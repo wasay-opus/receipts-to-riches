@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Crown } from 'lucide-react';
+import { Trophy, Flame } from 'lucide-react';
 import { Container, showToast } from '../../components';
-import images from '../../constants/images';
 import gameServices from '../../services/gameServices';
 import { mapApiStreakLeaderboardToDataset } from './rankingsMapper';
-import { LeaderboardDataset } from './types';
+import { LeaderboardDataset, PodiumUserData } from './types';
 
 const emptyDataset: LeaderboardDataset = {
   topThree: [],
@@ -34,6 +33,95 @@ const getLeaderboardList = (payload: any): any[] => {
 
   return [];
 };
+
+const podiumOrder: Array<1 | 2 | 3> = [2, 1, 3];
+const podiumHeight: Record<1 | 2 | 3, number> = { 1: 128, 2: 96, 3: 78 };
+const avatarSize: Record<1 | 2 | 3, number> = { 1: 76, 2: 60, 3: 60 };
+
+const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '10px',
+      flex: 1,
+      maxWidth: '140px',
+    }}
+  >
+    <span
+      className="pill-badge"
+      style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        color: 'var(--text-main)',
+        fontWeight: 700,
+        fontSize: '12px',
+      }}
+    >
+      {user.streak}
+    </span>
+
+    <div style={{ position: 'relative' }}>
+      {user.rank === 1 && (
+        <Trophy
+          size={22}
+          color="var(--text-main)"
+          style={{ position: 'absolute', top: '-26px', left: '50%', transform: 'translateX(-50%)' }}
+        />
+      )}
+      <img
+        src={
+          user.avatar ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1a1a1a&color=fff`
+        }
+        alt={user.name}
+        style={{
+          width: `${avatarSize[user.rank]}px`,
+          height: `${avatarSize[user.rank]}px`,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          border: `3px solid ${user.ringColor || 'var(--text-main)'}`,
+          background: 'var(--bg-card-secondary)',
+        }}
+      />
+    </div>
+
+    <strong
+      style={{
+        fontSize: '13px',
+        color: 'var(--text-main)',
+        textAlign: 'center',
+        maxWidth: '120px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {user.name}
+    </strong>
+
+    <div
+      style={{
+        width: '100%',
+        height: `${podiumHeight[user.rank]}px`,
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderBottom: 'none',
+        borderRadius: '14px 14px 0 0',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: '10px',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <span style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-muted)' }}>
+        {user.rank}
+      </span>
+    </div>
+  </div>
+);
 
 export const Rankings: React.FC = () => {
   const { t } = useTranslation();
@@ -72,6 +160,10 @@ export const Rankings: React.FC = () => {
     };
   }, []);
 
+  const orderedPodium = podiumOrder
+    .map((rank) => dataset.topThree.find((u) => u.rank === rank))
+    .filter((u): u is PodiumUserData => Boolean(u));
+
   return (
     <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '40px' }}>
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
@@ -95,132 +187,97 @@ export const Rankings: React.FC = () => {
         </div>
       )}
 
-      {dataset.topThree.length > 0 && (
+      {orderedPodium.length > 0 && (
         <div
           style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'flex-end',
-            gap: '12px',
-            padding: '24px 0 10px',
+            gap: '10px',
+            padding: '8px 0 0',
           }}
         >
-          {dataset.topThree.map((user) => (
+          {orderedPodium.map((user) => (
+            <PodiumSlot key={user.id} user={user} />
+          ))}
+        </div>
+      )}
+
+      {dataset.rankings.length > 0 && (
+        <div className="card" style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {dataset.rankings.map((item) => (
             <div
-              key={user.id}
+              key={item.id}
               style={{
+                padding: '10px 10px',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                gap: '8px',
-                flex: 1,
-                maxWidth: '130px',
+                justifyContent: 'space-between',
+                borderRadius: '12px',
               }}
             >
-              <div style={{ position: 'relative' }}>
-                {user.rank === 1 && (
-                  <Crown
-                    size={24}
-                    color="#FFD700"
-                    style={{
-                      position: 'absolute',
-                      top: '-18px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                    }}
-                  />
-                )}
-                <img
-                  src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=00674D&color=fff`}
-                  alt={user.name}
-                  style={{
-                    width: user.rank === 1 ? '72px' : '58px',
-                    height: user.rank === 1 ? '72px' : '58px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: `3px solid ${user.ringColor || '#D5AD60'}`,
-                  }}
-                />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <span
                   style={{
-                    position: 'absolute',
-                    bottom: '-6px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: user.badgeColor || '#D5AD60',
-                    color: '#050816',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: 'var(--bg-card-secondary)',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
                     fontWeight: 800,
-                    fontSize: '11px',
-                    padding: '2px 8px',
-                    borderRadius: '10px',
+                    color: 'var(--text-muted)',
+                    flexShrink: 0,
                   }}
                 >
-                  #{user.rank}
+                  {item.rank}
                 </span>
+                <img
+                  src={
+                    item.avatar ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=1a1a1a&color=fff`
+                  }
+                  alt={item.name}
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card-secondary)',
+                  }}
+                />
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
+                    {item.name}
+                  </h4>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {t('rankingsScreen.currentStreak', 'Current streak')}
+                  </span>
+                </div>
               </div>
 
               <div
                 style={{
-                  width: '100%',
-                  height: user.rank === 1 ? '110px' : user.rank === 2 ? '90px' : '75px',
-                  background: 'var(--bg-card)',
-                  borderRadius: '16px 16px 8px 8px',
-                  border: '1px solid var(--border-color)',
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '8px',
-                  boxShadow: 'var(--shadow-sm)',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '999px',
+                  background: 'var(--bg-card-secondary)',
+                  border: '1px solid var(--border-color)',
                 }}
               >
-                <strong style={{ fontSize: '12px', color: 'var(--text-main)', textAlign: 'center' }}>
-                  {user.name}
-                </strong>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#D5AD60', marginTop: '2px' }}>
-                  {user.streak}
-                </span>
+                <Flame size={14} color="var(--text-main)" />
+                <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{item.streak}</strong>
               </div>
             </div>
           ))}
         </div>
       )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {dataset.rankings.map((item) => (
-          <div
-            key={item.id}
-            className="card"
-            style={{
-              padding: '14px 18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-card)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-muted)', width: '24px' }}>
-                #{item.rank}
-              </span>
-              <div>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {item.name}
-                </h4>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  {t('rankingsScreen.currentStreak', 'Current streak')}
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <img src={images.Coin} alt="Pts" style={{ width: '18px', height: '18px' }} />
-              <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{item.streak}</strong>
-            </div>
-          </div>
-        ))}
-      </div>
     </Container>
   );
 };

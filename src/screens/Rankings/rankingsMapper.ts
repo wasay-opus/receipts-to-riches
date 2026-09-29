@@ -82,8 +82,8 @@ export const mapApiStreakLeaderboardToDataset = (
         name,
         avatar,
         streak,
-        ringColor: '#FFA500',
-        badgeColor: '#FFA500',
+        ringColor: 'var(--text-main)',
+        badgeColor: 'var(--text-main)',
       });
     } else if (rank === 2) {
       topThree.push({
@@ -92,8 +92,8 @@ export const mapApiStreakLeaderboardToDataset = (
         name,
         avatar,
         streak,
-        ringColor: '#0084D6',
-        badgeColor: '#0084D6',
+        ringColor: 'var(--text-muted)',
+        badgeColor: 'var(--text-muted)',
       });
     } else if (rank === 3) {
       topThree.push({
@@ -102,8 +102,8 @@ export const mapApiStreakLeaderboardToDataset = (
         name,
         avatar,
         streak,
-        ringColor: '#00C853',
-        badgeColor: '#00C853',
+        ringColor: 'var(--border-color)',
+        badgeColor: 'var(--border-color)',
       });
     } else {
       rankings.push({
