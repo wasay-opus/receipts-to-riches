@@ -1,58 +1,203 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { Gift, Sparkles, CheckCircle2, Lock } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Gift, AlertCircle } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { fetchAllRewards, claimReward } from '../../redux/Slices/rewardsSlice';
 import { fetchUser } from '../../redux/Slices/userSlice';
-import { Button, Container, CustomModal, showToast, triggerCoinCelebration } from '../../components';
+import { Button, Container, CustomModal, triggerCoinCelebration } from '../../components';
 import images from '../../constants/images';
 import { getUserRewardPoints } from '../../utils/userDisplay';
 
+// Crisp, perfectly-scaled vector logos for vouchers
+const McDonaldLogo = () => (
+  <svg viewBox="0 0 100 100" style={{ width: '64px', height: '64px' }}>
+    <path
+      d="M20 82 V44 C20 28 32 20 42 35 C50 48 50 82 50 82 C50 82 50 48 58 35 C68 20 80 28 80 44 V82"
+      fill="none"
+      stroke="#FFC72C"
+      strokeWidth="11"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <text
+      x="50"
+      y="94"
+      textAnchor="middle"
+      fill="#FFFFFF"
+      fontFamily="Poppins, Arial, sans-serif"
+      fontSize="11"
+      fontWeight="700"
+    >
+      McDonald's
+    </text>
+  </svg>
+);
+
+const StarbucksLogo = () => (
+  <svg viewBox="0 0 100 100" style={{ width: '68px', height: '68px' }}>
+    <circle cx="50" cy="50" r="44" fill="#00704A" />
+    <circle cx="50" cy="50" r="40" fill="none" stroke="#FFFFFF" strokeWidth="2.5" />
+    <path
+      d="M50 24 L53 32 L61 32 L55 37 L57 45 L50 40 L43 45 L45 37 L39 32 L47 32 Z"
+      fill="#FFFFFF"
+    />
+    <circle cx="50" cy="52" r="10" fill="#FFFFFF" />
+    <path
+      d="M35 62 Q50 78 65 62 Q50 84 35 62 Z"
+      fill="#FFFFFF"
+    />
+    {/* Mermaid crown stars */}
+    <circle cx="32" cy="42" r="2.5" fill="#FFFFFF" />
+    <circle cx="68" cy="42" r="2.5" fill="#FFFFFF" />
+  </svg>
+);
+
+const WalmartLogo = () => (
+  <svg viewBox="0 0 100 100" style={{ width: '64px', height: '64px' }}>
+    {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+      <g key={i} transform={`rotate(${angle} 50 50)`}>
+        <path
+          d="M50 16 C47 25 47 35 50 42 C53 35 53 25 50 16 Z"
+          fill="#FFC220"
+        />
+      </g>
+    ))}
+  </svg>
+);
+
+const DunkinLogo = () => (
+  <svg viewBox="0 0 120 70" style={{ width: '80px', height: '50px' }}>
+    <text
+      x="8"
+      y="48"
+      fontFamily="Poppins, Arial, sans-serif"
+      fontSize="42"
+      fontWeight="900"
+      fill="#FF671F"
+      letterSpacing="-2"
+    >
+      D
+    </text>
+    <text
+      x="56"
+      y="48"
+      fontFamily="Poppins, Arial, sans-serif"
+      fontSize="42"
+      fontWeight="900"
+      fill="#DA1884"
+      letterSpacing="-2"
+    >
+      D
+    </text>
+  </svg>
+);
+
 export const Rewards: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+
   const user = useSelector((state: RootState) => state.user?.userData);
   const {
     rewards: apiRewards,
-    loading: rewardsLoading,
-    error: rewardsError,
     claimLoading,
   } = useSelector((state: RootState) => state.rewards);
+
   const totalCoins = getUserRewardPoints(user);
+  const targetPoints = 15000;
+  const progressPercent = Math.min(100, Math.max(0, (totalCoins / targetPoints) * 100));
 
   const [selectedReward, setSelectedReward] = useState<any | null>(null);
-  const [redeemSuccess, setRedeemSuccess] = useState(false);
+  const [resultModal, setResultModal] = useState<{
+    visible: boolean;
+    variant: 'success' | 'error';
+    title: string;
+    description: string;
+  }>({
+    visible: false,
+    variant: 'success',
+    title: '',
+    description: '',
+  });
 
   useEffect(() => {
     dispatch(fetchAllRewards());
     dispatch(fetchUser());
   }, [dispatch]);
 
-  const rewardCatalog = apiRewards ?? [];
-  const getRewardTitle = (reward: any) => reward.title ?? reward.name ?? t('rewardsScreen.defaultRewardName', 'reward');
-  const getRewardPoints = (reward: any) =>
-    Number(reward.pointsRequired ?? reward.points ?? reward.required_points ?? 0);
-  const getRewardImage = (reward: any) => reward.image_url ?? reward.image ?? images.Gift;
+  // Pre-configured popular vouchers matching Screenshot 3
+  const popularVouchers = useMemo(() => [
+    {
+      id: 'mcdonald-10',
+      name: "McDonald's $10 Voucher",
+      points: 15000,
+      bgColor: '#D9221C',
+      component: <McDonaldLogo />,
+    },
+    {
+      id: 'starbucks-10',
+      name: 'StarBucks $10 Voucher',
+      points: 15000,
+      bgColor: '#00704A',
+      component: <StarbucksLogo />,
+    },
+    {
+      id: 'walmart-10',
+      name: 'Walmart  $10 Voucher',
+      points: 15000,
+      bgColor: '#0071CE',
+      component: <WalmartLogo />,
+    },
+    {
+      id: 'dunkin-10',
+      name: 'Dunkin-Donuts $10 Voucher',
+      points: 15000,
+      bgColor: '#E43590',
+      component: <DunkinLogo />,
+    },
+  ], []);
 
-  const handleRedeem = (reward: any) => {
-    const required = getRewardPoints(reward);
-    if (totalCoins < required) {
-      showToast({
-        type: 'error',
-        text1: t('rewardsScreen.insufficientPointsTitle', 'Insufficient Points'),
-        text2: t('rewardsScreen.pointsNeeded', 'You need {{points}} more points to claim this reward.', {
-          points: required - totalCoins,
-        }),
+  // Merge with API rewards if any additional exist
+  const displayRewards = useMemo(() => {
+    if (apiRewards && apiRewards.length > 0) {
+      return apiRewards.map((r: any, idx: number) => {
+        const fallback = popularVouchers[idx % popularVouchers.length];
+        return {
+          id: r.id || fallback.id,
+          name: r.name || r.title || fallback.name,
+          points: Number(r.points || r.pointsRequired || fallback.points),
+          image_url: r.image_url || r.image,
+          bgColor: fallback.bgColor,
+          component: fallback.component,
+        };
       });
-      return;
     }
+    return popularVouchers;
+  }, [apiRewards, popularVouchers]);
 
+  const handleRewardClick = (reward: any) => {
     setSelectedReward(reward);
   };
 
-  const confirmRedeem = async () => {
+  const handleConfirmRedeem = async () => {
     if (!selectedReward) return;
+
+    if (totalCoins < selectedReward.points) {
+      setSelectedReward(null);
+      setResultModal({
+        visible: true,
+        variant: 'error',
+        title: t('rewards.unsuccessful', 'Redemption Unsuccessful'),
+        description: t(
+          'rewards.needMorePoints',
+          'You need {{points}} more points to redeem this voucher.',
+          { points: (selectedReward.points - totalCoins).toLocaleString() },
+        ),
+      });
+      return;
+    }
 
     try {
       const rewardId = Number(selectedReward.id);
@@ -61,223 +206,322 @@ export const Rewards: React.FC = () => {
       }
       await dispatch(fetchUser());
 
-      setRedeemSuccess(true);
+      setSelectedReward(null);
       triggerCoinCelebration();
-      showToast({
-        type: 'success',
-        text1: t('rewardsScreen.redemptionSuccessTitle', 'Redemption Successful!'),
-        text2: t('rewardsScreen.redemptionSuccessDesc', 'Your gift card voucher has been sent to your registered email.'),
+      setResultModal({
+        visible: true,
+        variant: 'success',
+        title: t('rewards.successful', 'Redemption Successful!'),
+        description: t(
+          'rewards.voucherSentDesc',
+          'Your {{name}} digital code has been dispatched to your email.',
+          { name: selectedReward.name },
+        ),
       });
     } catch (error: any) {
-      showToast({
-        type: 'error',
-        text1: t('rewardsScreen.claimFailedTitle', 'Claim Failed'),
-        text2: error?.message || t('rewardsScreen.claimFailedDesc', 'Could not process redemption. Please try again.'),
+      setSelectedReward(null);
+      setResultModal({
+        visible: true,
+        variant: 'error',
+        title: t('rewards.claimFailed', 'Claim Failed'),
+        description:
+          error?.message ||
+          t('rewards.failedDesc', 'Could not process redemption. Please try again later.'),
       });
     }
   };
 
   return (
-    <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      {/* Balance Card */}
+    <Container maxWidth="500px" style={{ gap: '20px', paddingBottom: '40px' }}>
+      {/* 1. Header with Back Arrow */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingTop: '4px' }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#00674D',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+          }}
+          aria-label={t('common.back', 'Back')}
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>
+          {t('rewards.title', 'Reward')}
+        </h1>
+      </div>
+
+      {/* 2. Next Reward Progress Card (Screenshot 3 - Dark Theme) */}
       <div
-        className="card"
         style={{
-          background: 'linear-gradient(135deg, #00674D 0%, #004D39 100%)',
-          color: '#FFFFFF',
-          padding: '24px',
+          background: '#121212',
           borderRadius: '24px',
+          padding: '20px 20px',
+          color: '#FFFFFF',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: '0 8px 24px rgba(0, 103, 77, 0.3)',
+          flexDirection: 'column',
+          gap: '12px',
+          boxShadow: '0 10px 24px rgba(0,0,0,0.25)',
         }}
       >
-        <div>
-          <span style={{ fontSize: '13px', opacity: 0.85, fontWeight: 600 }}>
-            {t('rewardsScreen.availablePoints', 'AVAILABLE POINTS')}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.2px' }}>
+            {t('rewards.nextReward', 'Next Reward $10')}
+          </h2>
+          <span style={{ fontSize: '12.5px', color: '#9CA3AF', fontWeight: 500 }}>
+            ({targetPoints.toLocaleString()} Points=$10)
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-            <img src={images.Coin} alt="Coin" style={{ width: '28px', height: '28px' }} />
-            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#FFD700' }}>
-              {Number(totalCoins).toLocaleString()}
-            </h2>
-            <span style={{ fontSize: '14px', opacity: 0.9 }}>{t('rewardsScreen.ptsLabel', 'PTS')}</span>
-          </div>
         </div>
 
-        <div className="pill-badge pill-gold" style={{ fontSize: '13px' }}>
-          <Sparkles size={14} />
-          <span>{t('rewardsScreen.goldHunterTier', 'Tier: Gold Hunter')}</span>
+        {/* Progress Track */}
+        <div
+          style={{
+            width: '100%',
+            height: '10px',
+            borderRadius: '6px',
+            background: '#262626',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          <div
+            style={{
+              width: `${progressPercent}%`,
+              height: '100%',
+              borderRadius: '6px',
+              background: '#009944',
+              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          />
+        </div>
+
+        {/* Points Row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: '#00B050' }}>
+            {t('rewards.points', 'Points')}
+          </span>
+          <div style={{ fontSize: '14px', fontWeight: 700 }}>
+            <span style={{ color: '#00B050' }}>{Number(totalCoins).toLocaleString()}</span>
+            <span style={{ color: '#FFFFFF' }}>/{targetPoints.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>
-          {t('rewardsScreen.catalog', 'Rewards Catalog')}
-        </h2>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-          {t('rewardsScreen.subtitle', 'Redeem points for digital gift cards and instant cash transfers')}
-        </p>
-      </div>
+      {/* 3. Popular Rewards Section (Screenshot 3) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>
+          {t('rewards.popularRewards', 'Popular Rewards')}
+        </h3>
 
-      {/* Rewards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-        {rewardsLoading && rewardCatalog.length === 0 && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {t('rewardsScreen.loadingRewards', 'Loading rewards...')}
-          </div>
-        )}
-
-        {!rewardsLoading && rewardsError && rewardCatalog.length === 0 && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {rewardsError}
-          </div>
-        )}
-
-        {!rewardsLoading && !rewardsError && rewardCatalog.length === 0 && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {t('rewardsScreen.noRewardsApi', 'No rewards are available from the API right now.')}
-          </div>
-        )}
-
-        {rewardCatalog.map((reward) => {
-          const requiredPoints = getRewardPoints(reward);
-          const title = getRewardTitle(reward);
-          const image = getRewardImage(reward);
-          const isEligible = totalCoins >= requiredPoints;
-          return (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '14px',
+          }}
+        >
+          {displayRewards.map((item) => (
             <div
-              key={reward.id}
-              className="card"
+              key={item.id}
+              onClick={() => handleRewardClick(item)}
               style={{
-                padding: '20px',
+                background: 'var(--bg-card)',
+                borderRadius: '22px',
+                padding: '12px',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '16px',
-                position: 'relative',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 3px 12px rgba(0,0,0,0.06)',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 3px 12px rgba(0,0,0,0.06)';
               }}
             >
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                <div
+              {/* Compact Brand Logo Container */}
+              <div
+                style={{
+                  width: '100%',
+                  height: '135px',
+                  borderRadius: '18px',
+                  background: item.bgColor || '#00674D',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  padding: '10px',
+                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)',
+                }}
+              >
+                {item.image_url ? (
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    style={{ maxWidth: '80px', maxHeight: '80px', objectFit: 'contain' }}
+                  />
+                ) : (
+                  item.component || (
+                    <img
+                      src={images.Gift}
+                      alt="Gift"
+                      style={{ width: '50px', height: '50px', objectFit: 'contain' }}
+                    />
+                  )
+                )}
+              </div>
+
+              {/* Title & Points */}
+              <div style={{ width: '100%', padding: '0 4px' }}>
+                <h4
                   style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '14px',
-                    overflow: 'hidden',
-                    background: 'var(--bg-card-secondary)',
-                    flexShrink: 0,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: 'var(--text-main)',
+                    lineHeight: 1.3,
+                    minHeight: '34px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <img
-                    src={image}
-                    alt={title}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
-                </div>
-
-                <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                    {title}
-                  </h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                    <img src={images.Coin} alt="Pts" style={{ width: '16px', height: '16px' }} />
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#D5AD60' }}>
-                      {requiredPoints.toLocaleString()} {t('rewardsScreen.ptsLabel', 'PTS')}
-                    </span>
-                  </div>
-                </div>
+                  {item.name}
+                </h4>
+                <span
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#009944',
+                    marginTop: '2px',
+                    display: 'block',
+                  }}
+                >
+                  {item.points.toLocaleString()} pts
+                </span>
               </div>
-
-              <Button
-                variant={isEligible ? 'primary' : 'secondary'}
-                title={isEligible ? t('rewardsScreen.redeemVoucher', 'Redeem Voucher') : t('rewardsScreen.needMorePoints', 'Need More Points')}
-                icon={isEligible ? <Gift size={16} /> : <Lock size={16} />}
-                onClick={() => handleRedeem(reward)}
-                disabled={!isEligible}
-                style={{ width: '100%' }}
-              />
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      {/* Confirmation / Success Modal */}
+      {/* Confirmation Modal */}
       <CustomModal
         visible={Boolean(selectedReward)}
-        onClose={() => {
-          setSelectedReward(null);
-          setRedeemSuccess(false);
-        }}
-        maxWidth="420px"
+        onClose={() => setSelectedReward(null)}
+        maxWidth="380px"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
-          {redeemSuccess ? (
-            <>
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#10B981',
-                }}
-              >
-                <CheckCircle2 size={36} />
-              </div>
-              <h3 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)' }}>
-                {t('rewardsScreen.voucherDispatched', 'Voucher Dispatched!')}
-              </h3>
-              <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                {t('rewardsScreen.voucherSentDesc', 'Your {{title}} code has been sent to your registered email address.', {
-                  title: selectedReward ? getRewardTitle(selectedReward) : t('rewardsScreen.defaultRewardName', 'reward'),
-                })}
-              </p>
-              <Button
-                title={t('common.done', 'Done')}
-                onClick={() => {
-                  setSelectedReward(null);
-                  setRedeemSuccess(false);
-                }}
-                style={{ width: '100%', marginTop: '8px' }}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '14px' }}>
+          <div
+            style={{
+              width: '74px',
+              height: '74px',
+              borderRadius: '20px',
+              background: selectedReward?.bgColor || '#00674D',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            {selectedReward?.image_url ? (
+              <img
+                src={selectedReward.image_url}
+                alt={selectedReward.name}
+                style={{ width: '50px', height: '50px', objectFit: 'contain' }}
               />
-            </>
-          ) : (
-            <>
-              <img src={images.Gift} alt="Gift" style={{ width: '64px', height: '64px' }} />
-              <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-main)' }}>
-                {t('rewardsScreen.redeemConfirmTitle', 'Redeem {{title}}?', {
-                  title: selectedReward ? getRewardTitle(selectedReward) : t('rewardsScreen.defaultRewardName', 'reward'),
-                })}
-              </h3>
-              <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                {t('rewardsScreen.pointsWillBeDeducted', '{{points}} Points will be deducted from your account.', {
-                  points: selectedReward ? getRewardPoints(selectedReward).toLocaleString() : 0,
-                })}
-              </p>
-              <div style={{ width: '100%', display: 'flex', gap: '10px' }}>
-                <Button
-                  variant="secondary"
-                  title={t('common.cancel', 'Cancel')}
-                  onClick={() => setSelectedReward(null)}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  title={t('common.confirm', 'Confirm')}
-                  onClick={confirmRedeem}
-                  loading={claimLoading}
-                  style={{ flex: 1 }}
-                />
-              </div>
-            </>
-          )}
+            ) : (
+              selectedReward?.component || <Gift size={32} color="#FFFFFF" />
+            )}
+          </div>
+
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>
+            {t('rewards.redeemTitle', 'Redeem {{name}}?', { name: selectedReward?.name })}
+          </h3>
+
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            {t(
+              'rewards.pointsDeductionNotice',
+              '{{points}} points will be deducted from your balance.',
+              { points: selectedReward?.points?.toLocaleString() || '15,000' },
+            )}
+          </p>
+
+          <div style={{ width: '100%', display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <Button
+              variant="secondary"
+              title={t('common.cancel', 'Cancel')}
+              onClick={() => setSelectedReward(null)}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title={t('rewards.redeem', 'Redeem')}
+              onClick={handleConfirmRedeem}
+              loading={claimLoading}
+              style={{ flex: 1 }}
+            />
+          </div>
+        </div>
+      </CustomModal>
+
+      {/* Result Modal (Success / Error) */}
+      <CustomModal
+        visible={resultModal.visible}
+        onClose={() => setResultModal((prev) => ({ ...prev, visible: false }))}
+        maxWidth="380px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '14px' }}>
+          <div
+            style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background:
+                resultModal.variant === 'success'
+                  ? 'rgba(16, 185, 129, 0.15)'
+                  : 'rgba(239, 68, 68, 0.15)',
+              color: resultModal.variant === 'success' ? '#10B981' : '#EF4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {resultModal.variant === 'success' ? (
+              <CheckCircle2 size={32} />
+            ) : (
+              <AlertCircle size={32} />
+            )}
+          </div>
+
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>
+            {resultModal.title}
+          </h3>
+
+          <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            {resultModal.description}
+          </p>
+
+          <Button
+            title={t('common.done', 'Done')}
+            onClick={() => setResultModal((prev) => ({ ...prev, visible: false }))}
+            style={{ width: '100%', marginTop: '4px' }}
+          />
         </div>
       </CustomModal>
     </Container>

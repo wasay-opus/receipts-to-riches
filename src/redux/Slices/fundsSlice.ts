@@ -26,6 +26,8 @@ export interface ApiFund {
 
 interface FundsState {
   funds: ApiFund[];
+  balance: number;
+  currency: string;
   loading: boolean;
   error: string | null;
   fetched: boolean;
@@ -82,6 +84,8 @@ const normalizeFund = (item: RawFund, index: number): ApiFund => {
 
 const initialState: FundsState = {
   funds: [],
+  balance: 0,
+  currency: 'USD',
   loading: false,
   error: null,
   fetched: false,
@@ -149,6 +153,8 @@ const fundsSlice = createSlice({
     },
     resetFundsState(state) {
       state.funds = [];
+      state.balance = 0;
+      state.currency = 'USD';
       state.loading = false;
       state.error = null;
       state.fetched = false;
@@ -166,14 +172,27 @@ const fundsSlice = createSlice({
         state.loading = false;
         state.error = null;
         state.fetched = true;
-        const funds = Array.isArray(action.payload?.data)
-          ? action.payload.data
-          : Array.isArray(action.payload)
-          ? action.payload
-          : [];
-        state.funds = funds.map((item: RawFund, index: number) =>
-          normalizeFund(item as RawFund, index),
-        );
+
+        const rawData = action.payload?.data ?? action.payload;
+        if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
+          const bal = Number(
+            rawData.balance ??
+            rawData.total_balance ??
+            rawData.wallet_balance ??
+            rawData.amount ??
+            0
+          );
+          state.balance = Number.isFinite(bal) ? bal : 0;
+          state.currency = rawData.currency || 'USD';
+          state.funds = [normalizeFund(rawData as RawFund, 0)];
+        } else {
+          const funds = Array.isArray(rawData) ? rawData : [];
+          state.funds = funds.map((item: RawFund, index: number) =>
+            normalizeFund(item as RawFund, index),
+          );
+          const first = state.funds[0];
+          state.balance = Number(first?.balance ?? first?.total_balance ?? first?.wallet_balance ?? first?.amount ?? 0);
+        }
       })
       .addCase(fetchAllFunds.rejected, (state, action) => {
         state.loading = false;

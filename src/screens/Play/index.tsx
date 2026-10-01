@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { Gamepad2, Sparkles, Trophy, Flame, ChevronRight, Lock, PlayCircle } from 'lucide-react';
+import { ArrowLeft, Megaphone, Lock, PlayCircle } from 'lucide-react';
 import { Container, CustomModal, Button, showToast } from '../../components';
 import images from '../../constants/images';
 import { AppDispatch, RootState } from '../../redux/Store';
@@ -13,91 +13,13 @@ import {
   unlockedMiniGame,
 } from '../../redux/Slices/gamesSlice';
 
-const getGameMeta = (t: (key: string, fallback: string) => string): Record<string, any> => ({
-  'spin-the-wheel': {
-    title: t('play.games.spinTheWheel.title', 'Spin the Wheel'),
-    subtitle: t('play.games.spinTheWheel.subtitle', 'Rotate to win bonus points'),
-    image: images.playminispin,
-    path: '/play/spin-wheel',
-    badge: t('play.badges.popular', 'POPULAR'),
-  },
-  'scratch-2-win': {
-    title: t('play.games.scratch2Win.title', 'Scratch 2 Win'),
-    subtitle: t('play.games.scratch2Win.subtitle', 'Instant scratch-off surprise rewards'),
-    image: images.playminiscratch,
-    path: '/play/scratch-to-win',
-    badge: t('play.badges.hot', 'HOT'),
-  },
-  'lucky-7': {
-    title: t('play.games.lucky7.title', 'Lucky 777 Slot'),
-    subtitle: t('play.games.lucky7.subtitle', 'Hit triple 7s for jackpot bonuses'),
-    image: images.playmini777,
-    path: '/play/lucky-7',
-    badge: t('play.badges.jackpot', 'JACKPOT'),
-  },
-  'pic-pick': {
-    title: t('play.games.picPick.title', 'Pic Pick Challenge'),
-    subtitle: t('play.games.picPick.subtitle', 'Select winning images and state puzzles'),
-    image: images.picpickbg,
-    path: '/play/pic-pick',
-    badge: t('play.badges.daily', 'DAILY'),
-  },
-  zdt: {
-    title: t('play.games.zdt.title', 'ZDT Cash Game'),
-    subtitle: t('play.games.zdt.subtitle', 'Submit receipt details for this cash game'),
-    image: images.BigWinGame,
-    path: '/play/cash-game',
-    badge: t('play.badges.exclusive', 'EXCLUSIVE'),
-  },
-  'pick-3': {
-    title: t('play.games.pick3.title', 'Pick 3 Cash Game'),
-    subtitle: t('play.games.pick3.subtitle', 'Submit receipt details for this cash game'),
-    image: images.BigWinGame,
-    path: '/play/cash-game',
-    badge: t('play.badges.cash', 'CASH'),
-  },
-  'pick-4': {
-    title: t('play.games.pick4.title', 'Pick 4 Cash Game'),
-    subtitle: t('play.games.pick4.subtitle', 'Submit receipt details for this cash game'),
-    image: images.BigWinGame,
-    path: '/play/cash-game',
-    badge: t('play.badges.cash', 'CASH'),
-  },
-  'pick-5': {
-    title: t('play.games.pick5.title', 'Pick 5 Cash Game'),
-    subtitle: t('play.games.pick5.subtitle', 'Submit receipt details for this cash game'),
-    image: images.BigWinGame,
-    path: '/play/cash-game',
-    badge: t('play.badges.cash', 'CASH'),
-  },
-});
-
-const flattenGames = (allGames: any): any[] => {
-  if (!allGames) return [];
-  if (Array.isArray(allGames)) return allGames;
-  return Object.values(allGames).flatMap((value) => (Array.isArray(value) ? value : []));
-};
-
-const getGameTypeSlug = (game: any) =>
-  String(game?.game_type?.slug ?? game?.gameType ?? game?.type ?? '').toLowerCase();
-
-const resolveGamePath = (game: any, slug: string) => {
-  const typeSlug = getGameTypeSlug(game);
-  if (slug === 'spin-the-wheel') return '/play/spin-wheel';
-  if (slug === 'scratch-2-win') return '/play/scratch-to-win';
-  if (slug === 'lucky-7') return '/play/lucky-7';
-  if (slug === 'pic-pick' || typeSlug === 'pic-pick' || typeSlug === 'state') return '/play/pic-pick';
-  if (typeSlug === 'cash' || ['zdt', 'pick-3', 'pick-4', 'pick-5'].includes(slug)) return '/play/cash-game';
-  return '/play';
-};
-
 const AD_DURATION_SECONDS = 15;
 
 export const Play: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { allGames, unlockedMiniGames, loading } = useSelector((state: RootState) => state.games);
+  const { unlockedMiniGames } = useSelector((state: RootState) => state.games);
 
   const [adGame, setAdGame] = useState<any | null>(null);
   const [adSecondsLeft, setAdSecondsLeft] = useState(AD_DURATION_SECONDS);
@@ -126,8 +48,6 @@ export const Play: React.FC = () => {
     };
   }, [adGame]);
 
-  const gameMeta = useMemo(() => getGameMeta(t), [t]);
-
   const closeAdModal = () => {
     if (adTimerRef.current) clearInterval(adTimerRef.current);
     setAdGame(null);
@@ -143,9 +63,7 @@ export const Play: React.FC = () => {
       showToast({
         type: 'success',
         text1: t('play.gameUnlockedTitle', 'Game Unlocked'),
-        text2: t('play.gameUnlockedDesc', '{{gameTitle}} is now unlocked. You can play it now.', {
-          gameTitle: adGame.title,
-        }),
+        text2: `${adGame.title || 'Game'} is now unlocked. You can play it now!`,
       });
       closeAdModal();
     } catch (error: any) {
@@ -159,145 +77,718 @@ export const Play: React.FC = () => {
     }
   };
 
-  const games = useMemo(() => {
-    const apiGames = flattenGames(allGames);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-    return apiGames.map((game: any) => {
-      const slug = String(game.slug ?? game.game_slug ?? '').toLowerCase();
-      const meta = gameMeta[slug] ?? {};
-      const unlockSlots = unlockedMiniGames?.[slug];
-      const hasUnlockData = Array.isArray(unlockSlots) && unlockSlots.length > 0;
-      const isOpen = !hasUnlockData || unlockSlots.some((slot) => Number(slot.is_open) === 1);
-
-      return {
-        id: game.id ?? slug,
-        slug,
-        rawGame: game,
-        title: game.name ?? meta.title ?? t('play.defaultGameTitle', 'Game'),
-        subtitle:
-          meta.subtitle ??
-          (game.price
-            ? t('play.entryCost', 'Entry cost: {{price}} points', { price: game.price })
-            : t('play.liveGameFromApi', 'Live game from API')),
-        image: meta.image ?? images.playminispin,
-        path: meta.path ?? resolveGamePath(game, slug),
-        badge: isOpen ? meta.badge ?? t('play.badges.play', 'PLAY') : t('play.badges.locked', 'LOCKED'),
-        locked: !isOpen,
-      };
-    });
-  }, [allGames, unlockedMiniGames, gameMeta, t]);
-
-  const handleGameSelect = async (game: any) => {
-    if (game.locked) {
-      setAdGame(game);
-      return;
+  const formatCountdown = (targetDateStr?: string | null, defaultSeconds = 9521): string => {
+    let diffInSec = defaultSeconds;
+    if (targetDateStr) {
+      const targetTime = Date.parse(targetDateStr);
+      if (!Number.isNaN(targetTime)) {
+        diffInSec = Math.max(0, Math.floor((targetTime - now) / 1000));
+      }
     }
-
-    if (game.slug) {
-      dispatch(fetchGamesBySlug(game.slug));
-    }
-    navigate(game.path, { state: { game: game.rawGame ?? game } });
+    const hours = Math.floor(diffInSec / 3600);
+    const minutes = Math.floor((diffInSec % 3600) / 60);
+    const seconds = diffInSec % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
+  const getGameLockStatus = (slug: string) => {
+    const normalizedSlug = slug.toLowerCase();
+    const isMini = ['spin-the-wheel', 'lucky-7', 'scratch-2-win'].includes(normalizedSlug);
+    if (!isMini) return { locked: false, countdown: null };
+
+    const slotEntries = unlockedMiniGames?.[normalizedSlug] ?? [];
+    if (slotEntries.length > 0) {
+      const hasOpenSlot = slotEntries.some(
+        (slotItem: any) => Number(slotItem?.is_open) === 1,
+      );
+      if (hasOpenSlot) {
+        return { locked: false, countdown: null };
+      }
+      const firstBlocked = slotEntries.find((s: any) => s?.blocked_until);
+      return {
+        locked: true,
+        countdown: formatCountdown(firstBlocked?.blocked_until, 75423),
+      };
+    }
+    if (normalizedSlug === 'spin-the-wheel') return { locked: false, countdown: null };
+    if (normalizedSlug === 'lucky-7') return { locked: true, countdown: '20:57:03' };
+    if (normalizedSlug === 'scratch-2-win') return { locked: false, countdown: null };
+    return { locked: false, countdown: null };
+  };
+
+  const handleMiniGameClick = (slug: string, title: string, path: string) => {
+    const lockStatus = getGameLockStatus(slug);
+    if (lockStatus.locked) {
+      setAdGame({ slug, title });
+      return;
+    }
+    dispatch(fetchGamesBySlug(slug));
+    navigate(path);
+  };
+
+  const spinLock = getGameLockStatus('spin-the-wheel');
+  const luckyLock = getGameLockStatus('lucky-7');
+  const scratchLock = getGameLockStatus('scratch-2-win');
+
   return (
-    <Container maxWidth="720px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-main)' }}>
-            {t('playScreen.title', 'Mini Games & Arcade')}
-          </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {t('playScreen.subtitle', 'Play daily instant-win games to boost your reward earnings!')}
-          </p>
+    <Container maxWidth="960px" style={{ gap: '24px', paddingBottom: '60px' }}>
+      {/* Top Header Bar */}
+      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: 'var(--text-main)',
+          }}
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+          Play
+        </h2>
+        <div style={{ width: '40px' }} />
+      </div>
+
+      {/* Sponsored Ad Banner matching Screenshot 1 */}
+      <div
+        className="card"
+        style={{
+          width: '100%',
+          padding: '24px 20px',
+          borderRadius: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          gap: '12px',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
+        <div
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'rgba(21, 174, 54, 0.14)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#15AE36',
+          }}
+        >
+          <Megaphone size={28} />
+        </div>
+        <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+          Grow Your Audience!
+        </h3>
+        <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.5', maxWidth: '440px', margin: 0 }}>
+          Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/campaigns/create')}
+          style={{
+            background: '#15AE36',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '24px',
+            padding: '10px 26px',
+            fontSize: '14px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease',
+            marginTop: '4px',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        >
+          Get Started &rarr;
+        </button>
+
+        {/* Carousel Pagination Dots */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((dotIndex) => (
+            <div
+              key={dotIndex}
+              style={{
+                width: dotIndex === 3 ? '16px' : '6px',
+                height: '6px',
+                borderRadius: '3px',
+                background: dotIndex === 3 ? '#15AE36' : 'rgba(255, 255, 255, 0.25)',
+                transition: 'all 0.2s ease',
+              }}
+            />
+          ))}
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {loading && games.length === 0 && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {t('play.loadingGames', 'Loading games...')}
-          </div>
-        )}
-
-        {!loading && games.length === 0 && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {t('play.noGamesFromApi', 'No games are available from the API right now.')}
-          </div>
-        )}
-
-        {games.map((game) => (
+      {/* Section 1: Win Cash Games (2x2 Grid matching Screenshot 1) */}
+      <div style={{ width: '100%' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '16px' }}>
+          Win Cash Games
+        </h2>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '16px',
+            width: '100%',
+          }}
+        >
+          {/* Card 1: ZDT */}
           <div
-            key={game.id}
-            className="card"
-            onClick={() => handleGameSelect(game)}
+            onClick={() => navigate('/play/cash-game?slug=zdt')}
             style={{
-              padding: '16px 20px',
+              position: 'relative',
+              borderRadius: '24px',
+              height: '190px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              background: '#5B00F0',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: game.locked ? 'not-allowed' : 'pointer',
-              opacity: game.locked ? 0.65 : 1,
-              transition: 'all 0.25s ease',
+              justifyContent: 'center',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 8px 24px rgba(91, 0, 240, 0.3)',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.borderColor = 'var(--green)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
-            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div
-                style={{
-                  position: 'relative',
-                  width: '84px',
-                  height: '84px',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  boxShadow: 'var(--shadow-sm)',
-                }}
-              >
-                <img
-                  src={game.image}
-                  alt={game.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-
-              <div>
-                <span className="pill-badge pill-gold" style={{ fontSize: '10px', padding: '2px 8px' }}>
-                  {game.badge}
-                </span>
-                <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-main)', marginTop: '4px' }}>
-                  {game.title}
-                </h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  {game.subtitle}
-                </p>
-              </div>
-            </div>
-
-            <div
+            <img
+              src={images.cardBgMask}
+              alt="mask"
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: 'var(--bg-card-secondary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--text-main)',
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                mixBlendMode: 'screen',
+                opacity: 0.7,
+                pointerEvents: 'none',
               }}
-            >
-              {game.locked ? <Lock size={18} /> : <ChevronRight size={18} />}
+            />
+            <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.5px' }}>
+                ZDT
+              </div>
+              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', marginTop: '6px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                $1,000
+              </div>
             </div>
           </div>
-        ))}
+
+          {/* Card 2: PICK 3 */}
+          <div
+            onClick={() => navigate('/play/cash-game?slug=pick-3')}
+            style={{
+              position: 'relative',
+              borderRadius: '24px',
+              height: '190px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              background: '#FE6104',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 8px 24px rgba(254, 97, 4, 0.3)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <img
+              src={images.cardBgMask}
+              alt="mask"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                mixBlendMode: 'screen',
+                opacity: 0.7,
+                pointerEvents: 'none',
+              }}
+            />
+            <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.5px' }}>
+                PICK 3
+              </div>
+              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', marginTop: '6px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                $3,000
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: PICK 4 */}
+          <div
+            onClick={() => navigate('/play/cash-game?slug=pick-4')}
+            style={{
+              position: 'relative',
+              borderRadius: '24px',
+              height: '190px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              background: '#15AE36',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 8px 24px rgba(21, 174, 54, 0.3)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <img
+              src={images.cardBgMask}
+              alt="mask"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                mixBlendMode: 'screen',
+                opacity: 0.7,
+                pointerEvents: 'none',
+              }}
+            />
+            <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.5px' }}>
+                PICK 4
+              </div>
+              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', marginTop: '6px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                $4,000
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: PICK 5 */}
+          <div
+            onClick={() => navigate('/play/cash-game?slug=pick-5')}
+            style={{
+              position: 'relative',
+              borderRadius: '24px',
+              height: '190px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              background: '#105998',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 8px 24px rgba(16, 89, 152, 0.3)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <img
+              src={images.cardBgMask}
+              alt="mask"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                mixBlendMode: 'screen',
+                opacity: 0.7,
+                pointerEvents: 'none',
+              }}
+            />
+            <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.5px' }}>
+                PICK 5
+              </div>
+              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', marginTop: '6px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                $5,000
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Section 2: Instant Games matching Screenshot 2 (height: 220px) */}
+      <div style={{ width: '100%' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '16px' }}>
+          Instant Games
+        </h2>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '16px',
+            width: '100%',
+          }}
+        >
+          {/* Card 1: PIC-PICK */}
+          <div
+            onClick={() => navigate('/play/pic-pick?variant=picpick')}
+            style={{
+              position: 'relative',
+              borderRadius: '24px',
+              height: '220px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundImage: `url(${images.picpickbg})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              boxShadow: '0 8px 24px rgba(153, 5, 3, 0.3)',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-3px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <span
+              style={{
+                fontSize: '26px',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                letterSpacing: '1px',
+                textShadow: '0 3px 12px rgba(0,0,0,0.85)',
+                zIndex: 2,
+              }}
+            >
+              PIC-PICK
+            </span>
+          </div>
+
+          {/* Card 2: STATE PICK */}
+          <div
+            onClick={() => navigate('/play/pic-pick?variant=state')}
+            style={{
+              position: 'relative',
+              borderRadius: '24px',
+              height: '220px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundImage: `url(${images.statePickbg})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              boxShadow: '0 8px 24px rgba(86, 4, 183, 0.3)',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-3px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <span
+              style={{
+                fontSize: '26px',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                letterSpacing: '1px',
+                textShadow: '0 3px 12px rgba(0,0,0,0.85)',
+                zIndex: 2,
+              }}
+            >
+              STATE PICK
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3: Mini Games matching Screenshot 2 with Full Background Images */}
+      <div style={{ width: '100%' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '16px' }}>
+          Mini Games
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+          {/* Mini Game 1: Spin the Wheel */}
+          <div
+            onClick={() => handleMiniGameClick('spin-the-wheel', 'Spin the Wheel', '/play/spin-wheel')}
+            style={{
+              position: 'relative',
+              height: '160px',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              backgroundImage: `url(${images.playminispin})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              padding: '24px 28px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              transition: 'all 0.25s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', margin: 0, textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>
+              Spin the Wheel
+            </h3>
+            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', margin: '6px 0 16px 0', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
+              Play Spin the Wheel and win pts
+            </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMiniGameClick('spin-the-wheel', 'Spin the Wheel', '/play/spin-wheel');
+              }}
+              style={{
+                background: '#FE8904',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '8px 26px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(254, 137, 4, 0.4)',
+              }}
+            >
+              Play Now
+            </button>
+
+            {spinLock.locked && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.65)',
+                  backdropFilter: 'blur(3px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  color: '#FFFFFF',
+                  zIndex: 3,
+                }}
+              >
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Lock size={20} />
+                </div>
+                {spinLock.countdown && (
+                  <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.5px' }}>
+                    {spinLock.countdown}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mini Game 2: Lucky 7 */}
+          <div
+            onClick={() => handleMiniGameClick('lucky-7', 'Lucky 7', '/play/lucky-7')}
+            style={{
+              position: 'relative',
+              height: '160px',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              backgroundImage: `url(${images.playmini777})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              padding: '24px 28px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              transition: 'all 0.25s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', margin: 0, textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>
+              Lucky 7
+            </h3>
+            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', margin: '6px 0 16px 0', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
+              Play Lucky 7 and win pts
+            </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMiniGameClick('lucky-7', 'Lucky 7', '/play/lucky-7');
+              }}
+              style={{
+                background: '#FE8904',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '8px 26px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(254, 137, 4, 0.4)',
+              }}
+            >
+              Play Now
+            </button>
+
+            {luckyLock.locked && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.65)',
+                  backdropFilter: 'blur(3px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  color: '#FFFFFF',
+                  zIndex: 3,
+                }}
+              >
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Lock size={20} />
+                </div>
+                {luckyLock.countdown && (
+                  <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.5px' }}>
+                    {luckyLock.countdown}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mini Game 3: Scratch 2 Win */}
+          <div
+            onClick={() => handleMiniGameClick('scratch-2-win', 'Scratch 2 Win', '/play/scratch-to-win')}
+            style={{
+              position: 'relative',
+              height: '160px',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              backgroundImage: `url(${images.playminiscratch})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              padding: '24px 28px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              transition: 'all 0.25s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', margin: 0, textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>
+              Scratch 2 Win
+            </h3>
+            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', margin: '6px 0 16px 0', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
+              Play Scratch 2 Win and win pts
+            </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMiniGameClick('scratch-2-win', 'Scratch 2 Win', '/play/scratch-to-win');
+              }}
+              style={{
+                background: '#FE8904',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '8px 26px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(254, 137, 4, 0.4)',
+              }}
+            >
+              Play Now
+            </button>
+
+            {scratchLock.locked && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.65)',
+                  backdropFilter: 'blur(3px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  color: '#FFFFFF',
+                  zIndex: 3,
+                }}
+              >
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Lock size={20} />
+                </div>
+                {scratchLock.countdown && (
+                  <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.5px' }}>
+                    {scratchLock.countdown}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Watch Ad Unlock Modal */}
       <CustomModal
         visible={Boolean(adGame)}
         onClose={closeAdModal}

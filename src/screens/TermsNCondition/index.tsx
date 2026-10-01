@@ -1,13 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Container } from '../../components';
+import { getTermsMarkdown } from '../../locales/markdown';
 
 export const TermsNCondition: React.FC = () => {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const markdownContent = getTermsMarkdown(i18n.language);
 
   return (
-    <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '40px' }}>
+    <Container maxWidth="760px" style={{ gap: '20px', paddingBottom: '40px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
           onClick={() => navigate(-1)}
@@ -26,20 +31,75 @@ export const TermsNCondition: React.FC = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)' }}>
-          Terms & Conditions
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FileText size={22} color="var(--green)" />
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            Terms & Conditions
+          </h1>
+        </div>
       </div>
 
-      <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', lineHeight: '1.6', fontSize: '14px', color: 'var(--text-muted)' }}>
-        <h3 style={{ color: 'var(--text-main)', fontSize: '16px' }}>1. Acceptance of Terms</h3>
-        <p>By registering, accessing, or using the Receipts To Riches platform, you agree to be bound by these Terms and all applicable laws and regulations.</p>
-
-        <h3 style={{ color: 'var(--text-main)', fontSize: '16px' }}>2. Receipt Scanning Eligibility</h3>
-        <p>Only authentic, legible receipts issued by legitimate retailers within the last 14 days are eligible for point processing. Duplicate or falsified receipts will result in account suspension.</p>
-
-        <h3 style={{ color: 'var(--text-main)', fontSize: '16px' }}>3. Reward Redemption</h3>
-        <p>Points have no cash value outside the Receipts To Riches ecosystem until successfully redeemed for offered gift cards or approved payouts.</p>
+      <div
+        className="card"
+        style={{
+          padding: '28px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          lineHeight: '1.7',
+          fontSize: '14px',
+          color: 'var(--text-muted)',
+          borderRadius: '20px',
+        }}
+      >
+        <div className="markdown-content">
+          <ReactMarkdown
+            components={{
+              h1: ({ children }) => (
+                <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-main)', marginBottom: '16px' }}>
+                  {children}
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '24px', marginBottom: '10px' }}>
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)', marginTop: '16px', marginBottom: '8px' }}>
+                  {children}
+                </h3>
+              ),
+              p: ({ children }) => (
+                <p style={{ marginBottom: '12px', color: 'var(--text-muted)' }}>
+                  {children}
+                </p>
+              ),
+              ul: ({ children }) => (
+                <ul style={{ paddingLeft: '20px', marginBottom: '12px' }}>
+                  {children}
+                </ul>
+              ),
+              li: ({ children }) => (
+                <li style={{ marginBottom: '6px' }}>
+                  {children}
+                </li>
+              ),
+              strong: ({ children }) => (
+                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>
+                  {children}
+                </strong>
+              ),
+              a: ({ href, children }) => (
+                <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', textDecoration: 'underline' }}>
+                  {children}
+                </a>
+              ),
+            }}
+          >
+            {markdownContent}
+          </ReactMarkdown>
+        </div>
       </div>
     </Container>
   );

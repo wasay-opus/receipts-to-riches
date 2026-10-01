@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { ArrowLeft, FileText, Sparkles } from 'lucide-react';
-import { Button, Container, CustomModal, showToast, triggerCoinCelebration } from '../../components';
+import { ArrowLeft, HelpCircle, Megaphone, Camera, Image as ImageIcon, Sparkles, ChevronDown, Check } from 'lucide-react';
+import { Button, Container, CustomModal, GameHelpMenu, showToast, triggerCoinCelebration } from '../../components';
 import images from '../../constants/images';
 import gameServices from '../../services/gameServices';
-import { getUSTimeHHMM, getUSTimeWithOffset } from '../../utils/usTime';
+import locationServices from '../../services/locationServices';
+import { getUSDateYYYYMMDD, getUSTimeHHMM, getUSTimeWithOffset } from '../../utils/usTime';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
 import { getUserRewardPoints } from '../../utils/userDisplay';
@@ -17,46 +18,84 @@ const extractMessage = (payload: any, fallback: string) => {
   return typeof message === 'string' && message.trim() ? message : fallback;
 };
 
+const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
+  'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
+  'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan',
+  'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire',
+  'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
+  'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
+  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
+  'Wisconsin', 'Wyoming'
+];
+
 export const PicPickGame: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { userData } = useSelector((state: RootState) => state.user);
+
   const challenge = (location.state as any)?.challenge;
+  const isStatePick =
+    challenge?.isState ||
+    String(challenge?.gameType || challenge?.type || '').toLowerCase() === 'state' ||
+    String(challenge?.gameSlug || '').toLowerCase().includes('state');
+
+  const gameNumber = challenge?.number || '3';
+  const gameAmount = challenge?.amount || '$1500';
+  const gameTitle = challenge?.title || (isStatePick ? `State Game ${gameNumber}` : `Pic-Pick Game ${gameNumber}`);
+  const gameSlug = challenge?.gameSlug || challenge?.game_slug || (isStatePick ? (gameNumber === '3' ? '1500-game' : (gameNumber === '4' ? '2500-game-state' : '3500-game')) : (gameNumber === '1' ? '500-game' : (gameNumber === '2' ? '1000-game' : '2500-game-pic-pick')));
+  const gameType = isStatePick ? 'state' : 'pic-pick';
+
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [receiptTotal, setReceiptTotal] = useState('');
-  const [stateValue, setStateValue] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [statesList, setStatesList] = useState<string[]>(US_STATES);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ message: string; points: number } | null>(null);
 
-  const gameSlug =
-    challenge?.gameSlug ??
-    challenge?.game_slug ??
-    challenge?.slug ??
-    '';
-  const gameType =
-    challenge?.gameType ??
-    challenge?.game_type ??
-    '';
-  const isStatePick = String(gameType).toLowerCase() === 'state' || String(gameSlug).toLowerCase().includes('state');
+  useEffect(() => {
+    locationServices
+      .getAllStates()
+      .then((res) => {
+        const raw = res?.data?.data || res?.data || [];
+        if (Array.isArray(raw) && raw.length > 0) {
+          const names = raw
+            .map((s: any) => (typeof s === 'string' ? s : s?.state_name || s?.name || s?.state || s?.state_id || ''))
+            .filter((name: string) => Boolean(name && name.trim()));
+          if (names.length > 0) {
+            setStatesList(names);
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback to US_STATES list
+      });
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setReceiptFile(file);
+    if (file) {
+      setReceiptPreview(URL.createObjectURL(file));
+    } else {
+      setReceiptPreview(null);
+    }
+  };
 
   const handleSubmit = async () => {
-    if (!String(gameSlug).trim() || !String(gameType).trim()) {
-      showToast({
-        type: 'error',
-        text1: t('picPick.errors.gameNotAvailable', 'Game is not available'),
-        text2: t('picPick.errors.selectLiveGame', 'Please select a live Pic Pick game from the Play screen.'),
-      });
-      navigate('/play/pic-pick');
-      return;
-    }
     if (!receiptFile) {
-      showToast({ type: 'error', text1: t('picPick.errors.receiptImageRequired', 'Receipt image is required') });
+      showToast({ type: 'error', text1: 'Receipt photo required', text2: 'Please upload or capture a receipt photo.' });
       return;
     }
     if (!receiptTotal.trim()) {
-      showToast({ type: 'error', text1: t('picPick.errors.receiptTotalRequired', 'Receipt total is required') });
+      showToast({ type: 'error', text1: 'Amount required', text2: 'Please enter the receipt amount.' });
+      return;
+    }
+    if (isStatePick && !selectedState.trim()) {
+      showToast({ type: 'error', text1: 'State required', text2: 'Please select a state from the dropdown.' });
       return;
     }
 
@@ -67,7 +106,8 @@ export const PicPickGame: React.FC = () => {
         type: gameType,
         game_slug: gameSlug,
         total: receiptTotal.trim(),
-        state: isStatePick ? stateValue.trim() : undefined,
+        state: isStatePick ? selectedState.trim() : undefined,
+        date: getUSDateYYYYMMDD(),
         time: getUSTimeHHMM(),
         played_at: getUSTimeWithOffset(),
         receipt: {
@@ -77,41 +117,63 @@ export const PicPickGame: React.FC = () => {
           file: receiptFile,
         },
       });
-      // games/store-game doesn't return a points field - refresh the wallet and
-      // diff it to find out what was actually credited for this submission.
+
       let points = 0;
       try {
         const updatedUser = await dispatch(fetchUser()).unwrap();
         const pointsAfter = getUserRewardPoints(updatedUser?.data ?? updatedUser);
         points = Math.max(0, pointsAfter - pointsBefore);
       } catch {
-        // wallet refresh failed - fall back to showing the message with 0 points rather than guessing
+        // Fallback
       }
+
       setResult({
-        message: extractMessage(response?.data, t('picPick.success.submitted', 'Receipt submitted successfully.')),
+        message: extractMessage(response?.data, 'Receipt submitted successfully.'),
         points,
       });
+
       if (points > 0) {
         triggerCoinCelebration();
       }
+
       setReceiptFile(null);
+      setReceiptPreview(null);
       setReceiptTotal('');
-      setStateValue('');
+      setSelectedState('');
     } catch (error: any) {
+      const parsedError =
+        error?.response?.data?.errors
+          ? Object.values(error.response.data.errors).flat().join(' ')
+          : error?.response?.data?.message || error?.message || 'Submission failed. Please try again.';
+
       showToast({
         type: 'error',
-        text1: t('picPick.errors.submissionFailedTitle', 'Submission failed'),
-        text2: error?.message || String(error || t('picPick.errors.tryAgain', 'Please try again.')),
+        text1: 'Submission failed',
+        text2: parsedError,
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const cardGradient = isStatePick
+    ? (gameNumber === '4'
+        ? 'linear-gradient(135deg, #FE8904 0%, #E65100 100%)'
+        : (gameNumber === '5'
+            ? 'linear-gradient(135deg, #981076 0%, #6E0058 100%)'
+            : 'linear-gradient(135deg, #5B00F0 0%, #3B00A0 100%)'))
+    : (gameNumber === '1'
+        ? 'linear-gradient(135deg, #E11D48 0%, #9F1239 100%)'
+        : (gameNumber === '2'
+            ? 'linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%)'
+            : 'linear-gradient(135deg, #FE8904 0%, #5B00F0 100%)'));
+
   return (
-    <Container maxWidth="540px" style={{ gap: '20px', paddingBottom: '40px' }}>
+    <Container maxWidth="1020px" style={{ gap: '20px', paddingBottom: '60px' }}>
+      {/* Top Header Bar matching Screenshot 4 */}
       <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
+          type="button"
           onClick={() => navigate(-1)}
           style={{
             background: 'var(--bg-card)',
@@ -128,69 +190,350 @@ export const PicPickGame: React.FC = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)' }}>
-          {challenge?.title ?? t('picPick.defaultChallengeTitle', 'Pic Pick Challenge')}
+        <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>
+          {gameTitle}
         </h2>
-        <div style={{ width: '40px' }} />
+        <GameHelpMenu gameSlug={isStatePick ? 'state' : 'pic-pick'} gameTitle={gameTitle} gameNumber={gameNumber} />
       </div>
 
-      <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <FileText size={24} color="var(--green)" />
-          <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>
-              {t('picPick.submitReceipt', 'Submit Receipt')}
-            </h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-              {t('picPick.submitReceiptDesc', 'Receipt data will be saved through the game submission API.')}
-            </p>
-          </div>
+      {/* Main 2-Column Responsive Web Layout */}
+      <div
+        style={{
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '24px',
+          alignItems: 'start',
+        }}
+      >
+        {/* Left Column: Game Action Card & Submit */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+          {/* Game Card with Starburst / Sunburst Background matching Screenshot 4 */}
+          <div
+            style={{
+              width: '100%',
+              background: cardGradient,
+              borderRadius: '24px',
+              padding: '28px 24px',
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '16px',
+              color: '#FFFFFF',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            }}
+          >
+        {/* Sunburst Mask Overlay */}
+        <img
+          src={images.cardBgMask}
+          alt=""
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: 0.35,
+            pointerEvents: 'none',
+            mixBlendMode: 'overlay',
+          }}
+        />
+
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          <h3 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '0.3px', margin: 0 }}>
+            {gameTitle}
+          </h3>
+          <h2 style={{ fontSize: '38px', fontWeight: 900, marginTop: '4px', margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>
+            {gameAmount}
+          </h2>
+          <p style={{ fontSize: '13px', opacity: 0.9, marginTop: '8px', maxWidth: '280px', lineHeight: '1.4' }}>
+            Enter the receipt total and submit picture of receipt.
+          </p>
         </div>
 
-        <input
-          className="form-input"
-          type="file"
-          accept="image/*"
-          onChange={(event) => setReceiptFile(event.target.files?.[0] ?? null)}
-        />
-        <input
-          className="form-input"
-          type="number"
-          placeholder={t('picPick.receiptTotalPlaceholder', 'Receipt total')}
-          value={receiptTotal}
-          onChange={(event) => setReceiptTotal(event.target.value)}
-        />
-        {isStatePick && (
+        {/* Input Fields Container */}
+        <div style={{ position: 'relative', zIndex: 2, width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '6px' }}>
+          {/* Amount Pill Input */}
           <input
-            className="form-input"
-            placeholder={t('picPick.statePlaceholder', 'State')}
-            value={stateValue}
-            onChange={(event) => setStateValue(event.target.value)}
+            type="number"
+            step="0.01"
+            placeholder="Enter Amount"
+            value={receiptTotal}
+            onChange={(e) => setReceiptTotal(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '14px 20px',
+              borderRadius: '28px',
+              background: 'rgba(0, 0, 0, 0.35)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              color: '#FFFFFF',
+              fontSize: '15px',
+              outline: 'none',
+              boxSizing: 'border-box',
+              textAlign: 'center',
+            }}
           />
-        )}
 
-        <Button
-          title={t('picPick.submitReceipt', 'Submit Receipt')}
-          icon={<Sparkles size={18} />}
-          onClick={handleSubmit}
-          loading={loading}
-          style={{ width: '100%' }}
-        />
+          {/* State Pill Dropdown (for State games) */}
+          {isStatePick && (
+            <div style={{ position: 'relative', width: '100%' }}>
+              <select
+                value={selectedState}
+                onChange={(e) => setSelectedState(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px 20px',
+                  borderRadius: '28px',
+                  background: 'rgba(0, 0, 0, 0.35)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: selectedState ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+                  fontSize: '15px',
+                  outline: 'none',
+                  appearance: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="" style={{ background: '#1F2937', color: '#FFF' }}>
+                  Select State
+                </option>
+                {statesList.map((stateName) => (
+                  <option key={stateName} value={stateName} style={{ background: '#1F2937', color: '#FFF' }}>
+                    {stateName}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={18}
+                style={{
+                  position: 'absolute',
+                  right: '20px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none',
+                  color: 'rgba(255,255,255,0.8)',
+                }}
+              />
+            </div>
+          )}
+
+          {/* Camera and Gallery Icon Buttons matching Screenshot 4 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '0 10px' }}>
+            <label
+              style={{
+                width: '54px',
+                height: '54px',
+                borderRadius: '50%',
+                background: 'rgba(0, 0, 0, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#FFFFFF',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                transition: 'transform 0.2s ease',
+              }}
+              title="Take Photo"
+            >
+              <Camera size={24} />
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+            </label>
+
+            {/* Selected File Name / Thumbnail indicator */}
+            {receiptPreview && (
+              <div
+                style={{
+                  background: 'rgba(0,0,0,0.4)',
+                  padding: '6px 14px',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  color: '#10B981',
+                  fontWeight: 700,
+                }}
+              >
+                <Check size={14} />
+                <span>Photo Selected</span>
+              </div>
+            )}
+
+            <label
+              style={{
+                width: '54px',
+                height: '54px',
+                borderRadius: '50%',
+                background: 'rgba(0, 0, 0, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#FFFFFF',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                transition: 'transform 0.2s ease',
+              }}
+              title="Choose from Gallery"
+            >
+              <ImageIcon size={24} />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+        </div>
       </div>
 
+        {/* Continue Green CTA Button matching Screenshot 4 */}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '16px',
+            borderRadius: '28px',
+            background: 'var(--green)',
+            color: '#FFFFFF',
+            border: 'none',
+            fontSize: '16px',
+            fontWeight: 800,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.7 : 1,
+            boxShadow: '0 4px 16px rgba(0, 103, 77, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            marginTop: '8px',
+          }}
+        >
+          {loading ? 'Submitting...' : 'Continue'}
+        </button>
+      </div>
+
+      {/* Right Column: Sponsored Campaign Card & Guidelines */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+        {/* Sponsored Ad Banner */}
+        <div
+          className="card"
+          style={{
+            padding: '24px 20px',
+            borderRadius: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '12px',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'rgba(21, 174, 54, 0.14)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#15AE36',
+            }}
+          >
+            <Megaphone size={28} />
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            Grow Your Audience!
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+            Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/campaigns/create')}
+            style={{
+              background: '#15AE36',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '24px',
+              padding: '10px 24px',
+              fontSize: '14px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginTop: '4px',
+            }}
+          >
+            Get Started &rarr;
+          </button>
+        </div>
+
+        {/* Quick How to Win Card */}
+        <div
+          className="card"
+          style={{
+            padding: '22px 20px',
+            borderRadius: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}
+        >
+          <h4 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            Instant Game Rules
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
+              <span>Submit receipt total amount matching the game tier.</span>
+            </div>
+            {isStatePick && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
+                <span>Select the US state where the purchase was made.</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
+              <span>Take or upload a clean photo of your physical receipt.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+      {/* Success Modal */}
       <CustomModal visible={Boolean(result)} onClose={() => navigate('/play')} maxWidth="400px">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
-          <img src={images.Coin} alt={t('picPick.prizeImageAlt', 'Prize')} style={{ width: '80px', height: '80px' }} />
+          <img src={images.Coin} alt="Prize" style={{ width: '80px', height: '80px' }} />
           <div>
             <h3 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)' }}>
               {result?.message}
             </h3>
             <p style={{ fontSize: '15px', color: 'var(--primary)', fontWeight: 700, marginTop: '4px' }}>
-              {t('picPick.pointsEarned', 'Points: +{{points}}', { points: result?.points ?? 0 })}
+              Points: +{result?.points ?? 0}
             </p>
           </div>
           <Button
-            title={t('picPick.returnToGames', 'Return to Games')}
+            title="Return to Games"
             onClick={() => navigate('/play')}
             style={{ width: '100%', marginTop: '8px' }}
           />

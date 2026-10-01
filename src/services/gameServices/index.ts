@@ -1,5 +1,6 @@
 import endPoints from '../../redux/constants/endPoints';
 import { fetchApi } from '../../utils/helper';
+import { getUSDateYYYYMMDD, getUSTimeHHMM, getUSTimeWithOffset } from '../../utils/usTime';
 
 interface IApiResponse {
   [key: string]: any;
@@ -154,15 +155,17 @@ class GameServices {
       );
 
       const formData = new FormData();
-      formData.append('type', payload.type);
+      formData.append('type', payload.type || 'cash');
       formData.append('game_slug', payload.game_slug);
 
-      if (payload.time) {
-        formData.append('time', payload.time);
-      }
-      if (payload.date) {
-        formData.append('date', payload.date);
-      }
+      const resolvedDate = payload.date || getUSDateYYYYMMDD();
+      const resolvedTime = payload.time || getUSTimeHHMM();
+      const resolvedPlayedAt = payload.played_at || getUSTimeWithOffset();
+
+      formData.append('date', resolvedDate);
+      formData.append('time', resolvedTime);
+      formData.append('played_at', resolvedPlayedAt);
+
       if (payload.zip_code) {
         formData.append('zip_code', payload.zip_code);
       }
@@ -174,9 +177,6 @@ class GameServices {
       }
       if (payload.draw) {
         formData.append('draw', payload.draw);
-      }
-      if (payload.played_at) {
-        formData.append('played_at', payload.played_at);
       }
 
       if (payload.receipt?.file) {

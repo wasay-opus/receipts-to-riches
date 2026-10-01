@@ -96,8 +96,9 @@ export const Profile: React.FC = () => {
       title: t('profile.sectionPreferencesInfo', 'Preferences & Information'),
       items: [
         { label: t('profile.menuLanguage', 'Language / Idioma'), path: '/profile/languages', icon: <Globe size={18} /> },
+        { label: t('profile.menuExplainVideo', 'Explain Video & Tutorials'), path: '/guide-video', icon: <BookOpen size={18} /> },
+        { label: t('profile.menuRules', 'Official Rules & Guidelines'), path: '/profile/rules', icon: <BookOpen size={18} /> },
         { label: t('profile.menuClaimReviewReward', 'Claim App Review Reward'), action: handleReviewReward, icon: <Star size={18} /> },
-        { label: t('profile.menuRules', 'Rules & How to Play'), path: '/profile/rules', icon: <BookOpen size={18} /> },
         { label: t('profile.helpSupport', 'Help & Support'), path: '/profile/help', icon: <HelpCircle size={18} /> },
         { label: t('profile.menuAboutUs', 'About Us'), path: '/profile/about', icon: <Info size={18} /> },
         { label: t('profile.termsConditions', 'Terms & Conditions'), path: '/profile/terms', icon: <FileText size={18} /> },

@@ -45,3 +45,9 @@ export const getUSTimeHHMM = (date = new Date()) => {
   const usDate = getUSDateParts(date);
   return `${usDate.hour}:${usDate.minute}`;
 };
+
+export const getUSDateYYYYMMDD = (date = new Date()) => {
+  const usDate = getUSDateParts(date);
+  return `${usDate.year}-${usDate.month}-${usDate.day}`;
+};
+

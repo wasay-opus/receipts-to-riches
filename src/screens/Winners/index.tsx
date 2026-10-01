@@ -1,224 +1,911 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Gift } from 'lucide-react';
-import { Button, Container, FormInput, showToast } from '../../components';
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  Gift,
+  Trophy,
+  User,
+  X,
+  Search,
+  Check,
+} from 'lucide-react';
+import { Container, Button } from '../../components';
 import images from '../../constants/images';
 import winnerServices from '../../services/winnerServices';
+import gameServices from '../../services/gameServices';
 
-const getList = (payload: any): any[] => {
-  if (Array.isArray(payload?.data?.data)) return payload.data.data;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.winners)) return payload.winners;
-  if (Array.isArray(payload)) return payload;
-  return [];
-};
+type WinnerTab = 'winner' | 'results';
 
-const formatDate = (value?: string) => {
-  if (!value) return '';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-};
+interface WinnerItem {
+  id: string | number;
+  name: string;
+  drawTime: string;
+  gameName: string;
+  avatarUrl: string | null;
+  badge: {
+    type: 'cash' | 'picpick' | 'state' | 'mini' | 'text';
+    title?: string;
+    amount?: string;
+    gradient?: string;
+    image?: string;
+  };
+}
+
+interface ResultItem {
+  id: string | number;
+  resultType: string;
+  zipCode: string;
+  date: string;
+  time: string;
+  state?: string;
+  amount?: string;
+}
+
+interface DropdownGameOption {
+  label: string;
+  value: string;
+  group?: string;
+}
+
+const RESULTS_GAME_OPTIONS: DropdownGameOption[] = [
+  { label: 'ZDT', value: 'zdt' },
+  { label: 'PICK 3', value: 'pick-3' },
+  { label: 'PICK 4', value: 'pick-4' },
+  { label: 'PICK 5', value: 'pick-5' },
+  // Pic-Pick group
+  { label: '$500 Game', value: '500-game', group: 'Pic-Pick' },
+  { label: '$1000 Game', value: '1000-game', group: 'Pic-Pick' },
+  { label: '$2500 Game', value: '2500-game-pic-pick', group: 'Pic-Pick' },
+  // State Pick group
+  { label: '$1500 Game', value: '1500-game', group: 'State Pick' },
+  { label: '$2500 Game', value: '2500-game-state', group: 'State Pick' },
+  { label: '$3500 Game', value: '3500-game', group: 'State Pick' },
+];
 
 export const Winners: React.FC = () => {
   const { t } = useTranslation();
-  const [winners, setWinners] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [resultSlug, setResultSlug] = useState('');
-  const [resultDraw, setResultDraw] = useState('');
-  const [results, setResults] = useState<any[]>([]);
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState<WinnerTab>('winner');
+
+  // Winners state
+  const [winners, setWinners] = useState<WinnerItem[]>([]);
+  const [winnersLoading, setWinnersLoading] = useState(false);
+  const [winnersError, setWinnersError] = useState<string | null>(null);
+
+  // Results state
+  const [selectedGameSlug, setSelectedGameSlug] = useState<string>('pick-5');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [results, setResults] = useState<ResultItem[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
+  const [resultsError, setResultsError] = useState<string | null>(null);
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Close dropdown when clicking outside
   useEffect(() => {
-    let isMounted = true;
-
-    const loadWinners = async () => {
-      setLoading(true);
-      try {
-        const response = await winnerServices.getAllWinners();
-        if (isMounted) {
-          setWinners(getList(response?.data));
-        }
-      } catch (error: any) {
-        if (isMounted) {
-          showToast({
-            type: 'error',
-            text1: t('winners.notLoadedTitle', 'Winners not loaded'),
-            text2: error?.message || t('winners.tryAgain', 'Please try again.'),
-          });
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
       }
     };
-
-    loadWinners();
-    return () => {
-      isMounted = false;
-    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLoadResults = async () => {
-    const slug = resultSlug.trim();
-    if (!slug) {
-      showToast({ type: 'error', text1: t('winners.enterGameSlug', 'Enter a game slug') });
-      return;
+  // 1. Format Draw Time
+  const formatDrawTime = (rawDate?: string): string => {
+    if (!rawDate) return 'Recently';
+    const parsed = new Date(rawDate);
+    if (Number.isNaN(parsed.getTime())) return rawDate;
+    const dateStr = parsed.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    });
+    const timeStr = parsed.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return `${dateStr} ${timeStr}`;
+  };
+
+  // 2. Format Result Date
+  const formatResultDate = (rawDate?: string, createdAt?: string): string => {
+    const val = rawDate || createdAt;
+    if (!val) return '-';
+    const parsed = new Date(val);
+    if (Number.isNaN(parsed.getTime())) return val;
+    const d = `${parsed.getDate()}`.padStart(2, '0');
+    const m = `${parsed.getMonth() + 1}`.padStart(2, '0');
+    const y = parsed.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+
+  // 3. Format Result Time
+  const formatResultTime = (timeVal?: string, createdAt?: string): string => {
+    if (timeVal) {
+      const match = String(timeVal).match(/^(\d{1,2}):(\d{2})/);
+      if (match) {
+        const h = Number(match[1]);
+        const min = Number(match[2]);
+        const d = new Date();
+        d.setHours(h, min, 0, 0);
+        return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      }
+    }
+    if (createdAt) {
+      const parsed = new Date(createdAt);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      }
+    }
+    return '-';
+  };
+
+  // 4. Normalize Winner Item from API
+  const normalizeWinner = (raw: any, index: number): WinnerItem => {
+    const user = raw?.user || {};
+    const game = raw?.game || {};
+    const gameType = game?.game_type || {};
+
+    const firstName = (user?.first_name || '').trim();
+    const lastName = (user?.last_name || '').trim();
+    let name = `${firstName} ${lastName}`.trim();
+    if (!name) {
+      name = user?.name || raw?.name || (user?.email ? user.email.split('@')[0] : 'Winner');
     }
 
-    setResultsLoading(true);
+    const drawTime = formatDrawTime(raw?.created_at || raw?.date);
+    const gameName = game?.name || gameType?.name || 'PICK 4';
+    const gameSlug = (game?.slug || raw?.game_slug || '').toLowerCase();
+    const typeSlug = (gameType?.slug || raw?.type || '').toLowerCase();
+
+    let badge: WinnerItem['badge'] = {
+      type: 'cash',
+      title: 'PICK 4',
+      amount: '$4,000',
+      gradient: 'linear-gradient(135deg, #15AE36 0%, #0EA63F 100%)',
+    };
+
+    if (gameSlug.includes('zdt') || gameName.toLowerCase().includes('zdt')) {
+      badge = {
+        type: 'cash',
+        title: 'ZDT',
+        amount: '$1,000',
+        gradient: 'linear-gradient(135deg, #5B00F0 0%, #7A1DFF 100%)',
+      };
+    } else if (gameSlug.includes('pick-3') || gameName.toLowerCase().includes('pick 3')) {
+      badge = {
+        type: 'cash',
+        title: 'PICK 3',
+        amount: '$3,000',
+        gradient: 'linear-gradient(135deg, #FF6104 0%, #FE8C00 100%)',
+      };
+    } else if (gameSlug.includes('pick-4') || gameName.toLowerCase().includes('pick 4')) {
+      badge = {
+        type: 'cash',
+        title: 'PICK 4',
+        amount: '$4,000',
+        gradient: 'linear-gradient(135deg, #15AE36 0%, #0EA63F 100%)',
+      };
+    } else if (gameSlug.includes('pick-5') || gameName.toLowerCase().includes('pick 5')) {
+      badge = {
+        type: 'cash',
+        title: 'PICK 5',
+        amount: '$5,000',
+        gradient: 'linear-gradient(135deg, #0070BA 0%, #0099E5 100%)',
+      };
+    } else if (
+      typeSlug.includes('pic-pick') ||
+      gameSlug.includes('pic-pick') ||
+      gameSlug.includes('500-game') ||
+      gameSlug.includes('1000-game') ||
+      gameSlug === '2500-game'
+    ) {
+      badge = {
+        type: 'picpick',
+        image: images.picpickbg,
+      };
+    } else if (
+      typeSlug.includes('state') ||
+      gameSlug.includes('state') ||
+      gameSlug === '1500-game' ||
+      gameSlug === '3500-game'
+    ) {
+      badge = {
+        type: 'state',
+        image: images.statePickbg,
+      };
+    }
+
+    return {
+      id: raw?.id || index + 1,
+      name,
+      drawTime,
+      gameName,
+      avatarUrl: user?.image_url || user?.image || null,
+      badge,
+    };
+  };
+
+  // 5. Normalize Result Item from API
+  const normalizeResult = (raw: any, index: number, isMidday = false): ResultItem => {
+    let resultType = raw?.type || (isMidday ? 'Midday' : 'Daily');
+    resultType = resultType.charAt(0).toUpperCase() + resultType.slice(1);
+
+    const totalVal = raw?.total ?? raw?.amount ?? raw?.price;
+    const formattedAmount =
+      totalVal !== undefined && totalVal !== null && totalVal !== ''
+        ? `$${Number(totalVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '-';
+
+    return {
+      id: raw?.id || index + 1,
+      resultType,
+      zipCode: raw?.zip_code || raw?.zip || '-',
+      date: formatResultDate(raw?.date, raw?.created_at),
+      time: formatResultTime(raw?.time, raw?.created_at),
+      state: raw?.state || '',
+      amount: formattedAmount,
+    };
+  };
+
+  // Fetch Winners list
+  const loadWinners = useCallback(async () => {
+    setWinnersLoading(true);
+    setWinnersError(null);
     try {
-      const response = await winnerServices.getResults(slug, resultDraw.trim() || undefined);
-      setResults(getList(response?.data));
-    } catch (error: any) {
-      showToast({
-        type: 'error',
-        text1: t('winners.resultsNotLoadedTitle', 'Results not loaded'),
-        text2: error?.message || t('winners.tryAgain', 'Please try again.'),
-      });
+      const res = await winnerServices.getAllWinners();
+      const rawList = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.winners)
+        ? res.winners
+        : [];
+      setWinners(rawList.map(normalizeWinner));
+    } catch (err: any) {
+      setWinnersError(err?.message || 'Failed to fetch winners.');
+      setWinners([]);
+    } finally {
+      setWinnersLoading(false);
+    }
+  }, []);
+
+  // Fetch Results by game slug (multi-draw for pick-3, pick-4, pick-5)
+  const loadResults = useCallback(async (slug: string) => {
+    setResultsLoading(true);
+    setResultsError(null);
+    try {
+      let fullDayList: any[] = [];
+      let middayList: any[] = [];
+
+      const targetSlug =
+        slug === 'state-2500' ? '2500-game-state' : slug;
+
+      if (['pick-3', 'pick-4', 'pick-5'].includes(targetSlug)) {
+        const [fullRes, midRes] = await Promise.allSettled([
+          winnerServices.getResults(targetSlug),
+          winnerServices.getResults(targetSlug, 'midday'),
+        ]);
+
+        const fullData =
+          fullRes.status === 'fulfilled' && Array.isArray(fullRes.value?.data?.data)
+            ? fullRes.value.data.data
+            : fullRes.status === 'fulfilled' && Array.isArray(fullRes.value?.data)
+            ? fullRes.value.data
+            : [];
+
+        const midData =
+          midRes.status === 'fulfilled' && Array.isArray(midRes.value?.data?.data)
+            ? midRes.value.data.data
+            : midRes.status === 'fulfilled' && Array.isArray(midRes.value?.data)
+            ? midRes.value.data
+            : [];
+
+        fullDayList = fullData.map((item: any, i: number) => normalizeResult(item, i, false));
+        middayList = midData.map((item: any, i: number) =>
+          normalizeResult(item, i + fullData.length, true),
+        );
+      } else {
+        // Try fetching targetSlug, with pic-pick fallback if needed
+        let res: any = null;
+        try {
+          res = await winnerServices.getResults(targetSlug);
+        } catch (initialErr) {
+          if (targetSlug === '2500-game-pic-pick') {
+            try {
+              res = await winnerServices.getResults('2500-game');
+            } catch {
+              res = null;
+            }
+          }
+        }
+        const data = Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+          ? res.data
+          : [];
+        fullDayList = data.map((item: any, i: number) => normalizeResult(item, i, false));
+      }
+
+      setResults([...middayList, ...fullDayList]);
+    } catch {
+      setResultsError(null);
+      setResults([]);
     } finally {
       setResultsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadWinners();
+  }, [loadWinners]);
+
+  useEffect(() => {
+    if (activeTab === 'results' && selectedGameSlug) {
+      loadResults(selectedGameSlug);
+    }
+  }, [activeTab, selectedGameSlug, loadResults]);
+
+  // Selected game label
+  const selectedGameLabel = useMemo(() => {
+    const found = RESULTS_GAME_OPTIONS.find((g) => g.value === selectedGameSlug);
+    return found ? (found.group ? `${found.group} (${found.label})` : found.label) : selectedGameSlug.toUpperCase();
+  }, [selectedGameSlug]);
+
+  // Filtered results by date if chosen
+  const filteredResults = useMemo(() => {
+    if (!selectedDateFilter) return results;
+    // Format YYYY-MM-DD to DD/MM/YYYY
+    const parts = selectedDateFilter.split('-');
+    if (parts.length === 3) {
+      const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return results.filter((r) => r.date === formatted);
+    }
+    return results;
+  }, [results, selectedDateFilter]);
 
   return (
-    <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <img src={images.Trophy} alt="Trophy" style={{ width: '36px', height: '36px' }} />
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)' }}>
-            {t('winners.pageTitle', 'Recent Prize Winners')}
-          </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            {t('winners.pageSubtitle', 'Real-time live payouts and game reward claims')}
-          </p>
-        </div>
+    <Container maxWidth="600px" style={{ gap: '18px', paddingBottom: '40px' }}>
+      {/* 1. Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '4px' }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#00674D',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+          }}
+          aria-label={t('common.back', 'Back')}
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>
+          {activeTab === 'winner' ? t('winners.tabWinner', 'Winner') : t('winners.tabResults', 'Results')}
+        </h1>
       </div>
 
-      <div className="card" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
-          {t('winners.resultsLookupTitle', 'Game Results Lookup')}
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
-          <FormInput
-            label={t('winners.gameSlugLabel', 'Game Slug')}
-            value={resultSlug}
-            onChange={(event) => setResultSlug(event.target.value)}
-            placeholder={t('winners.gameSlugPlaceholder', 'Enter API game slug')}
-          />
-          <FormInput
-            label={t('winners.drawLabel', 'Draw')}
-            value={resultDraw}
-            onChange={(event) => setResultDraw(event.target.value)}
-            placeholder={t('winners.optionalPlaceholder', 'Optional')}
-          />
-          <Button
-            title={t('winners.loadButton', 'Load')}
-            onClick={handleLoadResults}
-            loading={resultsLoading}
-            style={{ padding: '12px 18px', minHeight: '48px' }}
-          />
-        </div>
+      {/* 2. Top Segmented Toggle: [Winner] | [Results] (Screenshot 1 & 2) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          background: 'var(--bg-card-secondary)',
+          borderRadius: '16px',
+          padding: '4px',
+          border: '1px solid var(--border-color)',
+          gap: '4px',
+        }}
+      >
+        <button
+          onClick={() => setActiveTab('winner')}
+          style={{
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: 'none',
+            fontSize: '14px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            background: activeTab === 'winner' ? '#009944' : 'transparent',
+            color: activeTab === 'winner' ? '#FFFFFF' : 'var(--text-muted)',
+            transition: 'all 0.2s ease',
+            boxShadow: activeTab === 'winner' ? '0 4px 12px rgba(0, 153, 68, 0.3)' : 'none',
+          }}
+        >
+          {t('winners.tabWinner', 'Winner')}
+        </button>
 
-        {results.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {results.map((result, index) => (
-              <div
-                key={result?.id ?? index}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  background: 'var(--bg-card-secondary)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  fontSize: '13px',
-                  color: 'var(--text-main)',
-                }}
-              >
-                <span>
-                  {formatDate(result?.date ?? result?.created_at) ||
-                    t('winners.resultFallback', 'Result {{number}}', { number: index + 1 })}
-                  {result?.type ? ` · ${result.type}` : ''}
-                  {result?.zip_code ? ` · ${result.zip_code}` : ''}
-                </span>
-                <strong>{result?.total !== undefined ? `$${result.total}` : t('winners.notAvailable', 'N/A')}</strong>
-              </div>
-            ))}
-          </div>
-        )}
+        <button
+          onClick={() => setActiveTab('results')}
+          style={{
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: 'none',
+            fontSize: '14px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            background: activeTab === 'results' ? '#009944' : 'transparent',
+            color: activeTab === 'results' ? '#FFFFFF' : 'var(--text-muted)',
+            transition: 'all 0.2s ease',
+            boxShadow: activeTab === 'results' ? '0 4px 12px rgba(0, 153, 68, 0.3)' : 'none',
+          }}
+        >
+          {t('winners.tabResults', 'Results')}
+        </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {loading && winners.length === 0 && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {t('winners.loadingWinners', 'Loading winners...')}
-          </div>
-        )}
+      {/* 3. Tab Content */}
+      {activeTab === 'winner' ? (
+        /* Winner List (Screenshot 1) */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {winnersLoading && winners.length === 0 && (
+            <div className="card" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              {t('winners.loadingWinners', 'Loading winners...')}
+            </div>
+          )}
 
-        {!loading && winners.length === 0 && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {t('winners.noWinnersYet', 'No winners yet.')}
-          </div>
-        )}
+          {!winnersLoading && winners.length === 0 && (
+            <div className="card" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              {winnersError || t('winners.noWinnersYet', 'No winners found.')}
+            </div>
+          )}
 
-        {winners.map((winner, index) => {
-          // The winners API only returns user_id/game_id/type - no embedded
-          // user name, game name, or prize amount to display.
-          const name =
-            winner?.user?.name ?? winner?.name ?? t('winners.winnerFallback', 'Winner #{{id}}', { id: winner?.user_id ?? index + 1 });
-          const prize = winner?.type ? winner.type : t('winners.rewardFallback', 'Reward');
-          const game = winner?.game?.name ?? winner?.game_name ?? t('winners.gameFallback', 'Game #{{id}}', { id: winner?.game_id ?? '-' });
-          return (
+          {winners.map((winner) => (
             <div
-              key={winner?.id ?? index}
+              key={winner.id}
               className="card"
               style={{
-                padding: '16px 20px',
+                padding: '14px 16px',
+                borderRadius: '18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: '12px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                border: '1px solid var(--border-color)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              {/* Left: Avatar + Info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '12px',
-                    background: 'rgba(213, 173, 96, 0.15)',
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    background: '#E5E7EB',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#D5AD60',
+                    flexShrink: 0,
                   }}
                 >
-                  <Gift size={20} />
+                  {winner.avatarUrl ? (
+                    <img
+                      src={winner.avatarUrl}
+                      alt={winner.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <User size={24} color="#9CA3AF" />
+                  )}
                 </div>
+
                 <div>
-                  <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                    {name}
+                  <h4 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                    {winner.name}
                   </h4>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {t('winners.wonVia', 'Won via {{game}} - {{date}}', { game, date: formatDate(winner?.created_at) })}
-                  </span>
+                  <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                    {winner.drawTime}
+                  </p>
                 </div>
               </div>
 
-              <span className="pill-badge pill-gold" style={{ fontSize: '13px', fontWeight: 700 }}>
-                {typeof prize === 'number' ? `${prize} ${t('winners.ptsSuffix', 'PTS')}` : prize}
-              </span>
+              {/* Right: Badge with cardBgMask or Image */}
+              <div style={{ flexShrink: 0 }}>
+                {winner.badge.type === 'picpick' ? (
+                  <div
+                    style={{
+                      width: '64px',
+                      height: '52px',
+                      borderRadius: '14px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 10px rgba(0, 153, 68, 0.25)',
+                    }}
+                  >
+                    <img
+                      src={images.picpickbg}
+                      alt="Pic Pick"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                ) : winner.badge.type === 'state' ? (
+                  <div
+                    style={{
+                      width: '64px',
+                      height: '52px',
+                      borderRadius: '14px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 10px rgba(126, 34, 206, 0.25)',
+                    }}
+                  >
+                    <img
+                      src={images.statePickbg}
+                      alt="State Pick"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      background: winner.badge.gradient || '#009944',
+                      borderRadius: '14px',
+                      padding: '8px 12px',
+                      color: '#FFFFFF',
+                      textAlign: 'center',
+                      minWidth: '68px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <img
+                      src={images.cardBgMask}
+                      alt=""
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        opacity: 0.5,
+                        pointerEvents: 'none',
+                        mixBlendMode: 'screen',
+                      }}
+                    />
+                    <span style={{ position: 'relative', zIndex: 2, fontSize: '10px', fontWeight: 800, letterSpacing: '0.5px' }}>
+                      {winner.badge.title}
+                    </span>
+                    <span style={{ position: 'relative', zIndex: 2, fontSize: '14px', fontWeight: 900, marginTop: '2px' }}>
+                      {winner.badge.amount}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      ) : (
+        /* Results Table View (Screenshot 2) */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Filters Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {/* Custom Grouped Dropdown matching Screenshot 2 */}
+            <div ref={dropdownRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '16px',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '13.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                }}
+              >
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {selectedGameLabel}
+                </span>
+                <ChevronDown
+                  size={18}
+                  style={{
+                    color: '#009944',
+                    transform: isDropdownOpen ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
+              </button>
+
+              {/* Dropdown Popover matching Screenshot 2 */}
+              {isDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    left: 0,
+                    right: 0,
+                    background: '#18202F',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
+                    zIndex: 50,
+                    padding: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    maxHeight: '380px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {/* Direct Cash Game items: ZDT, PICK 3, PICK 4, PICK 5 */}
+                  {RESULTS_GAME_OPTIONS.filter((g) => !g.group).map((game) => {
+                    const isSelected = selectedGameSlug === game.value;
+                    return (
+                      <button
+                        key={game.value}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGameSlug(game.value);
+                          setIsDropdownOpen(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          background: isSelected ? '#009944' : 'transparent',
+                          color: isSelected ? '#FFFFFF' : '#E2E8F0',
+                          fontWeight: isSelected ? 800 : 600,
+                          fontSize: '14px',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) (e.currentTarget.style.background = 'rgba(255,255,255,0.06)');
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) (e.currentTarget.style.background = 'transparent');
+                        }}
+                      >
+                        <span>{game.label}</span>
+                        {isSelected && <Check size={16} />}
+                      </button>
+                    );
+                  })}
+
+                  {/* Pic-Pick Header & Sub-items */}
+                  <div style={{ marginTop: '6px' }}>
+                    <div
+                      style={{
+                        padding: '8px 12px 4px 12px',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        color: '#94A3B8',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Pic-Pick
+                    </div>
+                    {RESULTS_GAME_OPTIONS.filter((g) => g.group === 'Pic-Pick').map((game) => {
+                      const isSelected = selectedGameSlug === game.value;
+                      return (
+                        <button
+                          key={game.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedGameSlug(game.value);
+                            setIsDropdownOpen(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '10px 16px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: isSelected ? '#009944' : 'rgba(30, 41, 59, 0.7)',
+                            color: isSelected ? '#FFFFFF' : '#CBD5E1',
+                            fontWeight: isSelected ? 800 : 500,
+                            fontSize: '13.5px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '3px',
+                          }}
+                        >
+                          <span style={{ paddingLeft: '8px' }}>{game.label}</span>
+                          {isSelected && <Check size={16} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* State Pick Header & Sub-items */}
+                  <div style={{ marginTop: '6px' }}>
+                    <div
+                      style={{
+                        padding: '8px 12px 4px 12px',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        color: '#94A3B8',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      State Pick
+                    </div>
+                    {RESULTS_GAME_OPTIONS.filter((g) => g.group === 'State Pick').map((game) => {
+                      const isSelected = selectedGameSlug === game.value;
+                      return (
+                        <button
+                          key={game.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedGameSlug(game.value);
+                            setIsDropdownOpen(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '10px 16px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: isSelected ? '#009944' : 'rgba(30, 41, 59, 0.7)',
+                            color: isSelected ? '#FFFFFF' : '#CBD5E1',
+                            fontWeight: isSelected ? 800 : 500,
+                            fontSize: '13.5px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '3px',
+                          }}
+                        >
+                          <span style={{ paddingLeft: '8px' }}>{game.label}</span>
+                          {isSelected && <Check size={16} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Date Picker Input */}
+            <div style={{ position: 'relative' }}>
+              <input
+                type="date"
+                value={selectedDateFilter}
+                onChange={(e) => setSelectedDateFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '16px',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                }}
+              />
+              {selectedDateFilter && (
+                <button
+                  onClick={() => setSelectedDateFilter('')}
+                  style={{
+                    position: 'absolute',
+                    right: '32px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                  }}
+                  title="Clear date filter"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Results Table matching Screenshot 2 */}
+          <div
+            className="card"
+            style={{
+              padding: 0,
+              borderRadius: '18px',
+              overflow: 'hidden',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+            }}
+          >
+            {/* Table Green Header */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1.2fr 1.4fr 1.3fr 1.2fr',
+                background: '#009944',
+                color: '#FFFFFF',
+                padding: '14px 16px',
+                fontSize: '13px',
+                fontWeight: 800,
+                letterSpacing: '0.3px',
+              }}
+            >
+              <span>Type</span>
+              <span>Date</span>
+              <span>Total</span>
+              <span style={{ textAlign: 'right' }}>Time</span>
+            </div>
+
+            {/* Table Body */}
+            {resultsLoading && (
+              <div style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                {t('winners.loadingResults', 'Loading results...')}
+              </div>
+            )}
+
+            {!resultsLoading && filteredResults.length === 0 && (
+              <div style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No available
+              </div>
+            )}
+
+            {!resultsLoading &&
+              filteredResults.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.2fr 1.4fr 1.3fr 1.2fr',
+                    padding: '14px 16px',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    color: 'var(--text-main)',
+                    borderBottom: '1px solid var(--border-color)',
+                    background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: item.resultType === 'Midday' ? '#D5AD60' : 'var(--green)' }}>
+                    {item.resultType}
+                  </span>
+                  <span>{item.date}</span>
+                  <span style={{ fontWeight: 700 }}>
+                    {selectedGameSlug === 'zdt' ? (item.zipCode !== '-' ? item.zipCode : item.amount) : item.amount}
+                  </span>
+                  <span style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{item.time}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </Container>
   );
 };

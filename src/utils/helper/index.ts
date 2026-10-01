@@ -58,6 +58,15 @@ const extractMessageFromPayload = (payload: unknown): string => {
   }
 
   const data = payload as Record<string, unknown>;
+
+  if (data.errors && typeof data.errors === 'object') {
+    const errorEntries = Object.values(data.errors);
+    const flattened = errorEntries.flat().filter(isMeaningfulString);
+    if (flattened.length > 0) {
+      return flattened.join(' ');
+    }
+  }
+
   const message = data.message;
   if (Array.isArray(message) && isMeaningfulString(message[0])) {
     return message[0].trim();

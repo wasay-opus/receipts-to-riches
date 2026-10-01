@@ -2,106 +2,99 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { Formik } from 'formik';
-import * as Yup from 'yup';
-import { ArrowLeft, Megaphone, DollarSign, Gift, CheckCircle, MapPin } from 'lucide-react';
-import { Button, Container, FormInput, showToast } from '../../components';
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  Upload,
+  Image as ImageIcon,
+  CheckCircle,
+  X,
+} from 'lucide-react';
+import { Button, Container, showToast } from '../../components';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchMyCampaigns, storeCampaign } from '../../redux/Slices/campaignsSlice';
 import { useLocationsDispatch, useLocationsState } from '../../redux/Hooks/useLocationsHooks';
+import { getUSDateYYYYMMDD } from '../../utils/usTime';
 
 export const CreateCampaign: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+
+  const isSubmitting = useSelector(
+    (state: RootState) => state.campaigns.storeCampaignLoading,
+  );
+
+  const { fetchAllStates } = useLocationsDispatch();
+  const { states, statesLoading } = useLocationsState();
+
+  const [targetingOption, setTargetingOption] = useState<'global' | 'targeted'>('global');
+  const [adType, setAdType] = useState<'image' | 'video'>('image');
+  const [sponsor, setSponsor] = useState('');
+  const [url, setUrl] = useState('');
+  const [startDate, setStartDate] = useState(getUSDateYYYYMMDD());
+  const [endDate, setEndDate] = useState('');
+  const [selectedState, setSelectedState] = useState('');
   const [campaignFile, setCampaignFile] = useState<File | null>(null);
-  const isSubmitting = useSelector((state: RootState) => state.campaigns.storeCampaignLoading);
-
-  const {
-    fetchAllStates,
-    fetchCitiesByState,
-    fetchZipCodesByCity,
-    clearCities,
-    clearZipCodes,
-  } = useLocationsDispatch();
-  const { states, statesLoading, cities, citiesLoading, zipCodes, zipCodesLoading } = useLocationsState();
-
-  const [targetLocation, setTargetLocation] = useState(false);
-  const [selectedStateId, setSelectedStateId] = useState('');
-  const [selectedCityId, setSelectedCityId] = useState('');
-  const [selectedZip, setSelectedZip] = useState('');
+  const [filePreview, setFilePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    if (targetLocation && states.length === 0) {
+    if (targetingOption === 'targeted' && states.length === 0) {
       fetchAllStates();
     }
-  }, [targetLocation, states.length, fetchAllStates]);
+  }, [targetingOption, states.length, fetchAllStates]);
 
-  const handleStateChange = (stateId: string) => {
-    setSelectedStateId(stateId);
-    setSelectedCityId('');
-    setSelectedZip('');
-    clearZipCodes();
-    if (stateId) {
-      fetchCitiesByState(stateId);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setCampaignFile(file);
+    if (file) {
+      setFilePreview(URL.createObjectURL(file));
     } else {
-      clearCities();
+      setFilePreview(null);
     }
   };
 
-  const handleCityChange = (cityId: string) => {
-    setSelectedCityId(cityId);
-    setSelectedZip('');
-    if (cityId) {
-      fetchZipCodesByCity(cityId);
-    } else {
-      clearZipCodes();
-    }
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const validationSchema = Yup.object().shape({
-    sponsor: Yup.string().required(t('manageCampaigns.createCampaign.validation.sponsorRequired', 'Sponsor is required')),
-    url: Yup.string()
-      .url(t('manageCampaigns.createCampaign.validation.urlInvalid', 'Enter a valid website URL'))
-      .required(t('manageCampaigns.createCampaign.validation.urlRequired', 'Website URL is required')),
-    type: Yup.string().oneOf(['image', 'video']).required(t('manageCampaigns.createCampaign.validation.typeRequired', 'Campaign type is required')),
-    startDate: Yup.string().required(t('manageCampaigns.createCampaign.validation.startDateRequired', 'Start date is required')),
-    endDate: Yup.string().required(t('manageCampaigns.createCampaign.validation.endDateRequired', 'End date is required')),
-  });
-
-  const handleSubmit = async (values: any) => {
-    if (!campaignFile) {
-      showToast({ type: 'error', text1: t('manageCampaigns.createCampaign.mediaRequiredToast', 'Campaign media is required') });
+    if (!sponsor.trim()) {
+      showToast({ type: 'error', text1: 'Sponsor name is required' });
       return;
     }
-    if (targetLocation && !selectedStateId) {
-      showToast({ type: 'error', text1: t('manageCampaigns.createCampaign.selectStateToast', 'Select a state to target, or turn off location targeting') });
+    if (!url.trim()) {
+      showToast({ type: 'error', text1: 'Website URL is required' });
+      return;
+    }
+    if (!startDate) {
+      showToast({ type: 'error', text1: 'Start date is required' });
+      return;
+    }
+    if (!endDate) {
+      showToast({ type: 'error', text1: 'End date is required' });
+      return;
+    }
+    if (!campaignFile) {
+      showToast({ type: 'error', text1: 'Campaign media file is required' });
+      return;
+    }
+    if (targetingOption === 'targeted' && !selectedState) {
+      showToast({ type: 'error', text1: 'Please select a state for targeting' });
       return;
     }
 
     const formData = new FormData();
     formData.append('file', campaignFile, campaignFile.name);
-    formData.append('type', values.type);
-    formData.append('sponsor', values.sponsor.trim());
-    formData.append('url', values.url.trim());
-    formData.append('start_date', values.startDate);
-    formData.append('end_date', values.endDate);
+    formData.append('type', adType);
+    formData.append('sponsor', sponsor.trim());
+    formData.append('url', url.trim());
+    formData.append('start_date', startDate);
+    formData.append('end_date', endDate);
 
-    if (targetLocation && selectedStateId) {
+    if (targetingOption === 'targeted' && selectedState) {
       formData.append('is_global', '0');
-      const stateName = states.find((s) => String(s.id) === selectedStateId)?.name ?? '';
-      const cityName = cities.find((c) => String(c.id) === selectedCityId)?.name ?? '';
-
-      if (selectedZip) {
-        formData.append('locations[0][type]', 'zip');
-        formData.append('locations[0][value]', selectedZip);
-      } else if (selectedCityId) {
-        formData.append('locations[0][type]', 'city');
-        formData.append('locations[0][value]', cityName);
-      } else {
-        formData.append('locations[0][type]', 'state');
-        formData.append('locations[0][value]', stateName);
-      }
+      formData.append('locations[0][type]', 'state');
+      formData.append('locations[0][value]', selectedState);
     } else {
       formData.append('is_global', '1');
     }
@@ -110,207 +103,351 @@ export const CreateCampaign: React.FC = () => {
       await dispatch(storeCampaign(formData)).unwrap();
       showToast({
         type: 'success',
-        text1: t('manageCampaigns.createCampaign.submittedTitle', 'Campaign Submitted!'),
-        text2: t('manageCampaigns.createCampaign.submittedMessage', 'Your campaign has been submitted for review.'),
+        text1: 'Campaign Created Successfully',
+        text2: 'Your ad has been submitted for review.',
       });
       dispatch(fetchMyCampaigns());
       navigate('/campaigns');
     } catch (error: any) {
       showToast({
         type: 'error',
-        text1: t('manageCampaigns.createCampaign.notSavedTitle', 'Campaign not saved'),
-        text2: error?.message || String(error || t('manageCampaigns.createCampaign.tryAgainFallback', 'Please try again.')),
+        text1: 'Failed to Create Campaign',
+        text2: error?.message || String(error || 'Please try again.'),
       });
     }
   };
 
   return (
-    <Container maxWidth="540px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <Container maxWidth="560px" style={{ gap: '20px', paddingBottom: '40px' }}>
+      {/* 1. Header (Screenshot 4) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '4px' }}>
         <button
           onClick={() => navigate(-1)}
           style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
             width: '40px',
             height: '40px',
+            borderRadius: '50%',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: 'var(--text-main)',
+            color: '#00674D',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
           }}
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)' }}>
-          {t('manageCampaigns.createCampaign.heading', 'Launch Brand Campaign')}
+        <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+          Request New Ad
         </h1>
       </div>
 
-      <div className="card" style={{ padding: '24px' }}>
-        <Formik
-          initialValues={{ sponsor: '', url: '', type: 'image', startDate: '', endDate: '' }}
-          validationSchema={validationSchema}
-          onSubmit={handleSubmit}
+      {/* Subtitle */}
+      <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: '-8px 0 0 0' }}>
+        Upload your campaign media and submit the placement details.
+      </p>
+
+      {/* 2. Form Controls matching Screenshot 4 */}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* Targeting Options */}
+        <div style={{ position: 'relative' }}>
+          <select
+            value={targetingOption}
+            onChange={(e) => setTargetingOption(e.target.value as any)}
+            style={{
+              width: '100%',
+              padding: '14px 40px 14px 18px',
+              borderRadius: '24px',
+              background: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+            }}
+          >
+            <option value="global">Global (All Locations)</option>
+            <option value="targeted">Location-Targeted (State)</option>
+          </select>
+          <ChevronDown
+            size={18}
+            style={{
+              position: 'absolute',
+              right: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#009944',
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
+
+        {/* Select Ad Type */}
+        <div style={{ position: 'relative' }}>
+          <select
+            value={adType}
+            onChange={(e) => setAdType(e.target.value as any)}
+            style={{
+              width: '100%',
+              padding: '14px 40px 14px 18px',
+              borderRadius: '24px',
+              background: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+            }}
+          >
+            <option value="image">Image Ad</option>
+            <option value="video">Video Ad</option>
+          </select>
+          <ChevronDown
+            size={18}
+            style={{
+              position: 'absolute',
+              right: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#009944',
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
+
+        {/* Sponsor */}
+        <input
+          className="form-input"
+          type="text"
+          placeholder="Sponsor"
+          value={sponsor}
+          onChange={(e) => setSponsor(e.target.value)}
+          required
+          style={{
+            borderRadius: '24px',
+            padding: '14px 18px',
+            fontSize: '14px',
+          }}
+        />
+
+        {/* URL */}
+        <input
+          className="form-input"
+          type="url"
+          placeholder="URL (e.g. https://yourbrand.com)"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          required
+          style={{
+            borderRadius: '24px',
+            padding: '14px 18px',
+            fontSize: '14px',
+          }}
+        />
+
+        {/* Start Date */}
+        <div style={{ position: 'relative' }}>
+          <input
+            type="date"
+            placeholder="Start date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+            style={{
+              width: '100%',
+              padding: '14px 18px',
+              borderRadius: '24px',
+              background: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          />
+        </div>
+
+        {/* End Date */}
+        <div style={{ position: 'relative' }}>
+          <input
+            type="date"
+            placeholder="End date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            required
+            style={{
+              width: '100%',
+              padding: '14px 18px',
+              borderRadius: '24px',
+              background: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          />
+        </div>
+
+        {/* State Dropdown (Conditional on Targeted option) */}
+        {targetingOption === 'targeted' && (
+          <div style={{ position: 'relative' }}>
+            <select
+              value={selectedState}
+              onChange={(e) => setSelectedState(e.target.value)}
+              disabled={statesLoading}
+              style={{
+                width: '100%',
+                padding: '14px 40px 14px 18px',
+                borderRadius: '24px',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-color)',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+              }}
+            >
+              <option value="">{statesLoading ? 'Loading states...' : 'Select Target State'}</option>
+              {states.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={18}
+              style={{
+                position: 'absolute',
+                right: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#009944',
+                pointerEvents: 'none',
+              }}
+            />
+          </div>
+        )}
+
+        {/* Upload Campaign Media Dashed Box (Screenshot 4) */}
+        <label
+          style={{
+            border: '2px dashed var(--border-color)',
+            background: 'var(--bg-card)',
+            borderRadius: '20px',
+            padding: '24px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
         >
-          {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <FormInput
-                label={t('manageCampaigns.createCampaign.sponsorLabel', 'Sponsor / Brand')}
-                placeholder={t('manageCampaigns.createCampaign.sponsorPlaceholder', 'e.g. Organic Valley')}
-                name="sponsor"
-                value={values.sponsor}
-                onChange={handleChange('sponsor')}
-                onBlur={handleBlur('sponsor')}
-                error={touched.sponsor && errors.sponsor ? (errors.sponsor as string) : undefined}
-                leftIcon={<Megaphone size={18} />}
-              />
+          <input
+            type="file"
+            accept={adType === 'video' ? 'video/*' : 'image/*'}
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '14px',
+              background: 'rgba(0, 153, 68, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#009944',
+              flexShrink: 0,
+            }}
+          >
+            <Upload size={24} />
+          </div>
 
-              <FormInput
-                label={t('manageCampaigns.createCampaign.urlLabel', 'Website URL')}
-                placeholder={t('manageCampaigns.createCampaign.urlPlaceholder', 'https://example.com')}
-                name="url"
-                value={values.url}
-                onChange={handleChange('url')}
-                onBlur={handleBlur('url')}
-                error={touched.url && errors.url ? (errors.url as string) : undefined}
-              />
+          <div style={{ flex: 1 }}>
+            <h4 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {campaignFile ? campaignFile.name : 'Upload campaign media'}
+            </h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+              {campaignFile ? `${(campaignFile.size / 1024 / 1024).toFixed(2)} MB` : 'Select an image or video from your gallery'}
+            </p>
+          </div>
+        </label>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--text-main)', fontWeight: 600 }}>
-                  {t('manageCampaigns.createCampaign.typeLabel', 'Campaign Type')}
-                  <select
-                    className="form-input"
-                    name="type"
-                    value={values.type}
-                    onChange={handleChange('type')}
-                    onBlur={handleBlur('type')}
-                  >
-                    <option value="image">{t('manageCampaigns.createCampaign.typeImage', 'Image')}</option>
-                    <option value="video">{t('manageCampaigns.createCampaign.typeVideo', 'Video')}</option>
-                  </select>
-                </label>
+        {/* Preview if image */}
+        {filePreview && adType === 'image' && (
+          <div
+            style={{
+              position: 'relative',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              maxHeight: '200px',
+              background: 'var(--bg-input)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <img src={filePreview} alt="Ad Preview" style={{ maxHeight: '200px', width: 'auto', objectFit: 'contain' }} />
+            <button
+              type="button"
+              onClick={() => {
+                setCampaignFile(null);
+                setFilePreview(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                background: 'rgba(0,0,0,0.6)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '28px',
+                height: '28px',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
-                <FormInput
-                  label={t('manageCampaigns.createCampaign.startDateLabel', 'Start Date')}
-                  type="date"
-                  name="startDate"
-                  value={values.startDate}
-                  onChange={handleChange('startDate')}
-                  onBlur={handleBlur('startDate')}
-                  error={touched.startDate && errors.startDate ? (errors.startDate as string) : undefined}
-                  leftIcon={<DollarSign size={18} />}
-                />
-              </div>
-
-              <FormInput
-                label={t('manageCampaigns.createCampaign.endDateLabel', 'End Date')}
-                type="date"
-                name="endDate"
-                value={values.endDate}
-                onChange={handleChange('endDate')}
-                onBlur={handleBlur('endDate')}
-                error={touched.endDate && errors.endDate ? (errors.endDate as string) : undefined}
-                leftIcon={<Gift size={18} />}
-              />
-
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-main)', fontWeight: 600 }}>
-                {t('manageCampaigns.createCampaign.mediaLabel', 'Campaign Media')}
-                <input
-                  className="form-input"
-                  type="file"
-                  accept="image/*,video/*"
-                  onChange={(event) => setCampaignFile(event.target.files?.[0] ?? null)}
-                />
-              </label>
-
-              <div className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={targetLocation}
-                    onChange={(event) => {
-                      setTargetLocation(event.target.checked);
-                      if (!event.target.checked) {
-                        setSelectedStateId('');
-                        setSelectedCityId('');
-                        setSelectedZip('');
-                      }
-                    }}
-                  />
-                  <MapPin size={16} />
-                  {t('manageCampaigns.createCampaign.targetLocationLabel', 'Target a specific location (default: shown everywhere)')}
-                </label>
-
-                {targetLocation && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {t('manageCampaigns.createCampaign.stateLabel', 'State')}
-                      <select
-                        className="form-input"
-                        value={selectedStateId}
-                        onChange={(event) => handleStateChange(event.target.value)}
-                        disabled={statesLoading}
-                      >
-                        <option value="">{statesLoading ? t('manageCampaigns.createCampaign.loadingOption', 'Loading...') : t('manageCampaigns.createCampaign.selectStateOption', 'Select state')}</option>
-                        {states.map((state) => (
-                          <option key={state.id} value={String(state.id)}>
-                            {state.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {t('manageCampaigns.createCampaign.cityLabel', 'City (optional)')}
-                      <select
-                        className="form-input"
-                        value={selectedCityId}
-                        onChange={(event) => handleCityChange(event.target.value)}
-                        disabled={!selectedStateId || citiesLoading}
-                      >
-                        <option value="">{citiesLoading ? t('manageCampaigns.createCampaign.loadingOption', 'Loading...') : t('manageCampaigns.createCampaign.allCitiesOption', 'All cities')}</option>
-                        {cities.map((city) => (
-                          <option key={city.id} value={String(city.id)}>
-                            {city.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {t('manageCampaigns.createCampaign.zipLabel', 'Zip (optional)')}
-                      <select
-                        className="form-input"
-                        value={selectedZip}
-                        onChange={(event) => setSelectedZip(event.target.value)}
-                        disabled={!selectedCityId || zipCodesLoading}
-                      >
-                        <option value="">{zipCodesLoading ? t('manageCampaigns.createCampaign.loadingOption', 'Loading...') : t('manageCampaigns.createCampaign.allZipsOption', 'All zips')}</option>
-                        {zipCodes.map((zip) => (
-                          <option key={zip.id} value={zip.name}>
-                            {zip.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                title={t('manageCampaigns.createCampaign.submitButton', 'Create & Submit Campaign')}
-                icon={<CheckCircle size={18} />}
-                loading={isSubmitting}
-                style={{ width: '100%', marginTop: '8px' }}
-              />
-            </form>
-          )}
-        </Formik>
-      </div>
+        {/* Create Button (Screenshot 4) */}
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          style={{
+            width: '100%',
+            background: '#009944',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '28px',
+            padding: '16px',
+            fontSize: '16px',
+            fontWeight: 800,
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 16px rgba(0, 153, 68, 0.35)',
+            marginTop: '8px',
+            opacity: isSubmitting ? 0.7 : 1,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {isSubmitting ? 'Creating...' : 'Create'}
+        </button>
+      </form>
     </Container>
   );
 };

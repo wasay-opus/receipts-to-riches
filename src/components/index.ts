@@ -7,3 +7,4 @@ export { Loader } from './Loader';
 export { CoinRain, triggerCoinCelebration } from './CoinRain';
 export { Container } from './Container';
 export { CustomToast, showToast } from './Toast';
+export { GameHelpMenu } from './GameHelpMenu';

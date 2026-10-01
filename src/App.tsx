@@ -45,6 +45,7 @@ import PrivacyPolicy from './screens/PrivacyPolicy';
 import AboutUs from './screens/AboutUs';
 import HelpSupport from './screens/Help&Support';
 import RulesScreen from './screens/RulesScreen';
+import GuideVideo from './screens/GuideVideo';
 import Notification from './screens/Notification';
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -162,6 +163,10 @@ function App() {
         <Route path="/profile/about" element={<AboutUs />} />
         <Route path="/profile/help" element={<HelpSupport />} />
         <Route path="/profile/rules" element={<RulesScreen />} />
+        <Route path="/rules" element={<RulesScreen />} />
+        <Route path="/profile/guide-video" element={<GuideVideo />} />
+        <Route path="/guide-video" element={<GuideVideo />} />
+        <Route path="/explainer-video" element={<GuideVideo />} />
         <Route path="/notifications" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
 
         {/* Catch-all fallback */}

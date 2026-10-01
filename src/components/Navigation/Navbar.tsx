@@ -8,6 +8,7 @@ import {
   ScanLine,
   Gift,
   Trophy,
+  Award,
   User,
 } from 'lucide-react';
 import images from '../../constants/images';
@@ -23,8 +24,8 @@ export const DesktopNavbar: React.FC = () => {
     { label: t('bottomTabs.play', 'Play'), path: '/play', icon: <Gamepad2 size={18} /> },
     { label: t('bottomTabs.scan', 'Scan Receipt'), path: '/scan', icon: <ScanLine size={18} />, highlight: true },
     { label: t('bottomTabs.rewards', 'Rewards'), path: '/rewards', icon: <Gift size={18} /> },
-    { label: t('bottomTabs.rankings', 'Rankings'), path: '/rankings', icon: <Trophy size={18} /> },
-    { label: t('profile.title', 'Profile'), path: '/profile', icon: <User size={18} /> },
+    { label: t('bottomTabs.winners', 'Winners'), path: '/winners', icon: <Trophy size={18} /> },
+    { label: t('bottomTabs.rankings', 'Rankings'), path: '/rankings', icon: <Award size={18} /> },
   ];
 
   const isItemActive = (path: string) =>
@@ -66,6 +67,16 @@ export const DesktopNavbar: React.FC = () => {
             </NavLink>
           );
         })}
+
+        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+          <NavLink
+            to="/profile"
+            className={`desktop-sidebar__link${isItemActive('/profile') ? ' desktop-sidebar__link--active' : ''}`}
+          >
+            <User size={18} />
+            <span>{t('profile.title', 'Profile')}</span>
+          </NavLink>
+        </div>
       </nav>
     </aside>
   );
@@ -77,19 +88,24 @@ export const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate();
 
   const leftTabs = [
-    { label: t('bottomTabs.home', 'Home'), path: '/', icon: <Home size={22} /> },
-    { label: t('bottomTabs.feed', 'Feed'), path: '/feed', icon: <Rss size={22} /> },
+    { label: t('bottomTabs.home', 'Home'), path: '/', icon: <Home size={19} /> },
+    { label: t('bottomTabs.feed', 'Feed'), path: '/feed', icon: <Rss size={19} /> },
+    { label: t('bottomTabs.play', 'Play'), path: '/play', icon: <Gamepad2 size={19} /> },
   ];
+
   const scanTab = { label: t('bottomTabs.scan', 'Scan'), path: '/scan', icon: <ScanLine size={24} /> };
+
   const rightTabs = [
-    { label: t('bottomTabs.play', 'Play'), path: '/play', icon: <Gamepad2 size={22} /> },
-    { label: t('bottomTabs.rankings', 'Rankings'), path: '/rankings', icon: <Trophy size={22} /> },
-    { label: t('bottomTabs.rewards', 'Rewards'), path: '/rewards', icon: <Gift size={22} /> },
-    { label: t('profile.title', 'Profile'), path: '/profile', icon: <User size={22} /> },
+    { label: t('bottomTabs.rewards', 'Reward'), path: '/rewards', icon: <Gift size={19} /> },
+    { label: t('bottomTabs.winners', 'Winner'), path: '/winners', icon: <Trophy size={19} /> },
+    { label: t('bottomTabs.rankings', 'Ranking'), path: '/rankings', icon: <Award size={19} /> },
   ];
 
   const renderTab = (tab: { label: string; path: string; icon: React.ReactNode }) => {
-    const isActive = location.pathname === tab.path;
+    const isActive =
+      tab.path === '/'
+        ? location.pathname === '/' || location.pathname === '/home'
+        : location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`);
 
     return (
       <button
@@ -101,11 +117,12 @@ export const MobileBottomNav: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '3px',
+          gap: '2px',
           cursor: 'pointer',
-          color: isActive ? 'var(--green)' : 'var(--text-muted)',
-          padding: '6px 4px',
-          minWidth: '50px',
+          color: isActive ? '#00674D' : 'var(--text-muted)',
+          padding: '4px 2px',
+          flex: 1,
+          minWidth: 0,
           transition: 'all 0.2s ease',
         }}
       >
@@ -113,11 +130,23 @@ export const MobileBottomNav: React.FC = () => {
           style={{
             transform: isActive ? 'scale(1.1)' : 'scale(1)',
             transition: 'transform 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           {tab.icon}
         </div>
-        <span style={{ fontSize: '9px', fontWeight: isActive ? 600 : 500 }}>
+        <span
+          style={{
+            fontSize: '9.5px',
+            fontWeight: isActive ? 700 : 500,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '48px',
+          }}
+        >
           {tab.label}
         </span>
       </button>
@@ -135,7 +164,7 @@ export const MobileBottomNav: React.FC = () => {
         zIndex: 50,
         display: 'flex',
         justifyContent: 'center',
-        padding: '10px 16px 14px',
+        padding: '6px 8px 10px',
         pointerEvents: 'none',
       }}
     >
@@ -143,72 +172,72 @@ export const MobileBottomNav: React.FC = () => {
         className="mobile-bottom-nav__bar"
         style={{
           width: '100%',
-          maxWidth: '620px',
+          maxWidth: '520px',
           background: 'var(--nav-bg)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: '1px solid var(--glass-border)',
-          borderRadius: '30px',
+          borderRadius: '32px',
           boxShadow: 'var(--shadow-lg)',
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr',
           alignItems: 'center',
-          justifyContent: 'space-between',
           padding: '6px 10px',
           pointerEvents: 'auto',
           position: 'relative',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '2px' }}>
           {leftTabs.map(renderTab)}
         </div>
 
-        <button
-          onClick={() => navigate(scanTab.path)}
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '-22px',
-            transform: 'translateX(-50%)',
-            width: '74px',
-            minHeight: '78px',
-            background: 'transparent',
-            border: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            gap: '4px',
-            color: location.pathname === scanTab.path ? 'var(--green)' : 'var(--text-muted)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease',
-            padding: 0,
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1.08)')}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1)')}
-          aria-label={scanTab.label}
-        >
-          <span
+        <div style={{ position: 'relative', width: '64px', display: 'flex', justifyContent: 'center' }}>
+          <button
+            onClick={() => navigate(scanTab.path)}
             style={{
-              width: '58px',
-              height: '58px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #00674D 0%, #009973 100%)',
-              border: '3px solid var(--bg-card)',
+              position: 'absolute',
+              top: '-30px',
+              width: '60px',
+              minHeight: '70px',
+              background: 'transparent',
+              border: 'none',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              boxShadow: '0 6px 18px rgba(0, 103, 77, 0.45)',
+              justifyContent: 'flex-start',
+              gap: '2px',
+              color: location.pathname === scanTab.path ? '#00674D' : 'var(--text-muted)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease',
+              padding: 0,
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            aria-label={scanTab.label}
           >
-            {scanTab.icon}
-          </span>
-          <span style={{ fontSize: '10px', fontWeight: 700 }}>
-            {scanTab.label}
-          </span>
-        </button>
+            <span
+              style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #00674D 0%, #009973 100%)',
+                border: '3px solid var(--bg-card)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                boxShadow: '0 6px 18px rgba(0, 103, 77, 0.45)',
+              }}
+            >
+              {scanTab.icon}
+            </span>
+            <span style={{ fontSize: '9.5px', fontWeight: 700 }}>
+              {scanTab.label}
+            </span>
+          </button>
+        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '2px' }}>
           {rightTabs.map(renderTab)}
         </div>
       </div>

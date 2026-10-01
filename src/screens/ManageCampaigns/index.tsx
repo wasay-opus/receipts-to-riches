@@ -2,20 +2,38 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { ArrowLeft, Megaphone, Plus, ArrowUpRight, BarChart2 } from 'lucide-react';
-import { Button, Container } from '../../components';
+import {
+  ArrowLeft,
+  Plus,
+  Wallet,
+  Calendar,
+  Eye,
+  MousePointer,
+  Sparkles,
+  ExternalLink,
+  Clock,
+} from 'lucide-react';
+import { Button, Container, CustomModal, FormInput, showToast } from '../../components';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchMyCampaigns, renewCampaign } from '../../redux/Slices/campaignsSlice';
 import { addFunds, fetchAllFunds } from '../../redux/Slices/fundsSlice';
-import { CustomModal, FormInput, showToast } from '../../components';
 import { promptAppInput } from '../../utils/sweetAlert';
+
+type CampaignTab = 'active' | 'expired' | 'pending' | 'rejected';
 
 export const ManageCampaigns: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { myCampaigns, loading, error } = useSelector((state: RootState) => state.campaigns);
-  const { funds, loading: fundsLoading, addFundsLoading } = useSelector((state: RootState) => state.funds);
+
+  const { myCampaigns, loading: campaignsLoading, error: campaignsError } = useSelector(
+    (state: RootState) => state.campaigns,
+  );
+  const { balance, loading: fundsLoading, addFundsLoading } = useSelector(
+    (state: RootState) => state.funds,
+  );
+
+  const [activeTab, setActiveTab] = useState<CampaignTab>('active');
   const [fundAmount, setFundAmount] = useState('');
   const [showFundsModal, setShowFundsModal] = useState(false);
 
@@ -30,32 +48,44 @@ export const ManageCampaigns: React.FC = () => {
     return date.toISOString().slice(0, 10);
   };
 
-  const totalFunds = useMemo(() => {
-    if (!funds.length) return 0;
-    const directBalance = funds.find((fund) =>
-      typeof fund.total_balance === 'number' ||
-      typeof fund.wallet_balance === 'number' ||
-      typeof fund.balance === 'number' ||
-      typeof fund.total === 'number',
-    );
+  // Group user campaigns by status tab matching Screenshot 3
+  const groupedCampaigns = useMemo(() => {
+    const active: typeof myCampaigns = [];
+    const expired: typeof myCampaigns = [];
+    const pending: typeof myCampaigns = [];
+    const rejected: typeof myCampaigns = [];
 
-    if (directBalance) {
-      return Number(
-        directBalance.total_balance ??
-          directBalance.wallet_balance ??
-          directBalance.balance ??
-          directBalance.total ??
-          0,
-      );
-    }
+    const now = new Date().getTime();
 
-    return funds.reduce((sum, fund) => sum + Number(fund.amount ?? 0), 0);
-  }, [funds]);
+    myCampaigns.forEach((campaign) => {
+      const isApproved = Number(campaign.is_approved);
+      const isActive = Number(campaign.is_active);
+      const isRejected =
+        Boolean(campaign.rejection_reason) || isApproved === -1 || isApproved === 2;
+      const isEndPassed = campaign.end_date
+        ? new Date(campaign.end_date).getTime() < now
+        : false;
+
+      if (isRejected) {
+        rejected.push(campaign);
+      } else if (isApproved === 0) {
+        pending.push(campaign);
+      } else if (isApproved === 1 && (isActive === 0 || isEndPassed)) {
+        expired.push(campaign);
+      } else {
+        active.push(campaign);
+      }
+    });
+
+    return { active, expired, pending, rejected };
+  }, [myCampaigns]);
+
+  const currentTabList = groupedCampaigns[activeTab] || [];
 
   const handleAddFunds = async () => {
     const amount = Number(fundAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      showToast({ type: 'error', text1: t('manageCampaigns.manager.enterValidAmount', 'Enter a valid amount') });
+      showToast({ type: 'error', text1: 'Enter a valid amount' });
       return;
     }
 
@@ -65,7 +95,11 @@ export const ManageCampaigns: React.FC = () => {
       if (approvalUrl) {
         window.open(approvalUrl, '_blank', 'noopener,noreferrer');
       } else {
-        showToast({ type: 'info', text1: t('manageCampaigns.manager.paypalOrderCreated', 'PayPal order created'), text2: response?.message });
+        showToast({
+          type: 'info',
+          text1: 'PayPal Order Created',
+          text2: response?.message || 'Redirecting to PayPal...',
+        });
       }
       setShowFundsModal(false);
       setFundAmount('');
@@ -73,27 +107,27 @@ export const ManageCampaigns: React.FC = () => {
     } catch (fundError: any) {
       showToast({
         type: 'error',
-        text1: t('manageCampaigns.manager.fundsNotAddedTitle', 'Funds not added'),
-        text2: fundError?.message || String(fundError || t('manageCampaigns.manager.tryAgainFallback', 'Please try again.')),
+        text1: 'Funds Not Added',
+        text2: fundError?.message || String(fundError || 'Please try again.'),
       });
     }
   };
 
   const handleRenewCampaign = async (campaignId: number) => {
     const startDate = await promptAppInput({
-      title: t('manageCampaigns.manager.renewCampaignTitle', 'Renew campaign'),
-      inputLabel: t('manageCampaigns.manager.startDateLabel', 'Start date'),
+      title: 'Renew Campaign',
+      inputLabel: 'Start Date',
       inputValue: getDateInputValue(0),
-      confirmButtonText: t('manageCampaigns.manager.nextButton', 'Next'),
+      confirmButtonText: 'Next',
       input: 'date',
     });
     if (!startDate) return;
 
     const endDate = await promptAppInput({
-      title: t('manageCampaigns.manager.renewCampaignTitle', 'Renew campaign'),
-      inputLabel: t('manageCampaigns.manager.endDateLabel', 'End date'),
+      title: 'Renew Campaign',
+      inputLabel: 'End Date',
       inputValue: getDateInputValue(30),
-      confirmButtonText: t('manageCampaigns.manager.renewButton', 'Renew'),
+      confirmButtonText: 'Renew',
       input: 'date',
     });
     if (!endDate) return;
@@ -106,157 +140,367 @@ export const ManageCampaigns: React.FC = () => {
           end_date: endDate,
         }),
       ).unwrap();
-      showToast({ type: 'success', text1: t('manageCampaigns.manager.campaignRenewedTitle', 'Campaign renewed') });
+      showToast({ type: 'success', text1: 'Campaign Renewed Successfully' });
       dispatch(fetchMyCampaigns());
     } catch (renewError: any) {
       showToast({
         type: 'error',
-        text1: t('manageCampaigns.manager.campaignNotRenewedTitle', 'Campaign not renewed'),
-        text2: renewError?.message || String(renewError || t('manageCampaigns.manager.tryAgainFallback', 'Please try again.')),
+        text1: 'Campaign Not Renewed',
+        text2: renewError?.message || String(renewError || 'Please try again.'),
       });
     }
   };
 
+  const emptyMessages: Record<CampaignTab, { title: string; desc: string }> = {
+    active: {
+      title: 'No active campaigns',
+      desc: 'Campaigns in this category will appear here once they are active.',
+    },
+    expired: {
+      title: 'No expired campaigns',
+      desc: 'Campaigns in this category will appear here once they expire.',
+    },
+    pending: {
+      title: 'No pending campaigns',
+      desc: 'Campaigns in this category will appear here once submitted for review.',
+    },
+    rejected: {
+      title: 'No rejected campaigns',
+      desc: 'Campaigns in this category will appear here once they are available.',
+    },
+  };
+
   return (
-    <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => navigate(-1)}
+    <Container maxWidth="600px" style={{ gap: '20px', paddingBottom: '70px', position: 'relative' }}>
+      {/* 1. Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '4px' }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#00674D',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+          }}
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>
+          Manage Campaigns
+        </h1>
+      </div>
+
+      {/* 2. Total Balance Card (Screenshot 3) */}
+      <div
+        className="card"
+        style={{
+          background: 'var(--bg-card)',
+          borderRadius: '24px',
+          padding: '24px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 800,
+                color: 'var(--text-muted)',
+                letterSpacing: '0.8px',
+                textTransform: 'uppercase',
+              }}
+            >
+              TOTAL BALANCE
+            </span>
+            <h2
+              style={{
+                fontSize: '32px',
+                fontWeight: 900,
+                color: 'var(--text-main)',
+                marginTop: '4px',
+                letterSpacing: '-0.5px',
+              }}
+            >
+              {fundsLoading ? '$...' : `$${balance.toFixed(2)}`}
+            </h2>
+          </div>
+
+          <div
             style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '12px',
-              width: '40px',
-              height: '40px',
+              width: '50px',
+              height: '50px',
+              borderRadius: '16px',
+              background: 'rgba(0, 153, 68, 0.12)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
-              color: 'var(--text-main)',
+              color: '#009944',
             }}
           >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)' }}>
-            {t('manageCampaigns.manager.heading', 'Campaign Manager')}
-          </h1>
+            <Wallet size={26} />
+          </div>
         </div>
 
         <button
-          onClick={() => navigate('/campaigns/create')}
-          className="btn-primary"
-          style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '12px' }}
+          onClick={() => setShowFundsModal(true)}
+          style={{
+            width: '100%',
+            background: '#009944',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '14px',
+            padding: '14px',
+            fontSize: '15px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 14px rgba(0, 153, 68, 0.35)',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = '#00853B')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = '#009944')}
         >
-          <Plus size={16} />
-          <span>{t('manageCampaigns.manager.newCampaignButton', 'New Campaign')}</span>
+          <Plus size={18} />
+          <span>Add Funds</span>
         </button>
       </div>
 
-      <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-        <div>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('manageCampaigns.manager.availableFundsLabel', 'Available campaign funds')}</span>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)' }}>
-            {fundsLoading ? t('manageCampaigns.manager.loading', 'Loading...') : `$${totalFunds.toFixed(2)}`}
-          </h2>
+      {/* 3. Campaigns Header & Filter Tabs (Screenshot 3) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>
+          Campaigns
+        </h3>
+
+        {/* 4 Tabs: Active, Expired, Pending, Rejected */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '8px',
+            borderBottom: '1px solid var(--border-color)',
+            paddingBottom: '8px',
+          }}
+        >
+          {(
+            [
+              { key: 'active', label: 'Active', count: groupedCampaigns.active.length },
+              { key: 'expired', label: 'Expired', count: groupedCampaigns.expired.length },
+              { key: 'pending', label: 'Pending', count: groupedCampaigns.pending.length },
+              { key: 'rejected', label: 'Rejected', count: groupedCampaigns.rejected.length },
+            ] as const
+          ).map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '8px 4px',
+                  cursor: 'pointer',
+                  borderBottom: isActive ? '3px solid #009944' : '3px solid transparent',
+                  marginBottom: '-9px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: isActive ? 800 : 600,
+                    color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                  }}
+                >
+                  {tab.label}
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    background: isActive ? '#009944' : 'var(--bg-card-secondary)',
+                    color: isActive ? '#FFFFFF' : 'var(--text-muted)',
+                    padding: '2px 7px',
+                    borderRadius: '10px',
+                    minWidth: '18px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <Button
-          title={t('manageCampaigns.manager.addFundsButton', 'Add Funds')}
-          onClick={() => setShowFundsModal(true)}
-          style={{ padding: '8px 14px', fontSize: '13px' }}
-        />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        {loading && myCampaigns.length === 0 && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {t('manageCampaigns.manager.loadingCampaigns', 'Loading campaigns...')}
+      {/* 4. Campaigns List / Empty State (Screenshot 3) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {campaignsLoading && myCampaigns.length === 0 && (
+          <div className="card" style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            Loading campaigns...
           </div>
         )}
 
-        {error && (
-          <div className="card" style={{ padding: '16px', color: '#EF4444', fontSize: '13px' }}>
-            {error}
-          </div>
-        )}
-
-        {!loading && myCampaigns.length === 0 && !error && (
-          <div className="card" style={{ padding: '20px', color: 'var(--text-muted)' }}>
-            {t('manageCampaigns.manager.noCampaigns', 'No campaigns created yet.')}
-          </div>
-        )}
-
-        {myCampaigns.map((c) => (
+        {!campaignsLoading && currentTabList.length === 0 && (
           <div
-            key={c.id}
             className="card"
-            onClick={() => navigate(`/campaigns/${c.id}`)}
             style={{
-              padding: '20px',
+              padding: '40px 24px',
+              textAlign: 'center',
+              borderRadius: '20px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
-              cursor: 'pointer',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              border: '1px solid var(--border-color)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
-                {c.sponsor}
-              </h3>
-              <span className={`pill-badge ${c.is_active ? 'pill-green' : 'pill-gold'}`}>
-                {c.is_active
-                  ? t('manageCampaigns.manager.activeStatus', 'Active')
-                  : t('manageCampaigns.manager.inactiveStatus', 'Inactive')}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>
-              <span>
-                {t('manageCampaigns.manager.approvalLabel', 'Approval:')}{' '}
-                <strong style={{ color: c.is_approved ? 'var(--green)' : '#D5AD60' }}>
-                  {c.is_approved
-                    ? t('manageCampaigns.manager.approvedStatus', 'Approved')
-                    : t('manageCampaigns.manager.pendingStatus', 'Pending')}
-                </strong>
-              </span>
-              <span>
-                {t('manageCampaigns.manager.typeLabel', 'Type:')}{' '}
-                <strong style={{ color: '#D5AD60' }}>{c.type || t('manageCampaigns.manager.campaignFallback', 'Campaign')}</strong>
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                className="btn-secondary"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleRenewCampaign(c.id);
-                }}
-                style={{ padding: '7px 12px', fontSize: '12px', borderRadius: '10px' }}
-              >
-                {t('manageCampaigns.manager.renewButton', 'Renew')}
-              </button>
-            </div>
+            <h4 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {emptyMessages[activeTab].title}
+            </h4>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0, maxWidth: '340px' }}>
+              {emptyMessages[activeTab].desc}
+            </p>
           </div>
-        ))}
+        )}
+
+        {!campaignsLoading &&
+          currentTabList.map((c) => (
+            <div
+              key={c.id}
+              className="card"
+              onClick={() => navigate(`/campaigns/${c.id}`)}
+              style={{
+                padding: '18px 20px',
+                borderRadius: '18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                cursor: 'pointer',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                  {c.sponsor}
+                </h4>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    background:
+                      activeTab === 'active'
+                        ? 'rgba(0, 153, 68, 0.15)'
+                        : activeTab === 'pending'
+                        ? 'rgba(213, 173, 96, 0.15)'
+                        : 'rgba(239, 68, 68, 0.15)',
+                    color:
+                      activeTab === 'active'
+                        ? '#009944'
+                        : activeTab === 'pending'
+                        ? '#D5AD60'
+                        : '#EF4444',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {activeTab}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '18px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                <span>Type: <strong style={{ color: 'var(--text-main)' }}>{c.type}</strong></span>
+                {c.start_date && (
+                  <span>
+                    Dates: <strong style={{ color: 'var(--text-main)' }}>{c.start_date} → {c.end_date || 'N/A'}</strong>
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRenewCampaign(c.id);
+                  }}
+                  style={{ padding: '6px 14px', fontSize: '12px', borderRadius: '10px' }}
+                >
+                  Renew
+                </button>
+              </div>
+            </div>
+          ))}
       </div>
 
+      {/* 5. Bottom Request New Ad Button (Screenshot 3) */}
+      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
+        <button
+          onClick={() => navigate('/campaigns/create')}
+          style={{
+            background: '#009944',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '28px',
+            padding: '14px 28px',
+            fontSize: '15px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 6px 18px rgba(0, 153, 68, 0.35)',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        >
+          <Plus size={20} />
+          <span>Request New Ad</span>
+        </button>
+      </div>
+
+      {/* Add Funds Modal */}
       <CustomModal
         visible={showFundsModal}
         onClose={() => setShowFundsModal(false)}
-        title={t('manageCampaigns.manager.addFundsModalTitle', 'Add Campaign Funds')}
+        title="Add Campaign Funds"
         maxWidth="420px"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <FormInput
-            label={t('manageCampaigns.manager.amountLabel', 'Amount')}
+            label="Amount (USD)"
             type="number"
-            placeholder={t('manageCampaigns.manager.amountPlaceholder', '100')}
+            placeholder="e.g. 50"
             value={fundAmount}
-            onChange={(event) => setFundAmount(event.target.value)}
+            onChange={(e) => setFundAmount(e.target.value)}
           />
           <Button
-            title={t('manageCampaigns.manager.continueToPaypalButton', 'Continue to PayPal')}
+            title="Continue to PayPal"
             onClick={handleAddFunds}
             loading={addFundsLoading}
             style={{ width: '100%' }}
