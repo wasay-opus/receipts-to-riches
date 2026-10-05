@@ -8,7 +8,7 @@ import { getPrivacyPolicyMarkdown } from '../../locales/markdown';
 
 export const PrivacyPolicy: React.FC = () => {
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const markdownContent = getPrivacyPolicyMarkdown(i18n.language);
 
   return (
@@ -28,13 +28,14 @@ export const PrivacyPolicy: React.FC = () => {
             cursor: 'pointer',
             color: 'var(--text-main)',
           }}
+          aria-label={t('common.back', 'Back')}
         >
           <ArrowLeft size={20} />
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Shield size={22} color="var(--green)" />
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            Privacy Policy
+            {t('profile.privacyPolicy', 'Privacy Policy')}
           </h1>
         </div>
       </div>

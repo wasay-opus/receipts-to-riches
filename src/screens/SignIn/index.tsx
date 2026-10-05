@@ -163,18 +163,41 @@ export const SignIn: React.FC = () => {
 
       navigate('/');
     } catch (error: any) {
+      const errorMessage =
+        typeof error === 'string'
+          ? error
+          : error?.message || t('auth.checkCredentials', 'Please check your credentials and try again.');
+
       showToast({
         type: 'error',
         text1: t('auth.loginFailed', 'Sign In Failed'),
-        text2: error?.message || t('auth.checkCredentials', 'Please check your credentials and try again.'),
+        text2: errorMessage,
       });
+
+      if (
+        error?.is_phone_verified === false ||
+        (typeof errorMessage === 'string' &&
+          errorMessage.toLowerCase().includes('verify your phone'))
+      ) {
+        setTimeout(() => {
+          navigate('/otp-verification', {
+            state: {
+              email: values.email.trim(),
+              phone: error?.phone,
+              isPhoneVerification: true,
+            },
+          });
+        }, 1200);
+      }
     }
   };
 
   const handleGoogleLogin = async () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId =
+      import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_WEB_CLIENT_ID;
 
     if (!clientId) {
+
       showToast({
         type: 'error',
         text1: t('auth.googleSignInNotConfiguredTitle', 'Google Sign-In Not Configured'),

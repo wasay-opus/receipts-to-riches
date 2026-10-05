@@ -35,15 +35,20 @@ export const getUserRewardPoints = (user: any): number => {
 };
 
 export const getUserFullName = (user: any): string => {
-  const directName = user?.name ?? user?.full_name ?? user?.fullName;
+  const combined = [user?.first_name, user?.last_name]
+    .filter((part) => typeof part === 'string' && part.trim())
+    .join(' ')
+    .trim();
+  if (combined) {
+    return combined;
+  }
+
+  const directName = user?.name ?? user?.full_name ?? user?.fullName ?? user?.username;
   if (typeof directName === 'string' && directName.trim()) {
     return directName.trim();
   }
 
-  return [user?.first_name, user?.last_name]
-    .filter((part) => typeof part === 'string' && part.trim())
-    .join(' ')
-    .trim();
+  return '';
 };
 
 export const splitFullName = (name: string) => {
@@ -56,3 +61,16 @@ export const splitFullName = (name: string) => {
     lastName,
   };
 };
+
+export const getUserAvatarUrl = (user: any): string => {
+  return (
+    user?.image_url ||
+    user?.image ||
+    user?.profile_image_url ||
+    user?.profile_image ||
+    user?.avatar_url ||
+    user?.avatar ||
+    ''
+  );
+};
+

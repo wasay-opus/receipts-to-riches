@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -10,6 +10,7 @@ import {
   Megaphone,
   CheckCircle2,
   Tv,
+  Sparkles,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
@@ -17,12 +18,15 @@ import {
   fetchAllGames,
   fetchUnlockedMiniGames,
   unlockedMiniGame,
+  invalidateUnlockedMiniGamesCache,
 } from '../../redux/Slices/gamesSlice';
 import { fetchAllCampaigns } from '../../redux/Slices/campaignsSlice';
 import { fetchAllNotifications } from '../../redux/Slices/notificationsSlice';
-import { Button, Container, CustomModal } from '../../components';
+import { Button, Container, CustomModal, showToast, triggerCoinCelebration } from '../../components';
 import images from '../../constants/images';
-import { getUserRewardPoints } from '../../utils/userDisplay';
+import { getUserRewardPoints, getUserFullName } from '../../utils/userDisplay';
+
+const AD_DURATION_SECONDS = 15;
 
 export const Home: React.FC = () => {
   const { t } = useTranslation();
@@ -31,9 +35,11 @@ export const Home: React.FC = () => {
 
   const { userData } = useSelector((state: RootState) => state.user);
   const { campaigns } = useSelector((state: RootState) => state.campaigns);
+  const isDarkMode = useSelector((state: RootState) => state.theme?.isDarkMode);
   const { unlockedMiniGames, unlockMiniGameLoading } = useSelector(
     (state: RootState) => state.games,
   );
+
   const unreadCount = useSelector((state: RootState) =>
     (state.notifications?.notifications ?? []).filter((n) => !n.read_at).length,
   );
@@ -44,25 +50,67 @@ export const Home: React.FC = () => {
     userData?.play_streak_count ?? userData?.streak_count ?? userData?.current_streak ?? 3,
   );
 
-  // Lock Modal State
-  const [lockModal, setLockModal] = useState<{
-    visible: boolean;
-    title: string;
-    gameSlug: string;
-    countdown?: string;
-  }>({
-    visible: false,
-    title: '',
-    gameSlug: '',
-  });
+  // Video Ad Modal State matching Play screen
+  const [adGame, setAdGame] = useState<{ slug: string; title: string } | null>(null);
+  const [adSecondsLeft, setAdSecondsLeft] = useState(AD_DURATION_SECONDS);
+  const [unlocking, setUnlocking] = useState(false);
+  const adTimerRef = useRef<any>(null);
 
-  const [unlockSuccessModal, setUnlockSuccessModal] = useState<{
-    visible: boolean;
-    gameTitle: string;
-  }>({
-    visible: false,
-    gameTitle: '',
-  });
+  useEffect(() => {
+    if (adGame) {
+      setAdSecondsLeft(AD_DURATION_SECONDS);
+      adTimerRef.current = setInterval(() => {
+        setAdSecondsLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(adTimerRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (adTimerRef.current) clearInterval(adTimerRef.current);
+    };
+  }, [adGame]);
+
+  const closeAdModal = () => {
+    if (adTimerRef.current) clearInterval(adTimerRef.current);
+    setAdGame(null);
+    setAdSecondsLeft(AD_DURATION_SECONDS);
+  };
+
+  const handleClaimUnlock = async () => {
+    if (!adGame) return;
+    setUnlocking(true);
+    const targetGame = adGame;
+    try {
+      await dispatch(unlockedMiniGame({ game_slug: targetGame.slug })).unwrap();
+      dispatch(invalidateUnlockedMiniGamesCache());
+      await dispatch(fetchUnlockedMiniGames()).unwrap();
+      triggerCoinCelebration();
+      showToast({
+        type: 'success',
+        text1: t('play.gameUnlockedTitle', 'Game Unlocked!'),
+        text2: `${targetGame.title || 'Game'} is now unlocked. You can play it now!`,
+      });
+      closeAdModal();
+    } catch (error: any) {
+      dispatch(invalidateUnlockedMiniGamesCache());
+      try {
+        await dispatch(fetchUnlockedMiniGames()).unwrap();
+      } catch {}
+      triggerCoinCelebration();
+      showToast({
+        type: 'success',
+        text1: t('play.gameUnlockedTitle', 'Game Unlocked!'),
+        text2: `${targetGame.title || 'Game'} is now unlocked. Enjoy your session!`,
+      });
+      closeAdModal();
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   // Countdown timers state
   const [now, setNow] = useState(Date.now());
@@ -127,36 +175,9 @@ export const Home: React.FC = () => {
   const handleMiniGameClick = (slug: string, title: string, path: string) => {
     const lockStatus = getGameLockStatus(slug);
     if (lockStatus.locked) {
-      setLockModal({
-        visible: true,
-        title,
-        gameSlug: slug,
-        countdown: lockStatus.countdown || undefined,
-      });
+      setAdGame({ slug, title });
     } else {
       navigate(path);
-    }
-  };
-
-  const handleWatchAdToUnlock = async () => {
-    if (!lockModal.gameSlug) return;
-    try {
-      await dispatch(unlockedMiniGame({ game_slug: lockModal.gameSlug })).unwrap();
-      await dispatch(fetchUnlockedMiniGames());
-      const unlockedTitle = lockModal.title;
-      setLockModal({ visible: false, title: '', gameSlug: '' });
-      setUnlockSuccessModal({
-        visible: true,
-        gameTitle: unlockedTitle,
-      });
-    } catch {
-      await dispatch(fetchUnlockedMiniGames());
-      const unlockedTitle = lockModal.title;
-      setLockModal({ visible: false, title: '', gameSlug: '' });
-      setUnlockSuccessModal({
-        visible: true,
-        gameTitle: unlockedTitle,
-      });
     }
   };
 
@@ -194,21 +215,36 @@ export const Home: React.FC = () => {
 
   // Safe ad banner content
   const firstCampaign = (campaigns?.[0] as any);
-  const adBannerTitle =
-    firstCampaign?.title || firstCampaign?.sponsor || t('home.growAudienceTitle', 'Grow Your Audience!');
-  const adBannerSubtitle =
-    firstCampaign?.description ||
-    t(
-      'home.growAudienceDesc',
-      'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!',
-    );
+  const isDefaultPromo =
+    !firstCampaign?.title ||
+    firstCampaign?.title === 'Grow Your Audience!' ||
+    firstCampaign?.sponsor === 'R2R' ||
+    firstCampaign?.sponsor === 'Receipts To Riches';
+
+  const adBannerTitle = isDefaultPromo
+    ? t('home.growAudienceTitle', 'Grow Your Audience!')
+    : firstCampaign?.title || firstCampaign?.sponsor || t('home.growAudienceTitle', 'Grow Your Audience!');
+
+  const adBannerSubtitle = isDefaultPromo
+    ? t(
+        'home.growAudienceDesc',
+        'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!',
+      )
+    : firstCampaign?.description ||
+      t(
+        'home.growAudienceDesc',
+        'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!',
+      );
 
   const spinLock = getGameLockStatus('spin-the-wheel');
   const luckyLock = getGameLockStatus('lucky-7');
   const scratchLock = getGameLockStatus('scratch-2-win');
 
   const userName =
-    userData?.first_name || userData?.name || t('home.defaultUser', 'Example');
+    getUserFullName(userData) ||
+    userData?.first_name ||
+    userData?.name ||
+    t('home.defaultUser', 'Example');
 
   return (
     <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '36px' }}>
@@ -315,102 +351,161 @@ export const Home: React.FC = () => {
         </button>
       </div>
 
-      {/* 2. My Balance Card (Mint Theme - Screenshot 1) */}
+      {/* 2. My Balance Card (Rich Luxury Theme) */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #A8C9B9 0%, #90BBA8 100%)',
+          background: isDarkMode
+            ? 'linear-gradient(135deg, #0A2F21 0%, #061F16 50%, #03140E 100%)'
+            : 'linear-gradient(135deg, #B2DFD0 0%, #90CEB8 50%, #70BFA5 100%)',
           borderRadius: '24px',
-          padding: '20px 20px 16px',
+          padding: '22px 24px 18px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
-          boxShadow: '0 8px 24px rgba(144, 187, 168, 0.35)',
-          color: '#133926',
+          border: isDarkMode
+            ? '1px solid rgba(0, 230, 118, 0.28)'
+            : '1px solid rgba(255, 255, 255, 0.7)',
+          boxShadow: isDarkMode
+            ? '0 14px 36px rgba(0, 0, 0, 0.65), 0 0 28px rgba(0, 230, 118, 0.14)'
+            : '0 12px 30px rgba(112, 191, 165, 0.35), 0 2px 6px rgba(0, 0, 0, 0.05)',
+          color: isDarkMode ? '#FFFFFF' : '#0A291A',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'all 0.3s ease',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Decorative background glow */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '-30px',
+            right: '-30px',
+            width: '150px',
+            height: '150px',
+            borderRadius: '50%',
+            background: isDarkMode
+              ? 'radial-gradient(circle, rgba(0, 230, 118, 0.22) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 2 }}>
           <div>
             <span
               style={{
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#1B4D34',
-                opacity: 0.9,
+                fontSize: '12px',
+                fontWeight: 800,
+                color: isDarkMode ? '#6EE7B7' : '#14462E',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
               }}
             >
               {t('home.myBalance', 'My Balance')}
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
               <img
                 src={images.Coin}
                 alt="Coin"
-                style={{ width: '28px', height: '28px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.25))',
+                }}
               />
               <span
                 style={{
-                  fontSize: '32px',
+                  fontSize: '34px',
                   fontWeight: 900,
-                  color: '#0A291A',
-                  letterSpacing: '-0.5px',
+                  color: isDarkMode ? '#FFFFFF' : '#062013',
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1,
                 }}
               >
                 {Number(totalCoins).toLocaleString()}
               </span>
-              <span style={{ fontSize: '15px', fontWeight: 600, color: '#1B4D34', marginTop: '4px' }}>
+              <span
+                style={{
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  color: isDarkMode ? '#34D399' : '#14462E',
+                  marginTop: '6px',
+                }}
+              >
                 {t('home.points', 'Points')}
               </span>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={() => navigate('/rewards')}
             style={{
-              width: '68px',
-              height: '68px',
+              width: '60px',
+              height: '60px',
               borderRadius: '20px',
-              background: '#FFFFFF',
-              border: 'none',
+              background: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
+              border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.16)' : 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
               transition: 'transform 0.2s ease',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08) rotate(3deg)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1) rotate(0deg)')}
             title={t('bottomTabs.rewards', 'Rewards')}
           >
-            <img src={images.Gift} alt="Gift" style={{ width: '42px', height: '42px', objectFit: 'contain' }} />
+            <img src={images.Gift} alt="Gift" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
           </button>
         </div>
 
         {/* Green Camera Earn Button */}
         <button
+          type="button"
           onClick={() => navigate('/scan')}
           style={{
-            background: '#009944',
+            width: '100%',
+            background: isDarkMode
+              ? 'linear-gradient(135deg, #00C853 0%, #009624 100%)'
+              : 'linear-gradient(135deg, #008765 0%, #00674D 100%)',
             color: '#FFFFFF',
             border: 'none',
-            borderRadius: '24px',
-            padding: '12px 16px',
-            fontSize: '13px',
-            fontWeight: 700,
+            borderRadius: '999px',
+            padding: '13px 18px',
+            fontSize: '14px',
+            fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0, 153, 68, 0.35)',
-            transition: 'all 0.2s ease',
+            boxShadow: isDarkMode
+              ? '0 6px 20px rgba(0, 200, 83, 0.38)'
+              : '0 6px 18px rgba(0, 103, 77, 0.32)',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+            zIndex: 2,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#00853B')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = '#009944')}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = isDarkMode
+              ? '0 8px 26px rgba(0, 200, 83, 0.5)'
+              : '0 8px 24px rgba(0, 103, 77, 0.42)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = isDarkMode
+              ? '0 6px 20px rgba(0, 200, 83, 0.38)'
+              : '0 6px 18px rgba(0, 103, 77, 0.32)';
+          }}
         >
           <Camera size={18} />
           <span>{t('home.useCameraEarnPoints', 'Use Camera to earn 40 points extra')}</span>
         </button>
       </div>
+
 
       {/* 3. Daily Streak Card (Screenshot 1) */}
       <div
@@ -554,7 +649,8 @@ export const Home: React.FC = () => {
             gridTemplateColumns: 'repeat(4, 1fr)',
             gap: '10px',
             overflowX: 'auto',
-            paddingBottom: '4px',
+            padding: '6px 2px 8px 2px',
+            margin: '-6px -2px 0 -2px',
           }}
         >
           {cashGames.map((game) => (
@@ -572,14 +668,18 @@ export const Home: React.FC = () => {
                 justifyContent: 'center',
                 textAlign: 'center',
                 cursor: 'pointer',
-                boxShadow: '0 6px 14px rgba(0,0,0,0.15)',
+                boxShadow: 'none',
                 position: 'relative',
                 overflow: 'hidden',
                 aspectRatio: '1 / 1.1',
-                transition: 'transform 0.2s ease',
+                transition: 'filter 0.2s ease, transform 0.2s ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-3px)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.filter = 'brightness(1.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.filter = 'brightness(1)';
+              }}
             >
               {/* Comic Halftone & Rayburst Mask Overlay */}
               <img
@@ -606,14 +706,14 @@ export const Home: React.FC = () => {
                   justifyContent: 'center',
                 }}
               >
-                <span style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.5px' }}>
+                <span style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '0.5px', lineHeight: 1.1 }}>
                   {game.name}
                 </span>
                 <span
                   style={{
                     fontSize: '18px',
                     fontWeight: 900,
-                    marginTop: '4px',
+                    marginTop: '6px',
                     textShadow: '0 2px 4px rgba(0,0,0,0.35)',
                   }}
                 >
@@ -965,103 +1065,122 @@ export const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* Game Locked Modal */}
+      {/* Watch Ad Unlock Modal matching Play Screen */}
       <CustomModal
-        visible={lockModal.visible}
-        onClose={() => setLockModal({ visible: false, title: '', gameSlug: '' })}
-        maxWidth="400px"
+        visible={Boolean(adGame)}
+        onClose={closeAdModal}
+        title={t('play.gameLocked', 'Unlock Game Session')}
+        maxWidth="460px"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'rgba(239, 68, 68, 0.12)',
-              color: '#EF4444',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Lock size={32} />
-          </div>
+        {adGame && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', whiteSpace: 'pre-line', margin: 0 }}>
+              {t('play.watchAds', "Watch this short 15-second sponsor video to unlock '{{gameTitle}}' immediately.", {
+                gameTitle: adGame.title,
+              })}
+            </p>
 
-          <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>
-            {t('play.gameLockedTitle', '{{title}} Locked', { title: lockModal.title })}
-          </h3>
+            {/* Video Player Box */}
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '16 / 9',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                background: '#000000',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <video
+                src="https://receipts-to-riches.koderspedia.live/images/game-guide/video-folder/spanish/WIN%20POINTS%20GAMES/GAME%2011%20SPIN%20THE%20WHEEL%20SPANISH%20.mp4"
+                autoPlay
+                muted
+                playsInline
+                loop
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
 
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            {t(
-              'play.gameLockedDesc',
-              'You have used your free play session. Cooldown timer: {{time}}. Watch a quick video ad to unlock an instant free play!',
-              { time: lockModal.countdown || '02:30:00' },
-            )}
-          </p>
+              {/* Floating Top-Right Countdown Badge */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  background: 'rgba(0, 0, 0, 0.75)',
+                  backdropFilter: 'blur(6px)',
+                  color: adSecondsLeft > 0 ? '#FFD700' : '#10B981',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  zIndex: 3,
+                }}
+              >
+                <Sparkles size={13} />
+                <span>{adSecondsLeft > 0 ? `Ad ends in ${adSecondsLeft}s` : 'Ad Complete!'}</span>
+              </div>
 
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+              {/* Floating Bottom-Left Sponsored Label */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  left: '10px',
+                  background: 'rgba(0, 0, 0, 0.65)',
+                  color: '#FFFFFF',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  zIndex: 3,
+                }}
+              >
+                Sponsored Ad
+              </div>
+            </div>
+
+            {/* 15s Progress Bar */}
+            <div style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'var(--bg-card-secondary)', overflow: 'hidden' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${((AD_DURATION_SECONDS - adSecondsLeft) / AD_DURATION_SECONDS) * 100}%`,
+                  background: 'linear-gradient(90deg, #00674D, #10B981)',
+                  boxShadow: '0 0 8px rgba(16, 185, 129, 0.5)',
+                  transition: 'width 1s linear',
+                }}
+              />
+            </div>
+
             <Button
-              title={t('play.watchAdToUnlock', 'Watch Ad to Unlock')}
-              icon={<Tv size={16} />}
-              onClick={handleWatchAdToUnlock}
-              loading={unlockMiniGameLoading}
-              style={{ width: '100%' }}
-            />
-            <Button
-              variant="secondary"
-              title={t('common.notNow', 'Not Now')}
-              onClick={() => setLockModal({ visible: false, title: '', gameSlug: '' })}
-              style={{ width: '100%' }}
+              onClick={handleClaimUnlock}
+              disabled={adSecondsLeft > 0}
+              loading={unlocking}
+              title={
+                adSecondsLeft > 0
+                  ? t('play.adEndsIn', 'Ad ends in {{seconds}}s', { seconds: adSecondsLeft })
+                  : t('play.claimAndUnlock', 'Claim & Unlock Game')
+              }
+              variant="gold"
+              style={{ width: '100%', padding: '14px', fontSize: '16px', fontWeight: 800, borderRadius: '20px' }}
             />
           </div>
-        </div>
-      </CustomModal>
-
-      {/* Unlock Success Modal */}
-      <CustomModal
-        visible={unlockSuccessModal.visible}
-        onClose={() => setUnlockSuccessModal({ visible: false, gameTitle: '' })}
-        maxWidth="400px"
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'rgba(16, 185, 129, 0.15)',
-              color: '#10B981',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <CheckCircle2 size={36} />
-          </div>
-
-          <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>
-            {t('play.gameUnlockedTitle', 'Game Unlocked!')}
-          </h3>
-
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            {t('play.gameUnlockedDesc', '{{gameTitle}} is now ready to play.', {
-              gameTitle: unlockSuccessModal.gameTitle || 'Your game',
-            })}
-          </p>
-
-          <Button
-            title={t('play.playNow', 'Play Now')}
-            onClick={() => {
-              const gameSlug = lockModal.gameSlug || 'spin-the-wheel';
-              setUnlockSuccessModal({ visible: false, gameTitle: '' });
-              if (gameSlug === 'spin-the-wheel') navigate('/play/spin-wheel');
-              else if (gameSlug === 'lucky-7') navigate('/play/lucky-7');
-              else if (gameSlug === 'scratch-2-win') navigate('/play/scratch-to-win');
-              else navigate('/play');
-            }}
-            style={{ width: '100%', marginTop: '6px' }}
-          />
-        </div>
+        )}
       </CustomModal>
     </Container>
   );

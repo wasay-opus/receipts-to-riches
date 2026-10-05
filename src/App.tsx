@@ -48,6 +48,18 @@ import RulesScreen from './screens/RulesScreen';
 import GuideVideo from './screens/GuideVideo';
 import Notification from './screens/Notification';
 
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [pathname, search]);
+
+  return null;
+}
+
 function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const hideNavPaths = [
@@ -67,6 +79,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={showChrome ? 'app-shell app-shell--with-sidebar' : 'app-shell'}>
+      <ScrollToTop />
       {showChrome && <DesktopNavbar />}
       <div className="app-shell__content">
         {showChrome && <Header />}
@@ -78,6 +91,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useSelector((state: RootState) => state.auth?.token);

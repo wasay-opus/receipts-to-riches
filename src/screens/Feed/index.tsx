@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Flag,
   Heart,
+  Image as ImageIcon,
+  Loader2,
   MessageCircle,
   Pencil,
   Plus,
@@ -12,6 +14,7 @@ import {
   Share2,
   ThumbsDown,
   Trash2,
+  X,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import {
@@ -189,7 +192,7 @@ export const Feed: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { feedList, feedLoading, feedError, likeLoadingMap, commentLoadingMap } =
+  const { feedList, feedLoading, feedError, likeLoadingMap, commentLoadingMap, updatePostLoading } =
     useSelector((state: RootState) => state.feed);
 
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | number | null>(null);
@@ -197,6 +200,14 @@ export const Feed: React.FC = () => {
   const [poll, setPoll] = useState<CommunityPoll | null>(null);
   const [selectedPollOption, setSelectedPollOption] = useState<string | number | null>(null);
   const [pollLoading, setPollLoading] = useState(false);
+
+  // Edit Post state
+  const [editingPost, setEditingPost] = useState<FeedPost | null>(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [editMediaPreview, setEditMediaPreview] = useState<string | null>(null);
+  const [editMediaFile, setEditMediaFile] = useState<File | null>(null);
+  const [editRemoveMedia, setEditRemoveMedia] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     dispatch(fetchFeed({ params: { per_page: 15, page: 1 } }));
@@ -271,33 +282,109 @@ export const Feed: React.FC = () => {
     [dispatch, likeLoadingMap, refreshFeed],
   );
 
-  const handleEditPost = useCallback(
-    async (post: FeedPost) => {
-      const description = await promptAppInput({
-        title: t('feedScreen.editPostLabel', 'Edit post'),
-        inputLabel: t('feedScreen.dialogs.postTextLabel', 'Post text'),
-        inputValue: post.content,
-        confirmButtonText: t('feedScreen.dialogs.updatePostButton', 'Update post'),
-        input: 'textarea',
-      });
-      if (!description || description === post.content) return;
+  const handleOpenEdit = useCallback((post: FeedPost) => {
+    setEditingPost(post);
+    setEditDescription(post.content || '');
+    setEditMediaPreview(post.image || null);
+    setEditMediaFile(null);
+    setEditRemoveMedia(false);
+  }, []);
 
-      try {
-        await dispatch(
-          updatePost({ postId: post.id, payload: { description } }),
-        ).unwrap();
-        showToast({ type: 'success', text1: t('feedScreen.toast.postUpdatedTitle', 'Post updated') });
-        refreshFeed();
-      } catch (error: any) {
-        showToast({
-          type: 'error',
-          text1: t('feedScreen.toast.postNotUpdatedTitle', 'Post not updated'),
-          text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
-        });
+  const handleCloseEdit = useCallback(() => {
+    if (editMediaPreview && editMediaFile) {
+      URL.revokeObjectURL(editMediaPreview);
+    }
+    setEditingPost(null);
+    setEditDescription('');
+    setEditMediaPreview(null);
+    setEditMediaFile(null);
+    setEditRemoveMedia(false);
+    if (editFileInputRef.current) {
+      editFileInputRef.current.value = '';
+    }
+  }, [editMediaFile, editMediaPreview]);
+
+  const handleEditImageSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        if (editMediaPreview && editMediaFile) {
+          URL.revokeObjectURL(editMediaPreview);
+        }
+        setEditMediaFile(file);
+        setEditMediaPreview(URL.createObjectURL(file));
+        setEditRemoveMedia(false);
       }
     },
-    [dispatch, refreshFeed],
+    [editMediaFile, editMediaPreview],
   );
+
+  const handleRemoveEditImage = useCallback(() => {
+    if (editMediaPreview && editMediaFile) {
+      URL.revokeObjectURL(editMediaPreview);
+    }
+    setEditMediaFile(null);
+    setEditMediaPreview(null);
+    setEditRemoveMedia(true);
+    if (editFileInputRef.current) {
+      editFileInputRef.current.value = '';
+    }
+  }, [editMediaFile, editMediaPreview]);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingPost) return;
+    if (!editDescription.trim() && !editMediaPreview && !editMediaFile) {
+      showToast({
+        type: 'error',
+        text1: t('createPost.postEmpty', 'Post cannot be empty'),
+      });
+      return;
+    }
+
+    try {
+      if (editMediaFile) {
+        const formData = new FormData();
+        formData.append('description', editDescription.trim());
+        formData.append('media', editMediaFile, editMediaFile.name || `post_media_${Date.now()}.jpg`);
+        await dispatch(updatePost({ postId: editingPost.id, payload: formData })).unwrap();
+      } else if (editRemoveMedia) {
+        const formData = new FormData();
+        formData.append('description', editDescription.trim());
+        formData.append('remove_media', '1');
+        await dispatch(updatePost({ postId: editingPost.id, payload: formData })).unwrap();
+      } else {
+        await dispatch(
+          updatePost({
+            postId: editingPost.id,
+            payload: { description: editDescription.trim() },
+          }),
+        ).unwrap();
+      }
+
+      showToast({
+        type: 'success',
+        text1: t('feedScreen.toast.postUpdatedTitle', 'Post updated'),
+      });
+      handleCloseEdit();
+      refreshFeed();
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        text1: t('feedScreen.toast.postNotUpdatedTitle', 'Post not updated'),
+        text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
+      });
+    }
+  }, [
+    dispatch,
+    editDescription,
+    editMediaFile,
+    editMediaPreview,
+    editRemoveMedia,
+    editingPost,
+    handleCloseEdit,
+    refreshFeed,
+    t,
+  ]);
 
   const handleDeletePost = useCallback(
     async (postId: string | number) => {
@@ -634,7 +721,7 @@ export const Feed: React.FC = () => {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <button
-                  onClick={() => handleEditPost(post)}
+                  onClick={() => handleOpenEdit(post)}
                   title={t('feedScreen.editPostLabel', 'Edit post')}
                   style={{
                     width: '30px',
@@ -871,6 +958,135 @@ export const Feed: React.FC = () => {
             >
               <Send size={18} />
             </button>
+          </div>
+        </div>
+      </CustomModal>
+
+      <CustomModal
+        visible={Boolean(editingPost)}
+        onClose={handleCloseEdit}
+        title={t('feedScreen.editPostLabel', 'Edit post')}
+        maxWidth="540px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>
+              {t('feedScreen.dialogs.postTextLabel', 'Post text')}
+            </label>
+            <textarea
+              rows={4}
+              className="form-input"
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              placeholder={t(
+                'createPost.sharePlaceholder',
+                'Share your shopping deals, winning receipts, or questions with the community...',
+              )}
+              style={{ resize: 'vertical', width: '100%', minHeight: '100px' }}
+            />
+          </div>
+
+          {editMediaPreview && (
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                maxHeight: '260px',
+                borderRadius: '14px',
+                overflow: 'hidden',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-card-secondary)',
+              }}
+            >
+              <img
+                src={editMediaPreview}
+                alt={t('createPost.previewImageAlt', 'Preview')}
+                style={{ width: '100%', maxHeight: '260px', objectFit: 'cover', display: 'block' }}
+              />
+              <button
+                type="button"
+                onClick={handleRemoveEditImage}
+                title={t('feedScreen.removeImage', 'Remove photo')}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  background: 'rgba(0, 0, 0, 0.65)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '30px',
+                  height: '30px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          <input
+            type="file"
+            ref={editFileInputRef}
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleEditImageSelect}
+          />
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingTop: '12px',
+              borderTop: '1px solid var(--border-color)',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => editFileInputRef.current?.click()}
+              style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <ImageIcon size={16} />
+              <span>
+                {editMediaPreview
+                  ? t('feedScreen.changeImage', 'Change Photo')
+                  : t('createPost.addReceiptPhoto', 'Add Receipt / Photo')}
+              </span>
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleCloseEdit}
+                style={{ padding: '8px 16px', fontSize: '13px' }}
+              >
+                {t('common.cancel', 'Cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSaveEdit}
+                disabled={updatePostLoading}
+                style={{
+                  padding: '8px 18px',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                {updatePostLoading && <Loader2 size={16} className="animate-spin" />}
+                <span>{t('feedScreen.dialogs.updatePostButton', 'Update post')}</span>
+              </button>
+            </div>
           </div>
         </div>
       </CustomModal>

@@ -83,6 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
         ) : (
           <div
             onClick={() => navigate('/')}
+            className="mobile-header-logo"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
           >
             <img
@@ -92,6 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
         )}
+
 
         {title && (
           <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>

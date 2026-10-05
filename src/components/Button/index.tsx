@@ -50,10 +50,11 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {loading ? (
-        <Loader2 className="animate-spin" size={18} />
+        <Loader2 className="animate-spin" size={18} style={{ animation: 'spin 0.9s linear infinite' }} />
       ) : (
         icon && <span className="button-icon">{icon}</span>
       )}
+
       <span>{title || children}</span>
     </button>
   );

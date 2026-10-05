@@ -45,7 +45,7 @@ export const PicPick: React.FC = () => {
           id: g.id,
           number: tpl?.number || `${idx + (isState ? 3 : 1)}`,
           amount: g.name || `$${g.price} Game`,
-          description: tpl?.description1 || 'Upload Receipt and chance to win.',
+          description: t('picPick.description1', 'Upload Receipt and chance to win.'),
           numberBackground: tpl?.numberBackground || (isState ? '#6300E4' : '#E11D48'),
           gameSlug: g.slug,
           gameType: isState ? 'state' : 'pic-pick',
@@ -54,22 +54,22 @@ export const PicPick: React.FC = () => {
       });
     }
 
-    // Fallback template items matching Screenshot 3
+    // Fallback template items
     return templateList.map((tpl) => ({
       id: tpl.id,
       number: tpl.number,
       amount: tpl.amount,
-      description: tpl.description1,
+      description: t('picPick.description1', 'Upload Receipt and chance to win.'),
       numberBackground: tpl.numberBackground,
       gameSlug: isState
         ? (tpl.number === '3' ? '1500-game' : (tpl.number === '4' ? '2500-game-state' : '3500-game'))
         : (tpl.number === '1' ? '500-game' : (tpl.number === '2' ? '1000-game' : '2500-game-pic-pick')),
       gameType: isState ? 'state' : 'pic-pick',
     }));
-  }, [allGames, gamesBySlug, isState]);
+  }, [allGames, gamesBySlug, isState, t]);
 
-  const headerTitle = isState ? 'State Game' : 'Pic-Pick';
-  const sectionTitle = isState ? 'Daily State Games' : 'Daily Pic-Pick Games';
+  const headerTitle = isState ? t('picPick.stateGame', 'State Game') : t('play.games.picPick.title', 'Pic-Pick');
+  const sectionTitle = isState ? t('picPick.dailyStateGames', 'Daily State Games') : t('picPick.dailyPicPickGames', 'Daily Pic-Pick Games');
 
   return (
     <Container maxWidth="520px" style={{ gap: '16px', paddingBottom: '40px' }}>
@@ -116,12 +116,11 @@ export const PicPick: React.FC = () => {
         </button>
       </div>
 
-      {/* Sponsored Ad Banner matching Screenshot 3 */}
+      {/* Sponsored Ad Banner */}
       <div
+        className="card"
         style={{
           width: '100%',
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
           borderRadius: '20px',
           padding: '20px',
           display: 'flex',
@@ -129,7 +128,6 @@ export const PicPick: React.FC = () => {
           alignItems: 'center',
           textAlign: 'center',
           gap: '10px',
-          boxShadow: 'var(--shadow-sm)',
         }}
       >
         <div
@@ -147,10 +145,10 @@ export const PicPick: React.FC = () => {
           <Megaphone size={28} />
         </div>
         <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>
-          Grow Your Audience!
+          {t('home.growAudienceTitle', 'Grow Your Audience!')}
         </h3>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.4', maxWidth: '340px' }}>
-          Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!
+          {t('home.growAudienceDesc', 'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!')}
         </p>
         <button
           type="button"
@@ -169,7 +167,7 @@ export const PicPick: React.FC = () => {
             gap: '6px',
           }}
         >
-          Get Started &rarr;
+          {t('home.getStarted', 'Get Started')} &rarr;
         </button>
       </div>
 
@@ -179,7 +177,7 @@ export const PicPick: React.FC = () => {
           {sectionTitle}
         </h3>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-          Select one game
+          {t('picPick.selectOneGame', 'Select one game')}
         </p>
       </div>
 
@@ -193,32 +191,22 @@ export const PicPick: React.FC = () => {
                 state: {
                   challenge: {
                     ...game,
-                    title: isState ? `State Game ${game.number}` : `Pic-Pick Game ${game.number}`,
+                    title: isState
+                      ? `${t('picPick.stateGame', 'State Game')} ${game.number}`
+                      : `${t('play.games.picPick.title', 'Pic-Pick')} ${game.number}`,
                     amount: game.amount,
                     isState,
                   },
                 },
               })
             }
+            className="card"
             style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '20px',
               padding: '16px',
               display: 'flex',
               alignItems: 'center',
               gap: '16px',
               cursor: 'pointer',
-              transition: 'transform 0.2s ease, border-color 0.2s ease',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.borderColor = 'var(--green)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
             }}
           >
             {/* Colored Number Box */}

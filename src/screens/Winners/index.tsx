@@ -238,15 +238,21 @@ export const Winners: React.FC = () => {
     resultType = resultType.charAt(0).toUpperCase() + resultType.slice(1);
 
     const totalVal = raw?.total ?? raw?.amount ?? raw?.price;
-    const formattedAmount =
-      totalVal !== undefined && totalVal !== null && totalVal !== ''
-        ? `$${Number(totalVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : '-';
+    let formattedAmount = '-';
+    if (totalVal !== undefined && totalVal !== null && totalVal !== '') {
+      const str = String(totalVal).trim();
+      if (str.startsWith('$')) {
+        formattedAmount = str;
+      } else {
+        const num = parseFloat(str);
+        formattedAmount = Number.isNaN(num) ? `$${str}` : `$${num}`;
+      }
+    }
 
     return {
       id: raw?.id || index + 1,
       resultType,
-      zipCode: raw?.zip_code || raw?.zip || '-',
+      zipCode: raw?.zip_code || raw?.zip || raw?.zipcode || '-',
       date: formatResultDate(raw?.date, raw?.created_at),
       time: formatResultTime(raw?.time, raw?.created_at),
       state: raw?.state || '',
@@ -312,12 +318,12 @@ export const Winners: React.FC = () => {
           normalizeResult(item, i + fullData.length, true),
         );
       } else {
-        // Try fetching targetSlug, with pic-pick fallback if needed
+        // Try fetching targetSlug, with fallback if needed
         let res: any = null;
         try {
           res = await winnerServices.getResults(targetSlug);
         } catch (initialErr) {
-          if (targetSlug === '2500-game-pic-pick') {
+          if (targetSlug === '2500-game-pic-pick' || targetSlug === '2500-game-state') {
             try {
               res = await winnerServices.getResults('2500-game');
             } catch {
@@ -369,6 +375,8 @@ export const Winners: React.FC = () => {
     }
     return results;
   }, [results, selectedDateFilter]);
+
+  const isZdtSelected = selectedGameSlug === 'zdt';
 
   return (
     <Container maxWidth="600px" style={{ gap: '18px', paddingBottom: '40px' }}>
@@ -449,7 +457,7 @@ export const Winners: React.FC = () => {
 
       {/* 3. Tab Content */}
       {activeTab === 'winner' ? (
-        /* Winner List (Screenshot 1) */
+        /* Winner List */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {winnersLoading && winners.length === 0 && (
             <div className="card" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -517,7 +525,7 @@ export const Winners: React.FC = () => {
                 </div>
               </div>
 
-              {/* Right: Badge with cardBgMask or Image */}
+              {/* Right: Badge */}
               <div style={{ flexShrink: 0 }}>
                 {winner.badge.type === 'picpick' ? (
                   <div
@@ -596,11 +604,11 @@ export const Winners: React.FC = () => {
           ))}
         </div>
       ) : (
-        /* Results Table View (Screenshot 2) */
+        /* Results Table View (Screenshot 1 & 2) */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Filters Row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {/* Custom Grouped Dropdown matching Screenshot 2 */}
+            {/* Custom Grouped Dropdown matching Screenshots */}
             <div ref={dropdownRef} style={{ position: 'relative' }}>
               <button
                 type="button"
@@ -608,7 +616,7 @@ export const Winners: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '12px 14px',
-                  borderRadius: '16px',
+                  borderRadius: '24px',
                   background: 'var(--bg-card)',
                   color: 'var(--text-main)',
                   border: '1px solid var(--border-color)',
@@ -634,7 +642,7 @@ export const Winners: React.FC = () => {
                 />
               </button>
 
-              {/* Dropdown Popover matching Screenshot 2 */}
+              {/* Dropdown Popover */}
               {isDropdownOpen && (
                 <div
                   style={{
@@ -642,10 +650,10 @@ export const Winners: React.FC = () => {
                     top: 'calc(100% + 6px)',
                     left: 0,
                     right: 0,
-                    background: '#18202F',
+                    background: 'var(--bg-card)',
                     borderRadius: '16px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
                     zIndex: 50,
                     padding: '8px',
                     display: 'flex',
@@ -672,7 +680,7 @@ export const Winners: React.FC = () => {
                           borderRadius: '10px',
                           border: 'none',
                           background: isSelected ? '#009944' : 'transparent',
-                          color: isSelected ? '#FFFFFF' : '#E2E8F0',
+                          color: isSelected ? '#FFFFFF' : 'var(--text-main)',
                           fontWeight: isSelected ? 800 : 600,
                           fontSize: '14px',
                           textAlign: 'left',
@@ -683,7 +691,7 @@ export const Winners: React.FC = () => {
                           transition: 'background 0.15s ease',
                         }}
                         onMouseEnter={(e) => {
-                          if (!isSelected) (e.currentTarget.style.background = 'rgba(255,255,255,0.06)');
+                          if (!isSelected) (e.currentTarget.style.background = 'var(--bg-secondary, rgba(128,128,128,0.1))');
                         }}
                         onMouseLeave={(e) => {
                           if (!isSelected) (e.currentTarget.style.background = 'transparent');
@@ -702,7 +710,7 @@ export const Winners: React.FC = () => {
                         padding: '8px 12px 4px 12px',
                         fontSize: '13px',
                         fontWeight: 800,
-                        color: '#94A3B8',
+                        color: 'var(--text-muted)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
                       }}
@@ -724,8 +732,8 @@ export const Winners: React.FC = () => {
                             padding: '10px 16px',
                             borderRadius: '10px',
                             border: 'none',
-                            background: isSelected ? '#009944' : 'rgba(30, 41, 59, 0.7)',
-                            color: isSelected ? '#FFFFFF' : '#CBD5E1',
+                            background: isSelected ? '#009944' : 'var(--bg-secondary, rgba(128,128,128,0.08))',
+                            color: isSelected ? '#FFFFFF' : 'var(--text-main)',
                             fontWeight: isSelected ? 800 : 500,
                             fontSize: '13.5px',
                             textAlign: 'left',
@@ -750,7 +758,7 @@ export const Winners: React.FC = () => {
                         padding: '8px 12px 4px 12px',
                         fontSize: '13px',
                         fontWeight: 800,
-                        color: '#94A3B8',
+                        color: 'var(--text-muted)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
                       }}
@@ -772,8 +780,8 @@ export const Winners: React.FC = () => {
                             padding: '10px 16px',
                             borderRadius: '10px',
                             border: 'none',
-                            background: isSelected ? '#009944' : 'rgba(30, 41, 59, 0.7)',
-                            color: isSelected ? '#FFFFFF' : '#CBD5E1',
+                            background: isSelected ? '#009944' : 'var(--bg-secondary, rgba(128,128,128,0.08))',
+                            color: isSelected ? '#FFFFFF' : 'var(--text-main)',
                             fontWeight: isSelected ? 800 : 500,
                             fontSize: '13.5px',
                             textAlign: 'left',
@@ -794,7 +802,7 @@ export const Winners: React.FC = () => {
               )}
             </div>
 
-            {/* Date Picker Input */}
+            {/* Date Picker Input matching Select date pill */}
             <div style={{ position: 'relative' }}>
               <input
                 type="date"
@@ -803,7 +811,7 @@ export const Winners: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '12px 14px',
-                  borderRadius: '16px',
+                  borderRadius: '24px',
                   background: 'var(--bg-card)',
                   color: 'var(--text-main)',
                   border: '1px solid var(--border-color)',
@@ -834,7 +842,7 @@ export const Winners: React.FC = () => {
             </div>
           </div>
 
-          {/* Results Table matching Screenshot 2 */}
+          {/* Results Table matching Screenshot 1 (ZDT) and Screenshot 2 (PICK 3) */}
           <div
             className="card"
             style={{
@@ -842,27 +850,50 @@ export const Winners: React.FC = () => {
               borderRadius: '18px',
               overflow: 'hidden',
               border: '1px solid var(--border-color)',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+              background: 'var(--bg-card)',
             }}
           >
-            {/* Table Green Header */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1.2fr 1.4fr 1.3fr 1.2fr',
-                background: '#009944',
-                color: '#FFFFFF',
-                padding: '14px 16px',
-                fontSize: '13px',
-                fontWeight: 800,
-                letterSpacing: '0.3px',
-              }}
-            >
-              <span>Type</span>
-              <span>Date</span>
-              <span>Total</span>
-              <span style={{ textAlign: 'right' }}>Time</span>
-            </div>
+            {/* Dynamic Table Green Header */}
+            {isZdtSelected ? (
+              /* ZDT Header: Result Type | Zip Code | Date | Time (Screenshot 1) */
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1.1fr 1.1fr 1.2fr 1fr',
+                  background: '#00D066',
+                  color: '#052E16',
+                  padding: '13px 12px',
+                  fontSize: '13.5px',
+                  fontWeight: 800,
+                  textAlign: 'center',
+                }}
+              >
+                <span>{t('winners.table.resultType', 'Result Type')}</span>
+                <span>{t('winners.table.zipCode', 'Zip Code')}</span>
+                <span>{t('winners.table.date', 'Date')}</span>
+                <span>{t('winners.table.time', 'Time')}</span>
+              </div>
+            ) : (
+              /* PICK 3/4/5, Pic-Pick, State Header: Result Type | Result Date | Amount | Time (Screenshot 2) */
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1.1fr 1.2fr 1.1fr 1fr',
+                  background: '#00D066',
+                  color: '#052E16',
+                  padding: '13px 12px',
+                  fontSize: '13.5px',
+                  fontWeight: 800,
+                  textAlign: 'center',
+                }}
+              >
+                <span>{t('winners.table.resultType', 'Result Type')}</span>
+                <span>{t('winners.table.resultDate', 'Result Date')}</span>
+                <span>{t('winners.table.amount', 'Amount')}</span>
+                <span>{t('winners.table.time', 'Time')}</span>
+              </div>
+            )}
 
             {/* Table Body */}
             {resultsLoading && (
@@ -873,7 +904,7 @@ export const Winners: React.FC = () => {
 
             {!resultsLoading && filteredResults.length === 0 && (
               <div style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                No available
+                {t('winners.noResults', 'No available')}
               </div>
             )}
 
@@ -883,24 +914,38 @@ export const Winners: React.FC = () => {
                   key={item.id || idx}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1.2fr 1.4fr 1.3fr 1.2fr',
-                    padding: '14px 16px',
-                    fontSize: '12.5px',
+                    gridTemplateColumns: isZdtSelected
+                      ? '1.1fr 1.1fr 1.2fr 1fr'
+                      : '1.1fr 1.2fr 1.1fr 1fr',
+                    padding: '12px 10px',
+                    fontSize: '13px',
                     fontWeight: 600,
                     color: 'var(--text-main)',
                     borderBottom: '1px solid var(--border-color)',
-                    background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)',
+                    background: idx % 2 === 0 ? 'transparent' : 'var(--bg-secondary, rgba(128, 128, 128, 0.05))',
                     alignItems: 'center',
+                    textAlign: 'center',
                   }}
                 >
-                  <span style={{ fontWeight: 700, color: item.resultType === 'Midday' ? '#D5AD60' : 'var(--green)' }}>
+                  {/* Column 1: Result Type */}
+                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px' }}>
                     {item.resultType}
                   </span>
-                  <span>{item.date}</span>
-                  <span style={{ fontWeight: 700 }}>
-                    {selectedGameSlug === 'zdt' ? (item.zipCode !== '-' ? item.zipCode : item.amount) : item.amount}
+
+                  {/* Column 2: Zip Code (ZDT) or Result Date (Others) */}
+                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px' }}>
+                    {isZdtSelected ? item.zipCode : item.date}
                   </span>
-                  <span style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{item.time}</span>
+
+                  {/* Column 3: Date (ZDT) or Amount (Others) */}
+                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px' }}>
+                    {isZdtSelected ? item.date : item.amount}
+                  </span>
+
+                  {/* Column 4: Time */}
+                  <span style={{ padding: '0 4px' }}>
+                    {item.time}
+                  </span>
                 </div>
               ))}
           </div>

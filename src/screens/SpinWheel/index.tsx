@@ -13,14 +13,17 @@ interface WheelSegment {
 }
 
 const SEGMENTS: WheelSegment[] = [
-  { label: '50 PTS', points: 50, color: '#00674D' },
-  { label: '100 PTS', points: 100, color: '#D5AD60' },
-  { label: '25 PTS', points: 25, color: '#274C66' },
-  { label: '500 PTS', points: 500, color: '#8B4513' },
-  { label: '200 PTS', points: 200, color: '#009973' },
-  { label: '1000 PTS', points: 1000, color: '#FFD700' },
-  { label: 'FREE SPIN', points: 0, color: '#151A2A' },
-  { label: '250 PTS', points: 250, color: '#00674D' },
+  { label: '5 PTS', points: 5, color: '#FF6B6B' },
+  { label: '10 PTS', points: 10, color: '#FF9F1C' },
+  { label: '0 PTS', points: 0, color: '#151A2A' },
+  { label: '15 PTS', points: 15, color: '#06D6A0' },
+  { label: '5 PTS', points: 5, color: '#118AB2' },
+  { label: '0 PTS', points: 0, color: '#3A86FF' },
+  { label: '25 PTS', points: 25, color: '#8338EC' },
+  { label: '5 PTS', points: 5, color: '#FF006E' },
+  { label: '500 PTS', points: 500, color: '#FFD700' },
+  { label: '25 PTS', points: 25, color: '#00B050' },
+  { label: '0 PTS', points: 0, color: '#D5AD60' },
 ];
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -66,7 +69,7 @@ const pickSegmentForPoints = (points: number) => {
     .map(({ index }) => index);
 
   if (matchingIndexes.length === 0) {
-    return Math.floor(Math.random() * SEGMENTS.length);
+    return 0;
   }
 
   return matchingIndexes[Math.floor(Math.random() * matchingIndexes.length)];
@@ -101,7 +104,7 @@ export const SpinWheel: React.FC = () => {
 
   const getSegmentLabel = (segment: WheelSegment) => {
     if (segment.points === 0) {
-      return t('spinWheel.freeSpinLabel', 'FREE SPIN');
+      return t('spinWheel.tryAgain', 'TRY AGAIN');
     }
     return t('spinWheel.ptsLabel', '{{points}} PTS', { points: segment.points });
   };
@@ -149,16 +152,16 @@ export const SpinWheel: React.FC = () => {
       ctx.rotate(segAngle + arcSize / 2);
       ctx.textAlign = 'right';
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 13px Poppins, sans-serif';
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.font = 'bold 12px Poppins, sans-serif';
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
       ctx.shadowBlur = 4;
-      ctx.fillText(getSegmentLabel(seg), radius - 20, 5);
+      ctx.fillText(getSegmentLabel(seg), radius - 16, 4);
       ctx.restore();
     });
 
     ctx.restore();
 
-    // Draw Outer Rim with Golden Dots
+    // Draw Outer Rim with Golden Border
     ctx.beginPath();
     ctx.arc(center, center, radius + 5, 0, 2 * Math.PI);
     ctx.lineWidth = 10;
@@ -223,10 +226,11 @@ export const SpinWheel: React.FC = () => {
 
     const segmentDegree = 360 / SEGMENTS.length;
 
-    // Calculate final angle to land on pointer (pointer at top 270 deg)
+    // The top pointer needle is at 270 deg (Top)
+    const targetFinalAngle = ((270 - (selectedIndex + 0.5) * segmentDegree) % 360 + 360) % 360;
     const extraRounds = 5 + Math.floor(Math.random() * 3);
-    const targetDegree =
-      360 * extraRounds + (360 - (selectedIndex * segmentDegree + segmentDegree / 2) + 270);
+    const angleDiff = ((targetFinalAngle - (rotationAngle % 360)) % 360 + 360) % 360;
+    const targetDegree = angleDiff + 360 * extraRounds;
 
     const startTime = performance.now();
     const duration = 4000; // 4 seconds
@@ -247,8 +251,10 @@ export const SpinWheel: React.FC = () => {
         setIsSpinning(false);
         setRotationAngle(currentAngle % 360);
         spinSoundRef.current?.stop();
-        winSoundRef.current?.play();
-        triggerCoinCelebration();
+        if (wonPoints > 0) {
+          winSoundRef.current?.play();
+          triggerCoinCelebration();
+        }
         setResultModal({
           ...winningSegment,
           label: wonPoints > 0 ? t('spinWheel.ptsLabel', '{{points}} PTS', { points: wonPoints }) : getSegmentLabel(winningSegment),
@@ -264,7 +270,7 @@ export const SpinWheel: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="540px" style={{ alignItems: 'center', gap: '20px', paddingBottom: '40px' }}>
+    <Container maxWidth="1100px" style={{ alignItems: 'center', gap: '24px', paddingBottom: '60px' }}>
       {/* Top Bar */}
       <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
@@ -280,14 +286,20 @@ export const SpinWheel: React.FC = () => {
             justifyContent: 'center',
             cursor: 'pointer',
             color: 'var(--text-main)',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           <ArrowLeft size={20} />
         </button>
 
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)' }}>
-          {t('spinWheel.headerTitle', 'Spin The Wheel')}
-        </h2>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            {t('spinWheel.headerTitle', 'Spin The Wheel')}
+          </h2>
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>
+            Fortune Game Show Arena
+          </span>
+        </div>
 
         <button
           onClick={() => setRulesModalVisible(true)}
@@ -302,6 +314,7 @@ export const SpinWheel: React.FC = () => {
             justifyContent: 'center',
             cursor: 'pointer',
             color: 'var(--text-main)',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           <HelpCircle size={20} />
@@ -311,57 +324,192 @@ export const SpinWheel: React.FC = () => {
       {/* Spins Available Badge */}
       <div
         className="pill-badge pill-gold"
-        style={{ fontSize: '14px', padding: '6px 16px' }}
+        style={{ fontSize: '14px', padding: '8px 20px', gap: '8px' }}
       >
         <Sparkles size={16} />
-        <span>
+        <span style={{ fontWeight: 700 }}>
           {playableSlots === null
             ? t('spinWheel.checkingSpins', 'Checking spins...')
             : t('spinWheel.spinsAvailable', '{{count}} Spins Available', { count: playableSlots })}
         </span>
       </div>
 
-      {/* Wheel Area with Needle */}
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {/* Top Pointer Needle */}
+      {/* Game Show Arena Immersive Wrapper */}
+      <div className="game-arena-wrapper">
+        {/* Top Marquee Light Bulbs */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
+          {[...Array(16)].map((_, i) => (
+            <span key={i} className="casino-bulb" />
+          ))}
+        </div>
+
+        {/* 2-Column Responsive Layout */}
         <div
           style={{
-            position: 'absolute',
-            top: '-10px',
-            zIndex: 10,
-            width: 0,
-            height: 0,
-            borderLeft: '14px solid transparent',
-            borderRight: '14px solid transparent',
-            borderTop: '28px solid #FFD700',
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '32px',
+            alignItems: 'center',
           }}
-        />
+        >
+          {/* Left Column: Wheel Stage & Spin CTA */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+            <div
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                background: 'radial-gradient(circle, rgba(213, 173, 96, 0.15) 0%, rgba(0,0,0,0) 70%)',
+                borderRadius: '50%',
+              }}
+            >
+              {/* Top Pointer Needle */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '0px',
+                  zIndex: 10,
+                  width: 0,
+                  height: 0,
+                  borderLeft: '16px solid transparent',
+                  borderRight: '16px solid transparent',
+                  borderTop: '32px solid #FFD700',
+                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 8px #FFA500)',
+                }}
+              />
 
-        <canvas
-          ref={canvasRef}
-          width={340}
-          height={340}
-          style={{ maxWidth: '100%', height: 'auto', filter: 'drop-shadow(0 10px 25px rgba(0, 103, 77, 0.3))' }}
-        />
+              <canvas
+                ref={canvasRef}
+                width={360}
+                height={360}
+                style={{
+                  maxWidth: '100%',
+                  height: 'auto',
+                  filter: 'drop-shadow(0 12px 30px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 15px rgba(213, 173, 96, 0.3))',
+                }}
+              />
+            </div>
+
+            {/* Spin CTA Button */}
+            <Button
+              onClick={spin}
+              disabled={isSpinning || (unlockedMiniGamesFetched && playableSlots === 0)}
+              loading={isSpinning}
+              variant="gold"
+              title={
+                isSpinning
+                  ? t('spinWheel.spinning', 'SPINNING...')
+                  : unlockedMiniGamesFetched && playableSlots === 0
+                  ? t('spinWheel.noSpinsLeft', 'No Spins Left')
+                  : t('spinWheel.spinNowButton', 'SPIN NOW')
+              }
+              icon={<RotateCw size={22} />}
+              style={{
+                width: '100%',
+                maxWidth: '380px',
+                padding: '16px',
+                fontSize: '18px',
+                fontWeight: 800,
+                borderRadius: '24px',
+                boxShadow: '0 8px 24px rgba(213, 173, 96, 0.4)',
+              }}
+            />
+          </div>
+
+          {/* Right Column: Prize Table & Wheel Guide */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Top Prize Grand Banner */}
+            <div className="game-glass-panel game-glass-panel-gold">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <Sparkles size={20} color="#FFD700" />
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Top Fortune Reward
+                </span>
+              </div>
+              <div style={{ fontSize: '32px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                500 PTS TOP PRIZE
+              </div>
+              <p style={{ fontSize: '13px', color: '#CBD5E1', marginTop: '6px', margin: 0, lineHeight: '1.45' }}>
+                Every spin guarantees reward points or a free extra spin for more chances to win!
+              </p>
+            </div>
+
+            {/* Prize Multipliers Grid */}
+            <div className="game-glass-panel">
+              <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>
+                Wheel Prize Segments
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+                {SEGMENTS.map((seg, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      background: 'rgba(255,255,255,0.06)',
+                      borderRadius: '10px',
+                      borderLeft: `4px solid ${seg.color}`,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: '#FFFFFF' }}>
+                      {getSegmentLabel(seg)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Earn More Plays Promo */}
+            <div
+              className="game-glass-panel"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, rgba(0, 103, 77, 0.3) 0%, rgba(16, 185, 129, 0.15) 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+              }}
+            >
+              <div>
+                <h5 style={{ fontSize: '14px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                  Need More Spins?
+                </h5>
+                <p style={{ fontSize: '12px', color: '#A7F3D0', margin: '4px 0 0 0' }}>
+                  Upload shopping receipts to get extra daily spins!
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/scan')}
+                style={{
+                  background: '#10B981',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
+                }}
+              >
+                Scan Now
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Marquee Light Bulbs */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginTop: '24px' }}>
+          {[...Array(16)].map((_, i) => (
+            <span key={i} className="casino-bulb" />
+          ))}
+        </div>
       </div>
-
-      {/* Spin Button */}
-      <Button
-        onClick={spin}
-        disabled={isSpinning || (unlockedMiniGamesFetched && playableSlots === 0)}
-        loading={isSpinning}
-        variant="gold"
-        title={
-          isSpinning
-            ? t('spinWheel.spinning', 'Spinning...')
-            : unlockedMiniGamesFetched && playableSlots === 0
-            ? t('spinWheel.noSpinsLeft', 'No Spins Left')
-            : t('spinWheel.spinNowButton', 'SPIN NOW')
-        }
-        icon={<RotateCw size={20} />}
-        style={{ width: '80%', padding: '16px', fontSize: '17px', borderRadius: '20px' }}
-      />
 
       {/* Result Modal */}
       <CustomModal

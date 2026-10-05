@@ -24,7 +24,7 @@ import { deleteUser, fetchUser } from '../../redux/Slices/userSlice';
 import { Container, showToast } from '../../components';
 import images from '../../constants/images';
 import userServices from '../../services/userServices';
-import { getUserFullName, getUserRewardPoints } from '../../utils/userDisplay';
+import { getUserAvatarUrl, getUserFullName, getUserRewardPoints } from '../../utils/userDisplay';
 import { confirmAppAction } from '../../utils/sweetAlert';
 
 export const Profile: React.FC = () => {
@@ -36,6 +36,8 @@ export const Profile: React.FC = () => {
   const deleteUserLoading = useSelector((state: RootState) => state.user?.deleteUserLoading);
   const fullName = getUserFullName(user);
   const totalCoins = getUserRewardPoints(user);
+  const avatarUrl = getUserAvatarUrl(user);
+  const [avatarError, setAvatarError] = React.useState(false);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -120,24 +122,43 @@ export const Profile: React.FC = () => {
           position: 'relative',
         }}
       >
-        <div
-          style={{
-            width: '68px',
-            height: '68px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #00674D 0%, #009973 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            fontSize: '24px',
-            fontWeight: 700,
-            border: '2px solid #D5AD60',
-            flexShrink: 0,
-          }}
-        >
-          {fullName ? fullName[0].toUpperCase() : 'U'}
-        </div>
+        {avatarUrl && !avatarError ? (
+          <img
+            src={avatarUrl}
+            alt={fullName || 'User'}
+            onError={() => setAvatarError(true)}
+            style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '2.5px solid #D5AD60',
+              background: 'var(--bg-card-secondary)',
+              flexShrink: 0,
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #00674D 0%, #009973 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FFFFFF',
+              fontSize: '24px',
+              fontWeight: 700,
+              border: '2px solid #D5AD60',
+              flexShrink: 0,
+            }}
+          >
+            {fullName ? fullName[0].toUpperCase() : 'U'}
+          </div>
+        )}
+
 
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>

@@ -8,7 +8,7 @@ import { getTermsMarkdown } from '../../locales/markdown';
 
 export const TermsNCondition: React.FC = () => {
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const markdownContent = getTermsMarkdown(i18n.language);
 
   return (
@@ -28,13 +28,14 @@ export const TermsNCondition: React.FC = () => {
             cursor: 'pointer',
             color: 'var(--text-main)',
           }}
+          aria-label={t('common.back', 'Back')}
         >
           <ArrowLeft size={20} />
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <FileText size={22} color="var(--green)" />
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            Terms & Conditions
+            {t('profile.termsConditions', 'Terms & Conditions')}
           </h1>
         </div>
       </div>

@@ -132,8 +132,8 @@ export const Lucky7: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="540px" style={{ alignItems: 'center', gap: '24px', paddingBottom: '40px' }}>
-      {/* Top Bar */}
+    <Container maxWidth="1100px" style={{ alignItems: 'center', gap: '24px', paddingBottom: '60px' }}>
+      {/* Top Navigation Bar */}
       <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
           onClick={() => navigate(-1)}
@@ -148,14 +148,20 @@ export const Lucky7: React.FC = () => {
             justifyContent: 'center',
             cursor: 'pointer',
             color: 'var(--text-main)',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           <ArrowLeft size={20} />
         </button>
 
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)' }}>
-          {t('lucky7.headerTitle', 'Lucky 777 Slot')}
-        </h2>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            {t('lucky7.headerTitle', 'Lucky 777 Slot')}
+          </h2>
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>
+            VIP Casino Lounge
+          </span>
+        </div>
 
         <button
           onClick={() => setRulesModalVisible(true)}
@@ -170,87 +176,247 @@ export const Lucky7: React.FC = () => {
             justifyContent: 'center',
             cursor: 'pointer',
             color: 'var(--text-main)',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           <HelpCircle size={20} />
         </button>
       </div>
 
-      <div className="pill-badge pill-gold" style={{ fontSize: '14px', padding: '6px 16px' }}>
+      {/* Plays Available Pill */}
+      <div className="pill-badge pill-gold" style={{ fontSize: '14px', padding: '8px 20px', gap: '8px' }}>
         <Sparkles size={16} />
-        <span>{t('lucky7.labels.slotPlaysAvailable', '{{count}} Slot Plays Available', { count: playsLeft })}</span>
+        <span style={{ fontWeight: 700 }}>
+          {t('lucky7.labels.slotPlaysAvailable', '{{count}} Slot Plays Available', { count: playsLeft })}
+        </span>
       </div>
 
-      {/* Slot Machine Frame */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '380px',
-          background: 'linear-gradient(135deg, #151A2A 0%, #0E121F 100%)',
-          borderRadius: '28px',
-          border: '4px solid #D5AD60',
-          padding: '24px 16px',
-          boxShadow: '0 12px 30px rgba(0, 0, 0, 0.6)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '20px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Trophy size={20} color="#FFD700" />
-          <span style={{ fontSize: '15px', fontWeight: 800, color: '#FFD700', letterSpacing: '1px' }}>
-            {t('lucky7.labels.jackpot777', 'JACKPOT 777')}
-          </span>
-        </div>
-
-        {/* 3 Slot Reels */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', width: '100%' }}>
-          {[reel1, reel2, reel3].map((symbol, idx) => (
-            <div
-              key={idx}
-              style={{
-                height: '110px',
-                background: '#FFFFFF',
-                borderRadius: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-                boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.2)',
-                border: '2px solid #E2E8F0',
-                transform: isSpinning ? 'scale(0.96)' : 'scale(1)',
-                transition: 'transform 0.1s ease',
-              }}
-            >
-              {symbol}
-            </div>
+      {/* Casino Arena Immersive Wrapper */}
+      <div className="game-arena-wrapper">
+        {/* Top Marquee Light Bulbs */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
+          {[...Array(16)].map((_, i) => (
+            <span key={i} className="casino-bulb" />
           ))}
         </div>
 
-        {/* Paytable */}
-        <div style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', gap: '16px' }}>
-          <span>{t('lucky7.labels.paytableJackpot', '7️⃣7️⃣7️⃣ = 1000 PTS')}</span>
-          <span>{t('lucky7.labels.paytableDiamond', '💎💎💎 = 300 PTS')}</span>
-          <span>{t('lucky7.labels.paytableMatch2', 'Match 2 = 50 PTS')}</span>
+        {/* 2-Column Responsive Layout */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '28px',
+            alignItems: 'center',
+          }}
+        >
+          {/* Left Column: 3D Slot Cabinet */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <div className="casino-cabinet-frame" style={{ width: '100%', maxWidth: '440px' }}>
+              {/* Marquee Header */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  padding: '8px 16px',
+                  background: 'linear-gradient(90deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.25) 50%, rgba(255,215,0,0.1) 100%)',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(255,215,0,0.4)',
+                  marginBottom: '16px',
+                }}
+              >
+                <Trophy size={22} color="#FFD700" />
+                <span
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 900,
+                    color: '#FFD700',
+                    letterSpacing: '2px',
+                    textShadow: '0 0 10px rgba(255,215,0,0.6)',
+                  }}
+                >
+                  {t('lucky7.labels.jackpot777', 'JACKPOT 777')}
+                </span>
+                <Trophy size={22} color="#FFD700" />
+              </div>
+
+              {/* 3 Slot Reels Container with laser payline */}
+              <div style={{ position: 'relative', width: '100%', padding: '4px 0' }}>
+                {/* Laser Payline Line */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '-8px',
+                    right: '-8px',
+                    height: '2px',
+                    background: 'linear-gradient(90deg, transparent, #FF4B2B, #FFD700, #FF4B2B, transparent)',
+                    boxShadow: '0 0 8px #FF4B2B',
+                    zIndex: 2,
+                    pointerEvents: 'none',
+                    opacity: 0.75,
+                  }}
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                  {[reel1, reel2, reel3].map((symbol, idx) => (
+                    <div
+                      key={idx}
+                      className="reel-box"
+                      style={{
+                        transform: isSpinning ? 'scale(0.96) translateY(2px)' : 'scale(1)',
+                        transition: 'transform 0.08s ease',
+                      }}
+                    >
+                      <span>{symbol}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Paytable Ribbon */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-around',
+                  fontSize: '12px',
+                  color: '#CBD5E1',
+                  marginTop: '16px',
+                  paddingTop: '12px',
+                  borderTop: '1px solid rgba(255,255,255,0.1)',
+                  fontWeight: 600,
+                }}
+              >
+                <span style={{ color: '#FFD700' }}>7️⃣7️⃣7️⃣ = 1000 PTS</span>
+                <span style={{ color: '#60A5FA' }}>💎💎💎 = 300 PTS</span>
+                <span style={{ color: '#34D399' }}>Match 2 = 50 PTS</span>
+              </div>
+            </div>
+
+            {/* Spin Lever CTA Button */}
+            <Button
+              onClick={spinReels}
+              disabled={isSpinning || playsLeft <= 0}
+              loading={isSpinning}
+              variant="gold"
+              title={
+                isSpinning
+                  ? t('lucky7.buttons.rolling', 'ROLLING...')
+                  : playsLeft > 0
+                    ? t('lucky7.buttons.pullLever', 'PULL LEVER / SPIN')
+                    : t('lucky7.buttons.noPlaysLeft', 'No Plays Left')
+              }
+              icon={<RotateCcw size={22} />}
+              style={{
+                width: '100%',
+                maxWidth: '440px',
+                padding: '16px',
+                fontSize: '18px',
+                fontWeight: 800,
+                borderRadius: '24px',
+                boxShadow: '0 8px 24px rgba(213, 173, 96, 0.4)',
+              }}
+            />
+          </div>
+
+          {/* Right Column: VIP Payout & Rewards Dashboard */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Progressive Jackpot Vault Card */}
+            <div className="game-glass-panel game-glass-panel-gold">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <Sparkles size={20} color="#FFD700" />
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Progressive Grand Prize
+                </span>
+              </div>
+              <div style={{ fontSize: '32px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                1,000 PTS JACKPOT
+              </div>
+              <p style={{ fontSize: '13px', color: '#CBD5E1', marginTop: '6px', margin: 0, lineHeight: '1.45' }}>
+                Hit three lucky sevens across the reels to trigger the top jackpot payout!
+              </p>
+            </div>
+
+            {/* Prize Multipliers Guide */}
+            <div className="game-glass-panel">
+              <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>
+                Prize Multipliers
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.06)', borderRadius: '10px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                    <span>7️⃣ 7️⃣ 7️⃣</span>
+                    <span>Triple 7s</span>
+                  </span>
+                  <span style={{ color: '#FFD700', fontWeight: 800 }}>+1,000 PTS</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.06)', borderRadius: '10px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                    <span>💎 💎 💎</span>
+                    <span>Triple Diamonds</span>
+                  </span>
+                  <span style={{ color: '#60A5FA', fontWeight: 800 }}>+300 PTS</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.06)', borderRadius: '10px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                    <span>🍒 🍒 🔔</span>
+                    <span>Any 2 Matching</span>
+                  </span>
+                  <span style={{ color: '#34D399', fontWeight: 800 }}>+50 PTS</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Earn More Plays Promo */}
+            <div
+              className="game-glass-panel"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, rgba(0, 103, 77, 0.3) 0%, rgba(16, 185, 129, 0.15) 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+              }}
+            >
+              <div>
+                <h5 style={{ fontSize: '14px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                  Need More Spins?
+                </h5>
+                <p style={{ fontSize: '12px', color: '#A7F3D0', margin: '4px 0 0 0' }}>
+                  Upload shopping receipts to get extra daily spins!
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/scan')}
+                style={{
+                  background: '#10B981',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
+                }}
+              >
+                Scan Now
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Marquee Light Bulbs */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginTop: '24px' }}>
+          {[...Array(16)].map((_, i) => (
+            <span key={i} className="casino-bulb" />
+          ))}
         </div>
       </div>
-
-      <Button
-        onClick={spinReels}
-        disabled={isSpinning || playsLeft <= 0}
-        loading={isSpinning}
-        variant="gold"
-        title={
-          isSpinning
-            ? t('lucky7.buttons.rolling', 'ROLLING...')
-            : playsLeft > 0
-              ? t('lucky7.buttons.pullLever', 'PULL LEVER / SPIN')
-              : t('lucky7.buttons.noPlaysLeft', 'No Plays Left')
-        }
-        icon={<RotateCcw size={20} />}
-        style={{ width: '80%', padding: '16px', fontSize: '17px', borderRadius: '20px' }}
-      />
 
       {/* Result Modal */}
       <CustomModal

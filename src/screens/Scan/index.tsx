@@ -18,6 +18,7 @@ import {
   isAssetTooLarge,
   RECEIPT_MAX_FILE_SIZE_BYTES,
 } from '../../utils/imageUpload';
+import { setScannedReceipt, clearScannedReceipt } from '../../utils/scannedReceiptStore';
 import images from '../../constants/images';
 
 export const Scan: React.FC = () => {
@@ -57,6 +58,7 @@ export const Scan: React.FC = () => {
     setSelectedFile(file);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
+    setScannedReceipt(file, url);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -76,11 +78,18 @@ export const Scan: React.FC = () => {
     }
   };
 
+  const handleSelectGames = () => {
+    if (!selectedFile || !previewUrl) return;
+    setScannedReceipt(selectedFile, previewUrl);
+    navigate('/play?from=scan', { state: { fromScan: true } });
+  };
+
   const handleUploadAndScan = async () => {
     if (!selectedFile) return;
 
     setIsUploading(true);
     try {
+      setScannedReceipt(selectedFile, previewUrl);
       triggerCoinCelebration();
       setIsSuccessModalVisible(true);
       showToast({
@@ -152,8 +161,12 @@ export const Scan: React.FC = () => {
         >
           <button
             onClick={() => {
+              if (previewUrl && !previewUrl.startsWith('data:')) {
+                URL.revokeObjectURL(previewUrl);
+              }
               setSelectedFile(null);
               setPreviewUrl(null);
+              clearScannedReceipt();
             }}
             style={{
               position: 'absolute',
@@ -169,6 +182,7 @@ export const Scan: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              zIndex: 10,
             }}
           >
             <X size={18} />
@@ -201,10 +215,9 @@ export const Scan: React.FC = () => {
               style={{ flex: 1 }}
             />
             <Button
-              title={t('scanScreen.submitReceipt', 'Continue to Games')}
-              loading={isUploading}
+              title={t('scanScreen.selectGames', 'Select Games')}
               icon={<Sparkles size={18} />}
-              onClick={handleUploadAndScan}
+              onClick={handleSelectGames}
               style={{ flex: 2 }}
             />
           </div>
@@ -321,11 +334,11 @@ export const Scan: React.FC = () => {
 
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <Button
-              title={t('scanScreen.successModal.chooseGame', 'Choose a Game')}
+              title={t('scanScreen.successModal.chooseGame', 'Select Games')}
               icon={<Sparkles size={18} />}
               onClick={() => {
                 setIsSuccessModalVisible(false);
-                navigate('/play');
+                navigate('/play?from=scan', { state: { fromScan: true } });
               }}
               style={{ width: '100%' }}
             />
@@ -336,6 +349,7 @@ export const Scan: React.FC = () => {
                 setIsSuccessModalVisible(false);
                 setSelectedFile(null);
                 setPreviewUrl(null);
+                clearScannedReceipt();
               }}
               style={{ width: '100%' }}
             />

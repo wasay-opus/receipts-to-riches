@@ -11,6 +11,7 @@ import { getUSDateYYYYMMDD, getUSTimeHHMM, getUSTimeWithOffset } from '../../uti
 import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
 import { getUserRewardPoints } from '../../utils/userDisplay';
+import { getScannedReceipt, clearScannedReceipt } from '../../utils/scannedReceiptStore';
 
 const extractMessage = (payload: any, fallback: string) => {
   const message = payload?.message ?? payload?.data?.message ?? payload?.user_friendly_message;
@@ -55,6 +56,14 @@ export const PicPickGame: React.FC = () => {
   const [statesList, setStatesList] = useState<string[]>(US_STATES);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ message: string; points: number } | null>(null);
+
+  useEffect(() => {
+    const preloaded = getScannedReceipt();
+    if (preloaded.file && !receiptFile) {
+      setReceiptFile(preloaded.file);
+      setReceiptPreview(preloaded.previewUrl);
+    }
+  }, []);
 
   useEffect(() => {
     locationServices
@@ -140,6 +149,7 @@ export const PicPickGame: React.FC = () => {
       setReceiptPreview(null);
       setReceiptTotal('');
       setSelectedState('');
+      clearScannedReceipt();
     } catch (error: any) {
       const parsedError =
         error?.response?.data?.errors
@@ -170,7 +180,7 @@ export const PicPickGame: React.FC = () => {
 
   return (
     <Container maxWidth="1020px" style={{ gap: '20px', paddingBottom: '60px' }}>
-      {/* Top Header Bar matching Screenshot 4 */}
+      {/* Top Header Bar */}
       <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
           type="button"
@@ -208,7 +218,7 @@ export const PicPickGame: React.FC = () => {
       >
         {/* Left Column: Game Action Card & Submit */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-          {/* Game Card with Starburst / Sunburst Background matching Screenshot 4 */}
+          {/* Game Card with Sunburst Background */}
           <div
             style={{
               width: '100%',
@@ -226,299 +236,323 @@ export const PicPickGame: React.FC = () => {
               boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
             }}
           >
-        {/* Sunburst Mask Overlay */}
-        <img
-          src={images.cardBgMask}
-          alt=""
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: 0.35,
-            pointerEvents: 'none',
-            mixBlendMode: 'overlay',
-          }}
-        />
+            {/* Sunburst Mask Overlay */}
+            <img
+              src={images.cardBgMask}
+              alt=""
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: 0.35,
+                pointerEvents: 'none',
+                mixBlendMode: 'overlay',
+              }}
+            />
 
-        <div style={{ position: 'relative', zIndex: 2 }}>
-          <h3 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '0.3px', margin: 0 }}>
-            {gameTitle}
-          </h3>
-          <h2 style={{ fontSize: '38px', fontWeight: 900, marginTop: '4px', margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>
-            {gameAmount}
-          </h2>
-          <p style={{ fontSize: '13px', opacity: 0.9, marginTop: '8px', maxWidth: '280px', lineHeight: '1.4' }}>
-            Enter the receipt total and submit picture of receipt.
-          </p>
-        </div>
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              <h3 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '0.3px', margin: 0 }}>
+                {gameTitle}
+              </h3>
+              <h2 style={{ fontSize: '38px', fontWeight: 900, marginTop: '4px', margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>
+                {gameAmount}
+              </h2>
+              <p style={{ fontSize: '13px', opacity: 0.9, marginTop: '8px', maxWidth: '280px', lineHeight: '1.4' }}>
+                {t('picPick.gameDescription', 'Enter the receipt total and submit picture of receipt.')}
+              </p>
+            </div>
 
-        {/* Input Fields Container */}
-        <div style={{ position: 'relative', zIndex: 2, width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '6px' }}>
-          {/* Amount Pill Input */}
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Enter Amount"
-            value={receiptTotal}
-            onChange={(e) => setReceiptTotal(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '14px 20px',
-              borderRadius: '28px',
-              background: 'rgba(0, 0, 0, 0.35)',
-              border: '1px solid rgba(255, 255, 255, 0.25)',
-              color: '#FFFFFF',
-              fontSize: '15px',
-              outline: 'none',
-              boxSizing: 'border-box',
-              textAlign: 'center',
-            }}
-          />
-
-          {/* State Pill Dropdown (for State games) */}
-          {isStatePick && (
-            <div style={{ position: 'relative', width: '100%' }}>
-              <select
-                value={selectedState}
-                onChange={(e) => setSelectedState(e.target.value)}
+            {/* Input Fields Container */}
+            <div style={{ position: 'relative', zIndex: 2, width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '6px' }}>
+              {/* Amount Pill Input */}
+              <input
+                type="number"
+                step="0.01"
+                placeholder={t('picPick.amountPlaceholder', 'Enter Amount')}
+                value={receiptTotal}
+                onChange={(e) => setReceiptTotal(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '14px 20px',
                   borderRadius: '28px',
                   background: 'rgba(0, 0, 0, 0.35)',
                   border: '1px solid rgba(255, 255, 255, 0.25)',
-                  color: selectedState ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+                  color: '#FFFFFF',
                   fontSize: '15px',
                   outline: 'none',
-                  appearance: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'center',
                   boxSizing: 'border-box',
-                }}
-              >
-                <option value="" style={{ background: '#1F2937', color: '#FFF' }}>
-                  Select State
-                </option>
-                {statesList.map((stateName) => (
-                  <option key={stateName} value={stateName} style={{ background: '#1F2937', color: '#FFF' }}>
-                    {stateName}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={18}
-                style={{
-                  position: 'absolute',
-                  right: '20px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  pointerEvents: 'none',
-                  color: 'rgba(255,255,255,0.8)',
+                  textAlign: 'center',
                 }}
               />
-            </div>
-          )}
 
-          {/* Camera and Gallery Icon Buttons matching Screenshot 4 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '0 10px' }}>
-            <label
-              style={{
-                width: '54px',
-                height: '54px',
-                borderRadius: '50%',
-                background: 'rgba(0, 0, 0, 0.35)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#FFFFFF',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-                transition: 'transform 0.2s ease',
-              }}
-              title="Take Photo"
-            >
-              <Camera size={24} />
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-              />
-            </label>
+              {/* State Pill Dropdown (for State games) */}
+              {isStatePick && (
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <select
+                    value={selectedState}
+                    onChange={(e) => setSelectedState(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '14px 20px',
+                      borderRadius: '28px',
+                      background: 'rgba(0, 0, 0, 0.35)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      color: selectedState ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+                      fontSize: '15px',
+                      outline: 'none',
+                      appearance: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="" style={{ background: '#1F2937', color: '#FFF' }}>
+                      {t('basicInfo.selectState', 'Select State')}
+                    </option>
+                    {statesList.map((stateName) => (
+                      <option key={stateName} value={stateName} style={{ background: '#1F2937', color: '#FFF' }}>
+                        {stateName}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={18}
+                    style={{
+                      position: 'absolute',
+                      right: '20px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                      color: 'rgba(255,255,255,0.8)',
+                    }}
+                  />
+                </div>
+              )}
 
-            {/* Selected File Name / Thumbnail indicator */}
-            {receiptPreview && (
-              <div
-                style={{
-                  background: 'rgba(0,0,0,0.4)',
-                  padding: '6px 14px',
-                  borderRadius: '16px',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '12px',
-                  color: '#10B981',
-                  fontWeight: 700,
-                }}
-              >
-                <Check size={14} />
-                <span>Photo Selected</span>
+              {/* Receipt Image Selected Box (matching Mobile Screenshot 3) */}
+              {receiptPreview && (
+                <div
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0, 0, 0, 0.45)',
+                    padding: '10px 16px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      background: '#000',
+                      flexShrink: 0,
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                    }}
+                  >
+                    <img
+                      src={receiptPreview}
+                      alt="Receipt"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      flex: 1,
+                      textAlign: 'left',
+                    }}
+                  >
+                    {t('picPick.receiptImageSelected', 'Receipt image selected')}
+                  </span>
+                </div>
+              )}
+
+              {/* Camera and Gallery Icon Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', padding: '0 10px' }}>
+                <label
+                  style={{
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.35)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                    transition: 'transform 0.2s ease',
+                  }}
+                  title="Take Photo"
+                >
+                  <Camera size={24} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+
+                <label
+                  style={{
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.35)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                    transition: 'transform 0.2s ease',
+                  }}
+                  title="Choose from Gallery"
+                >
+                  <ImageIcon size={24} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
-            )}
-
-            <label
-              style={{
-                width: '54px',
-                height: '54px',
-                borderRadius: '50%',
-                background: 'rgba(0, 0, 0, 0.35)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#FFFFFF',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-                transition: 'transform 0.2s ease',
-              }}
-              title="Choose from Gallery"
-            >
-              <ImageIcon size={24} />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-              />
-            </label>
+            </div>
           </div>
-        </div>
-      </div>
 
-        {/* Continue Green CTA Button matching Screenshot 4 */}
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '16px',
-            borderRadius: '28px',
-            background: 'var(--green)',
-            color: '#FFFFFF',
-            border: 'none',
-            fontSize: '16px',
-            fontWeight: 800,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1,
-            boxShadow: '0 4px 16px rgba(0, 103, 77, 0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            marginTop: '8px',
-          }}
-        >
-          {loading ? 'Submitting...' : 'Continue'}
-        </button>
-      </div>
-
-      {/* Right Column: Sponsored Campaign Card & Guidelines */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
-        {/* Sponsored Ad Banner */}
-        <div
-          className="card"
-          style={{
-            padding: '24px 20px',
-            borderRadius: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center',
-            gap: '12px',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          <div
+          {/* Continue Green CTA Button */}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: 'rgba(21, 174, 54, 0.14)',
+              width: '100%',
+              padding: '16px',
+              borderRadius: '28px',
+              background: 'var(--green)',
+              color: '#FFFFFF',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 800,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+              boxShadow: '0 4px 16px rgba(0, 103, 77, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#15AE36',
+              gap: '8px',
+              marginTop: '8px',
             }}
           >
-            <Megaphone size={28} />
-          </div>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            Grow Your Audience!
-          </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
-            Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/campaigns/create')}
-            style={{
-              background: '#15AE36',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '24px',
-              padding: '10px 24px',
-              fontSize: '14px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginTop: '4px',
-            }}
-          >
-            Get Started &rarr;
+            {loading ? t('common.loading', 'Submitting...') : t('common.continue', 'Continue')}
           </button>
         </div>
 
-        {/* Quick How to Win Card */}
-        <div
-          className="card"
-          style={{
-            padding: '22px 20px',
-            borderRadius: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <h4 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            Instant Game Rules
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
-              <span>Submit receipt total amount matching the game tier.</span>
+        {/* Right Column: Sponsored Campaign Card & Guidelines */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+          {/* Sponsored Ad Banner */}
+          <div
+            className="card"
+            style={{
+              padding: '24px 20px',
+              borderRadius: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '12px',
+            }}
+          >
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'rgba(21, 174, 54, 0.14)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#15AE36',
+              }}
+            >
+              <Megaphone size={28} />
             </div>
-            {isStatePick && (
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {t('home.growAudienceTitle', 'Grow Your Audience!')}
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+              {t('home.growAudienceDesc', 'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!')}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/campaigns/create')}
+              style={{
+                background: '#15AE36',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '24px',
+                padding: '10px 24px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginTop: '4px',
+              }}
+            >
+              {t('home.getStarted', 'Get Started')} &rarr;
+            </button>
+          </div>
+
+          {/* Quick How to Win Card */}
+          <div
+            className="card"
+            style={{
+              padding: '22px 20px',
+              borderRadius: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <h4 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {t('profile.menuRules', 'Instant Game Rules')}
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
-                <span>Select the US state where the purchase was made.</span>
+                <span>{t('picPick.gameDescription', 'Submit receipt total amount matching the game tier.')}</span>
               </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
-              <span>Take or upload a clean photo of your physical receipt.</span>
+              {isStatePick && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
+                  <span>{t('picPick.errors.selectState', 'Select the US state where the purchase was made.')}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
+                <span>{t('picPick.description1', 'Take or upload a clean photo of your physical receipt.')}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
       {/* Success Modal */}
       <CustomModal visible={Boolean(result)} onClose={() => navigate('/play')} maxWidth="400px">
@@ -529,11 +563,11 @@ export const PicPickGame: React.FC = () => {
               {result?.message}
             </h3>
             <p style={{ fontSize: '15px', color: 'var(--primary)', fontWeight: 700, marginTop: '4px' }}>
-              Points: +{result?.points ?? 0}
+              {t('home.points', 'Points')}: +{result?.points ?? 0}
             </p>
           </div>
           <Button
-            title="Return to Games"
+            title={t('cashGames.buttons.returnToGames', 'Return to Games')}
             onClick={() => navigate('/play')}
             style={{ width: '100%', marginTop: '8px' }}
           />

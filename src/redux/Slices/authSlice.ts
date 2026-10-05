@@ -296,11 +296,39 @@ export const login = createAsyncThunk(
         return response;
       }
 
+      const resData = response?.data || response;
+      const isUnverifiedPhone =
+        resData?.is_phone_verified === false ||
+        resData?.data?.is_phone_verified === false ||
+        String(response?.message || '').toLowerCase().includes('verify your phone');
+
+      if (isUnverifiedPhone) {
+        return rejectWithValue({
+          message: extractErrorMessage(response, 'Please verify your phone number to continue.'),
+          is_phone_verified: false,
+          phone: resData?.phone || resData?.data?.phone,
+        });
+      }
+
       return rejectWithValue(
         extractErrorMessage(response, 'Invalid login response. Please try again.'),
       );
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response) {
+        const resData = error.response.data;
+        const isUnverifiedPhone =
+          resData?.is_phone_verified === false ||
+          resData?.data?.is_phone_verified === false ||
+          String(resData?.message || '').toLowerCase().includes('verify your phone');
+
+        if (isUnverifiedPhone) {
+          return rejectWithValue({
+            message: extractErrorMessage(resData, 'Please verify your phone number to continue.'),
+            is_phone_verified: false,
+            phone: resData?.phone || resData?.data?.phone,
+          });
+        }
+
         return rejectWithValue(
           extractErrorMessage(error.response.data, 'Invalid credentials.'),
         );

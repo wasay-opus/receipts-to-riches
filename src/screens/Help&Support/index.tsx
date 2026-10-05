@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Mail, MessageCircle } from 'lucide-react';
 import { Container, Button } from '../../components';
 
 export const HelpSupport: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const supportEmail = 'support@receiptstoriches.net';
 
@@ -28,11 +30,12 @@ export const HelpSupport: React.FC = () => {
             cursor: 'pointer',
             color: 'var(--text-main)',
           }}
+          aria-label={t('common.back', 'Back')}
         >
           <ArrowLeft size={20} />
         </button>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)' }}>
-          Help & Support
+          {t('profile.helpSupport', 'Help & Support')}
         </h1>
       </div>
 
@@ -54,12 +57,12 @@ export const HelpSupport: React.FC = () => {
               <Mail size={22} />
             </div>
             <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>Email Support</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>{t('help.emailSupport', 'Email Support')}</h3>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>support@receiptstoriches.net</p>
             </div>
           </div>
           <Button
-            title="Send Email"
+            title={t('help.sendEmail', 'Send Email')}
             onClick={() => openSupportEmail('Receipts To Riches Support')}
             style={{ padding: '8px 16px', fontSize: '13px' }}
           />
@@ -82,13 +85,13 @@ export const HelpSupport: React.FC = () => {
               <MessageCircle size={22} />
             </div>
             <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>Live Chat</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Available Monday - Friday, 9 AM - 6 PM</p>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>{t('help.liveChat', 'Live Chat')}</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('help.hours', 'Available Monday - Friday, 9 AM - 6 PM')}</p>
             </div>
           </div>
           <Button
             variant="secondary"
-            title="Contact"
+            title={t('help.contact', 'Contact')}
             onClick={() => openSupportEmail('Receipts To Riches Live Chat Request')}
             style={{ padding: '8px 16px', fontSize: '13px' }}
           />

@@ -22,7 +22,7 @@ export const DesktopNavbar: React.FC = () => {
     { label: t('bottomTabs.home', 'Home'), path: '/', icon: <Home size={18} /> },
     { label: t('bottomTabs.feed', 'Feed'), path: '/feed', icon: <Rss size={18} /> },
     { label: t('bottomTabs.play', 'Play'), path: '/play', icon: <Gamepad2 size={18} /> },
-    { label: t('bottomTabs.scan', 'Scan Receipt'), path: '/scan', icon: <ScanLine size={18} />, highlight: true },
+    { label: t('bottomTabs.scan', 'Scan Receipt'), path: '/scan', icon: <ScanLine size={18} /> },
     { label: t('bottomTabs.rewards', 'Rewards'), path: '/rewards', icon: <Gift size={18} /> },
     { label: t('bottomTabs.winners', 'Winners'), path: '/winners', icon: <Trophy size={18} /> },
     { label: t('bottomTabs.rankings', 'Rankings'), path: '/rankings', icon: <Award size={18} /> },
@@ -43,18 +43,6 @@ export const DesktopNavbar: React.FC = () => {
       <nav className="desktop-sidebar__nav">
         {navItems.map((item) => {
           const isActive = isItemActive(item.path);
-          if (item.highlight) {
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className="desktop-sidebar__link desktop-sidebar__link--scan"
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          }
 
           return (
             <NavLink
@@ -67,6 +55,7 @@ export const DesktopNavbar: React.FC = () => {
             </NavLink>
           );
         })}
+
 
         <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
           <NavLink

@@ -192,7 +192,7 @@ export const Scratch2Win: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="540px" style={{ alignItems: 'center', gap: '20px', paddingBottom: '40px' }}>
+    <Container maxWidth="1100px" style={{ alignItems: 'center', gap: '24px', paddingBottom: '60px' }}>
       {/* Top Bar */}
       <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
@@ -208,14 +208,20 @@ export const Scratch2Win: React.FC = () => {
             justifyContent: 'center',
             cursor: 'pointer',
             color: 'var(--text-main)',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           <ArrowLeft size={20} />
         </button>
 
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)' }}>
-          {t('scratch2win.pageTitle', 'Scratch 2 Win')}
-        </h2>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            {t('scratch2win.pageTitle', 'Scratch 2 Win')}
+          </h2>
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>
+            VIP Scratch Card Lounge
+          </span>
+        </div>
 
         <button
           onClick={() => setRulesModalVisible(true)}
@@ -230,124 +236,250 @@ export const Scratch2Win: React.FC = () => {
             justifyContent: 'center',
             cursor: 'pointer',
             color: 'var(--text-main)',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           <HelpCircle size={20} />
         </button>
       </div>
 
-      <div className="pill-badge pill-gold" style={{ fontSize: '14px', padding: '6px 16px' }}>
+      <div className="pill-badge pill-gold" style={{ fontSize: '14px', padding: '8px 20px', gap: '8px' }}>
         <Sparkles size={16} />
-        <span>{t('scratch2win.cardsRemaining', '{{count}} Scratch Cards Remaining', { count: cardsLeft })}</span>
+        <span style={{ fontWeight: 700 }}>
+          {t('scratch2win.cardsRemaining', '{{count}} Scratch Cards Remaining', { count: cardsLeft })}
+        </span>
       </div>
 
-      {/* Scratch Card Container */}
-      <div
-        className="card"
-        style={{
-          position: 'relative',
-          width: '320px',
-          height: '240px',
-          borderRadius: '24px',
-          overflow: 'hidden',
-          boxShadow: 'var(--shadow-lg)',
-          border: '2px solid #D5AD60',
-        }}
-      >
-        {/* Hidden Prize Underneath */}
+      {/* VIP Scratch Arena Immersive Wrapper */}
+      <div className="game-arena-wrapper game-arena-wrapper--green">
+        {/* Top Marquee Light Bulbs */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
+          {[...Array(16)].map((_, i) => (
+            <span key={i} className="casino-bulb" />
+          ))}
+        </div>
+
+        {/* 2-Column Responsive Layout */}
         <div
           style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(135deg, #0E1528 0%, #151A2A 100%)',
-            display: 'flex',
-            flexDirection: 'column',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '32px',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            color: '#FFFFFF',
           }}
         >
-          <img src={images.Coin} alt={t('scratch2win.prizeAlt', 'Prize')} style={{ width: '64px', height: '64px' }} />
-          <h3 style={{ fontSize: '28px', fontWeight: 800, color: '#FFD700' }}>
-            {prizePoints > 0
-              ? t('scratch2win.wonPointsDisplay', '+{{points}} PTS!', { points: prizePoints })
-              : t('scratch2win.noWinDisplay', 'No Win')}
-          </h3>
-          <span style={{ fontSize: '13px', color: prizePoints > 0 ? '#10B981' : 'var(--text-muted)', fontWeight: 600 }}>
-            {prizePoints > 0
-              ? t('scratch2win.winnerInstantReward', 'Winner Instant Reward')
-              : t('scratch2win.betterLuckNextTime', 'Better luck next time')}
-          </span>
+          {/* Left Column: Interactive Gold Foil Scratch Card */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <div
+              style={{
+                position: 'relative',
+                width: '360px',
+                maxWidth: '100%',
+                height: '250px',
+                borderRadius: '28px',
+                overflow: 'hidden',
+                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(213, 173, 96, 0.3)',
+                border: '4px solid #D5AD60',
+                background: 'linear-gradient(135deg, #0A291E 0%, #151A2A 100%)',
+              }}
+            >
+              {/* Hidden Prize Underneath */}
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'radial-gradient(circle at center, #0F382B 0%, #061A13 100%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  color: '#FFFFFF',
+                }}
+              >
+                <img src={images.Coin} alt={t('scratch2win.prizeAlt', 'Prize')} style={{ width: '70px', height: '70px', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))' }} />
+                <h3 style={{ fontSize: '30px', fontWeight: 900, color: '#FFD700', margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                  {prizePoints > 0
+                    ? t('scratch2win.wonPointsDisplay', '+{{points}} PTS!', { points: prizePoints })
+                    : t('scratch2win.noWinDisplay', 'No Win')}
+                </h3>
+                <span style={{ fontSize: '13px', color: prizePoints > 0 ? '#34D399' : '#94A3B8', fontWeight: 700 }}>
+                  {prizePoints > 0
+                    ? t('scratch2win.winnerInstantReward', 'Winner Instant Reward')
+                    : t('scratch2win.betterLuckNextTime', 'Better luck next time')}
+                </span>
+              </div>
+
+              {/* Scratchable Canvas Overlay */}
+              <canvas
+                ref={canvasRef}
+                width={360}
+                height={250}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  cursor: 'grab',
+                  touchAction: 'none',
+                }}
+                onMouseDown={(e) => {
+                  setIsDrawing(true);
+                  const { x, y } = getPosition(e);
+                  scratch(x, y);
+                }}
+                onMouseMove={(e) => {
+                  if (isDrawing) {
+                    const { x, y } = getPosition(e);
+                    scratch(x, y);
+                  }
+                }}
+                onMouseUp={() => setIsDrawing(false)}
+                onMouseLeave={() => setIsDrawing(false)}
+                onTouchStart={(e) => {
+                  setIsDrawing(true);
+                  const { x, y } = getPosition(e);
+                  scratch(x, y);
+                }}
+                onTouchMove={(e) => {
+                  if (isDrawing) {
+                    const { x, y } = getPosition(e);
+                    scratch(x, y);
+                  }
+                }}
+                onTouchEnd={() => setIsDrawing(false)}
+              />
+            </div>
+
+            {/* Progress Bar & Next Card Action */}
+            <div style={{ width: '360px', maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#CBD5E1', fontWeight: 600 }}>
+                <span>{t('scratch2win.scratchedLabel', 'Scratched')}</span>
+                <span style={{ color: '#10B981', fontWeight: 800 }}>{revealedPercent}%</span>
+              </div>
+              <div style={{ width: '100%', height: '10px', borderRadius: '5px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${Math.min(revealedPercent, 100)}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #00674D, #10B981)',
+                    boxShadow: '0 0 10px #10B981',
+                    transition: 'width 0.1s ease',
+                  }}
+                />
+              </div>
+
+              {isRevealed && (
+                <Button
+                  onClick={handleNextCard}
+                  disabled={cardsLeft <= 0}
+                  variant="gold"
+                  title={cardsLeft > 0 ? t('scratch2win.scratchNextCard', 'Scratch Next Card') : t('scratch2win.noCardsLeft', 'No Cards Left')}
+                  icon={<RefreshCw size={20} />}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    fontSize: '17px',
+                    fontWeight: 800,
+                    borderRadius: '20px',
+                    marginTop: '8px',
+                    boxShadow: '0 8px 24px rgba(213, 173, 96, 0.4)',
+                  }}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Scratch Guide & Rewards Panel */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Top Prize Card */}
+            <div className="game-glass-panel game-glass-panel-gold">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <Trophy size={20} color="#FFD700" />
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Instant Scratch Jackpot
+                </span>
+              </div>
+              <div style={{ fontSize: '32px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                UP TO 1,000 PTS
+              </div>
+              <p style={{ fontSize: '13px', color: '#CBD5E1', marginTop: '6px', margin: 0, lineHeight: '1.45' }}>
+                Rub the metallic foil surface to 45% to instantly uncover your secret cash points prize!
+              </p>
+            </div>
+
+            {/* How It Works Guide */}
+            <div className="game-glass-panel">
+              <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>
+                Scratch & Win Rules
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#E2E8F0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>
+                    1
+                  </span>
+                  <span>Use cursor or touch to rub the gold overlay foil.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>
+                    2
+                  </span>
+                  <span>Reach 45% scratched to automatically reveal winnings.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>
+                    3
+                  </span>
+                  <span>Winnings are directly credited into your reward points.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Earn More Plays Promo */}
+            <div
+              className="game-glass-panel"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, rgba(0, 103, 77, 0.4) 0%, rgba(16, 185, 129, 0.2) 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.5)',
+              }}
+            >
+              <div>
+                <h5 style={{ fontSize: '14px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                  Need More Scratch Cards?
+                </h5>
+                <p style={{ fontSize: '12px', color: '#A7F3D0', margin: '4px 0 0 0' }}>
+                  Upload shopping receipts to get extra daily cards!
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/scan')}
+                style={{
+                  background: '#10B981',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
+                }}
+              >
+                Scan Now
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Scratchable Canvas Overlay */}
-        <canvas
-          ref={canvasRef}
-          width={320}
-          height={240}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            cursor: 'grab',
-            touchAction: 'none',
-          }}
-          onMouseDown={(e) => {
-            setIsDrawing(true);
-            const { x, y } = getPosition(e);
-            scratch(x, y);
-          }}
-          onMouseMove={(e) => {
-            if (isDrawing) {
-              const { x, y } = getPosition(e);
-              scratch(x, y);
-            }
-          }}
-          onMouseUp={() => setIsDrawing(false)}
-          onMouseLeave={() => setIsDrawing(false)}
-          onTouchStart={(e) => {
-            setIsDrawing(true);
-            const { x, y } = getPosition(e);
-            scratch(x, y);
-          }}
-          onTouchMove={(e) => {
-            if (isDrawing) {
-              const { x, y } = getPosition(e);
-              scratch(x, y);
-            }
-          }}
-          onTouchEnd={() => setIsDrawing(false)}
-        />
+        {/* Bottom Marquee Light Bulbs */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginTop: '24px' }}>
+          {[...Array(16)].map((_, i) => (
+            <span key={i} className="casino-bulb" />
+          ))}
+        </div>
       </div>
-
-      {/* Progress Bar & Next Card Action */}
-      <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-        <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)' }}>
-          <span>{t('scratch2win.scratchedLabel', 'Scratched')}</span>
-          <span>{revealedPercent}%</span>
-        </div>
-        <div style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'var(--bg-card-secondary)', overflow: 'hidden' }}>
-          <div
-            style={{
-              width: `${Math.min(revealedPercent, 100)}%`,
-              height: '100%',
-              background: 'linear-gradient(90deg, #00674D, #10B981)',
-              transition: 'width 0.1s ease',
-            }}
-          />
-        </div>
-      </div>
-
-      {isRevealed && (
-        <Button
-          onClick={handleNextCard}
-          disabled={cardsLeft <= 0}
-          variant="gold"
-          title={cardsLeft > 0 ? t('scratch2win.scratchNextCard', 'Scratch Next Card') : t('scratch2win.noCardsLeft', 'No Cards Left')}
-          icon={<RefreshCw size={18} />}
-          style={{ width: '320px', padding: '14px' }}
-        />
-      )}
 
       {/* Rules Modal */}
       <CustomModal

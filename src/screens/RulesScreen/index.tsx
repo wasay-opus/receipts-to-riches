@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
@@ -49,6 +49,10 @@ export const RulesScreen: React.FC = () => {
     (i18n.language || 'en').startsWith('es') ? 'es' : 'en',
   );
   const [showVideoGuides, setShowVideoGuides] = useState(false);
+
+  useEffect(() => {
+    setSelectedLanguage((i18n.language || 'en').startsWith('es') ? 'es' : 'en');
+  }, [i18n.language]);
 
   const getRulesMarkdown = (tab: string, lang: 'en' | 'es') => {
     const isSpanish = lang === 'es';

@@ -193,6 +193,8 @@
   },
   "play": {
     "title": "Jugar",
+    "receiptAttachedTitle": "Recibo adjunto • Selecciona un juego",
+    "receiptAttachedSubtitle": "Tu recibo subido se seleccionará automáticamente para el juego.",
     "winCashGames": "Juegos por dinero",
     "instantGames": "Juegos instantáneos",
     "miniGames": "Minijuegos",
@@ -543,6 +545,9 @@
   },
   "home": {
     "title": "Inicio",
+    "growAudienceTitle": "¡Haz Crecer tu Audiencia!",
+    "growAudienceDesc": "Anuncia tu marca, sitio web o aplicación móvil directamente a nuestros usuarios activos. ¡Toca aquí para iniciar tu campaña!",
+    "getStarted": "Comenzar",
     "pointsBalance": "Balance de puntos",
     "dailyStreak": "Racha diaria",
     "scanReceipt": "Escanear recibo",
@@ -725,6 +730,14 @@
     "rankings": "clasificaciones"
   },
   "cashGames": {
+    "descriptions": {
+      "zdt": "Juegue la información de código postal, fecha y hora de cualquier recibo. ¡Puede ganar hasta $1,430,000 en premios!",
+      "pickGames": "¡Ingrese la información del recibo y el monto para ingresar al sorteo de {{prize}}!"
+    },
+    "placeholders": {
+      "enterZip": "Ingrese el código postal",
+      "enterTotal": "Ingrese el monto total"
+    },
     "zdt": {
       "headerTitle": "Zip Date Time",
       "introText": "Juegue la información de código postal, fecha y hora de cualquier recibo. ¡Puede ganar hasta $1,430,000 en premios!",
@@ -1334,6 +1347,8 @@
     "loadingFeed": "Cargando el feed...",
     "emptyState": "Todavía no hay publicaciones de la comunidad.",
     "editPostLabel": "Editar publicación",
+    "changeImage": "Cambiar foto",
+    "removeImage": "Eliminar imagen",
     "reportPostLabel": "Reportar publicación",
     "deletePostLabel": "Eliminar publicación",
     "postAttachmentAlt": "Imagen adjunta de la publicación",

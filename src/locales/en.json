@@ -193,6 +193,8 @@
   },
   "play": {
     "title": "Play",
+    "receiptAttachedTitle": "Receipt Attached • Select a Game",
+    "receiptAttachedSubtitle": "Your uploaded receipt will be automatically selected for your game.",
     "winCashGames": "Win Cash Games",
     "instantGames": "Instant Games",
     "miniGames": "Mini Games",
@@ -543,6 +545,9 @@
   },
   "home": {
     "title": "Home",
+    "growAudienceTitle": "Grow Your Audience!",
+    "growAudienceDesc": "Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!",
+    "getStarted": "Get Started",
     "pointsBalance": "Points Balance",
     "dailyStreak": "Daily Streak",
     "scanReceipt": "Scan Receipt",
@@ -725,6 +730,14 @@
     "rankings": "Rankings"
   },
   "cashGames": {
+    "descriptions": {
+      "zdt": "Play the Zip Code, Date and Time info from any receipt. You can win up to $1,430,000 in prizes!",
+      "pickGames": "Enter receipt info and amount to enter the {{prize}} draw!"
+    },
+    "placeholders": {
+      "enterZip": "Enter Zip Code",
+      "enterTotal": "Enter Total Amount"
+    },
     "zdt": {
       "headerTitle": "Zip Date Time",
       "introText": "Play the Zip Code, Date and Time info from any receipt. You can win up to $1,430,000 in prizes!",
@@ -1339,6 +1352,8 @@
     "loadingFeed": "Loading feed...",
     "emptyState": "No community posts yet.",
     "editPostLabel": "Edit post",
+    "changeImage": "Change Photo",
+    "removeImage": "Remove photo",
     "reportPostLabel": "Report post",
     "deletePostLabel": "Delete post",
     "postAttachmentAlt": "Post attachment",

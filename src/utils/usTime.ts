@@ -2,7 +2,7 @@ const DEFAULT_US_TIME_ZONE = 'America/New_York';
 
 const pad = (value: number | string) => String(value).padStart(2, '0');
 
-const getUSDateParts = (date = new Date(), timeZone = DEFAULT_US_TIME_ZONE) => {
+export const getUSDateParts = (date = new Date(), timeZone = DEFAULT_US_TIME_ZONE) => {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',
@@ -49,5 +49,20 @@ export const getUSTimeHHMM = (date = new Date()) => {
 export const getUSDateYYYYMMDD = (date = new Date()) => {
   const usDate = getUSDateParts(date);
   return `${usDate.year}-${usDate.month}-${usDate.day}`;
+};
+
+export const isMiddayOpenInUSTime = (timeStr?: string): boolean => {
+  if (timeStr) {
+    const match = String(timeStr).match(/^(\d{1,2}):(\d{2})/);
+    if (match) {
+      const hour = parseInt(match[1], 10);
+      const min = parseInt(match[2], 10);
+      return hour < 12 || (hour === 12 && min === 0);
+    }
+  }
+  const usDate = getUSDateParts();
+  const hour = parseInt(usDate.hour, 10);
+  const min = parseInt(usDate.minute, 10);
+  return hour < 12 || (hour === 12 && min === 0);
 };
 
