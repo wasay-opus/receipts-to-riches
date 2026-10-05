@@ -36,10 +36,27 @@ export const getUSDateParts = (date = new Date(), timeZone = DEFAULT_US_TIME_ZON
   };
 };
 
+export const getLocalTimeWithOffset = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const offsetHours = pad(Math.floor(Math.abs(offsetMinutes) / 60));
+  const offsetMins = pad(Math.abs(offsetMinutes) % 60);
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMins}`;
+};
+
 export const getUSTimeWithOffset = (date = new Date()) => {
   const usDate = getUSDateParts(date);
   return `${usDate.year}-${usDate.month}-${usDate.day}T${usDate.hour}:${usDate.minute}:${usDate.second}${usDate.offset}`;
 };
+
 
 export const getUSTimeHHMM = (date = new Date()) => {
   const usDate = getUSDateParts(date);

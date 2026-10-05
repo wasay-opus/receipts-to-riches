@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, DollarSign, Sparkles, MapPin, Calendar, Clock, Image, Layers, HelpCircle, Megaphone, Lock, CheckCircle2, Circle } from 'lucide-react';
 import { Button, Container, CustomModal, GameHelpMenu, showToast, triggerCoinCelebration } from '../../components';
 import gameServices from '../../services/gameServices';
-import { getUSDateYYYYMMDD, getUSTimeHHMM, getUSTimeWithOffset, isMiddayOpenInUSTime } from '../../utils/usTime';
+import { getLocalTimeWithOffset, getUSDateYYYYMMDD, getUSTimeHHMM, getUSTimeWithOffset, isMiddayOpenInUSTime } from '../../utils/usTime';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
 import { getUserRewardPoints } from '../../utils/userDisplay';
@@ -94,20 +94,20 @@ export const CashGame: React.FC = () => {
   const [middayClosedModalOpen, setMiddayClosedModalOpen] = useState(false);
   const [middayStatusData, setMiddayStatusData] = useState<{ is_open?: boolean | null; note?: string } | null>(null);
 
+  // Sync state whenever selected game slug or URL changes
   useEffect(() => {
-    const preloaded = getScannedReceipt();
-    if (preloaded.file && !receiptFile) {
-      setReceiptFile(preloaded.file);
-      setReceiptPreview(preloaded.previewUrl);
-    }
-  }, []);
+    const isZdt = selectedGameSlug === 'zdt';
+    const explicitMode = (location.state as any)?.mode || null;
+    setSelectedMode(isZdt ? 'full day' : explicitMode);
+    setTempSelectedMode(explicitMode);
+    setDrawOption(explicitMode === 'midday' ? 'midday' : 'full day');
+    setMiddayClosedModalOpen(false);
+    setResult(null);
 
-  useEffect(() => {
+    const localTimeStr = getLocalTimeWithOffset();
     let isMounted = true;
-    const currentUSTime = getUSTimeHHMM();
-
     gameServices
-      .getMiddayStatus(currentUSTime)
+      .getMiddayStatus(localTimeStr)
       .then((response) => {
         if (!isMounted) return;
         const payload = response?.data?.data ?? response?.data;
@@ -120,6 +120,14 @@ export const CashGame: React.FC = () => {
     return () => {
       isMounted = false;
     };
+  }, [selectedGameSlug, location.search]);
+
+  useEffect(() => {
+    const preloaded = getScannedReceipt();
+    if (preloaded.file && !receiptFile) {
+      setReceiptFile(preloaded.file);
+      setReceiptPreview(preloaded.previewUrl);
+    }
   }, []);
 
   const checkIsMiddayOpen = (): boolean => {
@@ -546,6 +554,7 @@ export const CashGame: React.FC = () => {
                 <img
                   src={receiptPreview}
                   alt="Receipt Preview"
+                  onError={() => setReceiptPreview(null)}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>

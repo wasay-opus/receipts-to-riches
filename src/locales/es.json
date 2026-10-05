@@ -1475,7 +1475,14 @@
     "profileUpdatedDesc": "Tu información personal ha sido guardada.",
     "profileNotSaved": "No se pudo guardar el perfil",
     "tryAgain": "Por favor, inténtalo de nuevo.",
-    "saveChanges": "Guardar Cambios"
+    "saveChanges": "Guardar Cambios",
+    "unsavedChangesTitle": "Cambios sin guardar",
+    "unsavedChangesText": "Tienes cambios sin guardar en tu perfil. ¿Deseas guardarlos antes de salir?",
+    "saveChangesButton": "Guardar Cambios",
+    "discardChangesButton": "Descartar Cambios",
+    "keepEditingButton": "Seguir Editando",
+    "unsavedBadge": "Tienes cambios sin guardar",
+    "discard": "Descartar"
   },
   "notification": {
     "markAllReadSuccess": "Todas las notificaciones se marcaron como leídas",

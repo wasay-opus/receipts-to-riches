@@ -50,7 +50,9 @@
   --shadow-glow: 0 0 25px rgba(0, 103, 77, 0.4);
 }
 
-/* Dark Mode Native Date/Time Pickers & Indicators */
+/* ==========================================================================
+   Dark Mode Native Date/Time Pickers & Global Controls
+   ========================================================================== */
 html.dark,
 .dark,
 .dark input[type="date"],
@@ -62,31 +64,63 @@ html.dark,
   color-scheme: dark;
 }
 
+/* Force Native Webkit Calendar & Time Picker Indicator Icons to be 100% Pure Bright White */
 .dark input[type="date"]::-webkit-calendar-picker-indicator,
 .dark input[type="time"]::-webkit-calendar-picker-indicator,
 .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 .dark input[type="month"]::-webkit-calendar-picker-indicator,
-.dark input[type="week"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.8) contrast(1.2);
-  cursor: pointer;
-  opacity: 0.95;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+.dark input[type="week"]::-webkit-calendar-picker-indicator,
+html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+html.dark input[type="month"]::-webkit-calendar-picker-indicator,
+html.dark input[type="week"]::-webkit-calendar-picker-indicator,
+.dark input::-webkit-calendar-picker-indicator,
+html.dark input::-webkit-calendar-picker-indicator,
+input.dark[type="date"]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) invert(1) !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  display: inline-block !important;
+  transition: transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
 }
 
 .dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
 .dark input[type="time"]::-webkit-calendar-picker-indicator:hover,
 .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
 .dark input[type="month"]::-webkit-calendar-picker-indicator:hover,
-.dark input[type="week"]::-webkit-calendar-picker-indicator:hover {
-  filter: invert(1) brightness(2.2);
-  opacity: 1;
-  transform: scale(1.1);
+.dark input[type="week"]::-webkit-calendar-picker-indicator:hover,
+.dark input::-webkit-calendar-picker-indicator:hover,
+html.dark input::-webkit-calendar-picker-indicator:hover {
+  filter: brightness(0) invert(1) drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) !important;
+  opacity: 1 !important;
+  transform: scale(1.15);
 }
 
-.dark input[type="search"]::-webkit-search-cancel-button {
-  filter: invert(1);
-  cursor: pointer;
+.dark input[type="search"]::-webkit-search-cancel-button,
+html.dark input[type="search"]::-webkit-search-cancel-button {
+  filter: brightness(0) invert(1) !important;
+  cursor: pointer !important;
+  opacity: 0.9 !important;
 }
+
+/* Dark Mode Form Input Icons & SVG Pickers */
+.dark .form-input__left-icon,
+html.dark .form-input__left-icon {
+  color: #E2E8F0 !important;
+}
+
+.dark .form-input__right-icon,
+html.dark .form-input__right-icon {
+  color: #E2E8F0 !important;
+}
+
+.dark .form-input-icon,
+html.dark .form-input-icon {
+  color: #E2E8F0 !important;
+}
+
+
 
 * {
   margin: 0;
@@ -682,5 +716,53 @@ svg.animate-spin,
   background: linear-gradient(135deg, rgba(213, 173, 96, 0.12) 0%, rgba(255, 215, 0, 0.04) 100%);
   border: 1px solid rgba(213, 173, 96, 0.3);
 }
+
+/* Personal Info & Form Grids */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .form-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+@keyframes saveHighlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(213, 173, 96, 0.7);
+    border-color: #D5AD60;
+  }
+  50% {
+    box-shadow: 0 0 24px 6px rgba(213, 173, 96, 0.55);
+    border-color: #FFD700;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(213, 173, 96, 0);
+    border-color: transparent;
+  }
+}
+
+.save-section-highlight {
+  border-radius: 18px;
+  border: 2px solid #D5AD60 !important;
+  animation: saveHighlightPulse 2s ease-in-out infinite;
+  padding: 10px !important;
+  background: rgba(213, 173, 96, 0.08) !important;
+}
+
 
 

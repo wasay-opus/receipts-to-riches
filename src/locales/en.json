@@ -1475,7 +1475,14 @@
     "profileUpdatedDesc": "Your personal information has been saved.",
     "profileNotSaved": "Profile not saved",
     "tryAgain": "Please try again.",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "unsavedChangesTitle": "Unsaved Changes",
+    "unsavedChangesText": "You have unsaved changes on your profile. Would you like to save them before leaving?",
+    "saveChangesButton": "Save Changes",
+    "discardChangesButton": "Discard Changes",
+    "keepEditingButton": "Keep Editing",
+    "unsavedBadge": "You have unsaved changes",
+    "discard": "Discard"
   },
   "notification": {
     "markAllReadSuccess": "All notifications marked read",

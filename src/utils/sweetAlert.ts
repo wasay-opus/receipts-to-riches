@@ -112,3 +112,42 @@ export const promptAppInput = async ({
 
   return result.isConfirmed ? String(result.value ?? '').trim() : '';
 };
+
+export const confirmUnsavedChanges = async ({
+  title = 'Unsaved Changes',
+  text = 'You have unsaved changes. Would you like to save them before leaving?',
+  saveButtonText = 'Save Changes',
+  discardButtonText = 'Discard Changes',
+  keepEditingButtonText = 'Keep Editing',
+}: {
+  title?: string;
+  text?: string;
+  saveButtonText?: string;
+  discardButtonText?: string;
+  keepEditingButtonText?: string;
+} = {}): Promise<'save' | 'discard' | 'stay'> => {
+  const result = await Swal.fire({
+    icon: 'question',
+    title,
+    text,
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: saveButtonText,
+    denyButtonText: discardButtonText,
+    cancelButtonText: keepEditingButtonText,
+    confirmButtonColor: '#00674D',
+    denyButtonColor: '#EF4444',
+    cancelButtonColor: '#64748B',
+    reverseButtons: false,
+    background: isDarkTheme() ? '#0E1528' : '#FFFFFF',
+    color: isDarkTheme() ? '#F8FAFC' : '#0F172A',
+    customClass: {
+      popup: getPopupClass(),
+    },
+  });
+
+  if (result.isConfirmed) return 'save';
+  if (result.isDenied) return 'discard';
+  return 'stay';
+};
+

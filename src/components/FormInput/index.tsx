@@ -32,6 +32,7 @@ export const FormInput: React.FC<FormInputProps> = ({
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
         {leftIcon && (
           <span
+            className="form-input__left-icon"
             style={{
               position: 'absolute',
               left: '14px',
@@ -57,6 +58,7 @@ export const FormInput: React.FC<FormInputProps> = ({
         {isPassword ? (
           <button
             type="button"
+            className="form-input__right-icon"
             onClick={() => setShowPassword(!showPassword)}
             style={{
               position: 'absolute',
@@ -74,6 +76,7 @@ export const FormInput: React.FC<FormInputProps> = ({
           </button>
         ) : rightIcon ? (
           <span
+            className="form-input__right-icon"
             style={{
               position: 'absolute',
               right: '14px',

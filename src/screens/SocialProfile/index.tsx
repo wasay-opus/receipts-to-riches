@@ -143,6 +143,9 @@ export const SocialProfile: React.FC = () => {
           <img
             src={profile?.image_url ?? profile?.profile_image_url ?? profile?.avatar ?? fallbackAvatar}
             alt={getDisplayName(profile) ?? t('socialProfile.communityMember', 'Community Member')}
+            onError={(e) => {
+              e.currentTarget.src = fallbackAvatar;
+            }}
             style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #00674D' }}
           />
           <div>
