@@ -67,6 +67,24 @@ class FundServices {
       throw error;
     }
   };
+
+  capturePaypalPayment = async (token: string, payerId: string): Promise<IApiResponse> => {
+    try {
+      console.log('[FundAPI] Request -> GET', endPoints.PAYPAL_CALLBACK, { token, payerId });
+      const response = await fetchApi({
+        method: 'GET',
+        endPoint: `${endPoints.PAYPAL_CALLBACK}?token=${encodeURIComponent(token)}&PayerID=${encodeURIComponent(payerId)}`,
+        data: undefined,
+        params: undefined,
+        token: false,
+      });
+      console.log('[FundAPI] Success -> GET PayPal callback', response);
+      return response;
+    } catch (error) {
+      console.error('[FundAPI] Error -> GET PayPal callback', error);
+      throw error;
+    }
+  };
 }
 
 const fundServices = new FundServices();

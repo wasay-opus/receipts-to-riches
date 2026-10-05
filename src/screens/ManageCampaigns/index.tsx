@@ -82,6 +82,22 @@ export const ManageCampaigns: React.FC = () => {
 
   const currentTabList = groupedCampaigns[activeTab] || [];
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PAYPAL_PAYMENT_SUCCESS') {
+        showToast({
+          type: 'success',
+          text1: 'Payment Successful',
+          text2: 'Funds have been added to your account.',
+        });
+        dispatch(fetchAllFunds());
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [dispatch]);
+
   const handleAddFunds = async () => {
     const amount = Number(fundAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -93,7 +109,7 @@ export const ManageCampaigns: React.FC = () => {
       const response = await dispatch(addFunds(amount)).unwrap();
       const approvalUrl = response?.data?.approval_url ?? response?.data?.approvalUrl;
       if (approvalUrl) {
-        window.open(approvalUrl, '_blank', 'noopener,noreferrer');
+        window.open(approvalUrl, '_blank');
       } else {
         showToast({
           type: 'info',

@@ -70,6 +70,7 @@ const endPoints = {
   //Funds
   GET_FUNDS: 'funds',
   ADD_FUNDS_PAYPAL: 'funds/paypal/create',
+  PAYPAL_CALLBACK: 'funds/paypal/callback',
 
   //notifications
   SAVE_FCM_TOKEN: 'user/save-fcm-token',

@@ -35,6 +35,7 @@ import SocialProfile from './screens/SocialProfile';
 import ManageCampaigns from './screens/ManageCampaigns';
 import CreateCampaign from './screens/CreateCampaign';
 import CampaignDetail from './screens/CampaignDetail';
+import PaypalCallback from './screens/PaypalCallback';
 
 import Profile from './screens/Profile';
 import PersonalInfo from './screens/PersonalInfo';
@@ -136,6 +137,7 @@ function App() {
         <Route path="/signup" element={isAuthenticated ? <Navigate to="/" replace /> : <SignUp />} />
         <Route path="/forgot-password" element={<ForgetPassword />} />
         <Route path="/otp" element={<OtpVerification />} />
+        <Route path="/otp-verification" element={<OtpVerification />} />
         <Route path="/secret-question" element={<SecretQuestion />} />
 
         {/* Protected Core Routes */}
@@ -164,8 +166,14 @@ function App() {
 
         {/* Campaigns */}
         <Route path="/campaigns" element={<ProtectedRoute><ManageCampaigns /></ProtectedRoute>} />
+        <Route path="/manage-campaigns" element={<ProtectedRoute><ManageCampaigns /></ProtectedRoute>} />
         <Route path="/campaigns/create" element={<ProtectedRoute><CreateCampaign /></ProtectedRoute>} />
         <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetail /></ProtectedRoute>} />
+
+        {/* PayPal Callback */}
+        <Route path="/funds/paypal/callback" element={<PaypalCallback />} />
+        <Route path="/api/funds/paypal/callback" element={<PaypalCallback />} />
+        <Route path="/paypal/callback" element={<PaypalCallback />} />
 
         {/* Settings & Info */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

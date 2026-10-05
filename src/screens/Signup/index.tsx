@@ -63,7 +63,29 @@ export const SignUp: React.FC = () => {
         payload.referral_code = values.referralCode.trim();
       }
 
-      await dispatch(registerUser(payload)).unwrap();
+      const res = await dispatch(registerUser(payload)).unwrap();
+      const resData = res?.data || res;
+      const isUnverifiedPhone =
+        resData?.is_phone_verified === false ||
+        res?.is_phone_verified === false ||
+        (typeof res?.message === 'string' &&
+          res.message.toLowerCase().includes('verify your phone'));
+
+      if (isUnverifiedPhone) {
+        showToast({
+          type: 'info',
+          text1: t('auth.verifyPhone', 'Verify Phone Number'),
+          text2: res?.message || t('auth.otpSentToPhone', 'Please verify the code sent to your phone.'),
+        });
+        navigate('/otp-verification', {
+          state: {
+            email: payload.email,
+            phone: payload.phone,
+            isPhoneVerification: true,
+          },
+        });
+        return;
+      }
 
       showToast({
         type: 'success',
@@ -83,6 +105,22 @@ export const SignUp: React.FC = () => {
         text1: t('auth.signUpFailed', 'Registration Failed'),
         text2: errorMsg,
       });
+
+      if (
+        error?.is_phone_verified === false ||
+        (typeof errorMsg === 'string' &&
+          errorMsg.toLowerCase().includes('verify your phone'))
+      ) {
+        setTimeout(() => {
+          navigate('/otp-verification', {
+            state: {
+              email: values.email.trim(),
+              phone: error?.phone || values.phone.trim(),
+              isPhoneVerification: true,
+            },
+          });
+        }, 1200);
+      }
     }
   };
 

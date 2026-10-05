@@ -16,10 +16,13 @@ export const OtpVerification: React.FC = () => {
   const { loading } = useSelector((state: RootState) => state.auth);
 
   const email = (location.state as any)?.email || '';
+  const phone = (location.state as any)?.phone || '';
   const isForgot = (location.state as any)?.isForgot || false;
+  const isPhoneVerification = (location.state as any)?.isPhoneVerification || !!phone;
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
+  const [submitting, setSubmitting] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -68,6 +71,7 @@ export const OtpVerification: React.FC = () => {
       return;
     }
 
+    setSubmitting(true);
     try {
       if (isForgot) {
         await dispatch(
@@ -76,16 +80,30 @@ export const OtpVerification: React.FC = () => {
             token: code,
           })
         ).unwrap();
-      }
 
-      showToast({
-        type: 'success',
-        text1: t('auth.verifiedSuccess', 'Verification Successful!'),
-        text2: t('auth.accountActive', 'Your code has been verified.'),
-      });
+        showToast({
+          type: 'success',
+          text1: t('auth.verifiedSuccess', 'Verification Successful!'),
+          text2: t('auth.accountActive', 'Your code has been verified.'),
+        });
 
-      if (isForgot) {
         navigate('/profile/change-password', { state: { email, otp: code } });
+      } else if (phone || isPhoneVerification) {
+        const response = await authServices.verifyOtp({
+          phone: phone.trim(),
+          otp: code,
+        });
+
+        if (response && response.success !== false) {
+          showToast({
+            type: 'success',
+            text1: t('auth.verifiedSuccess', 'Phone Verified!'),
+            text2: response?.message || t('auth.phoneVerifiedMsg', 'Your phone number has been verified.'),
+          });
+          navigate('/signin');
+        } else {
+          throw new Error(response?.message || 'Verification failed');
+        }
       } else {
         navigate('/');
       }
@@ -95,19 +113,31 @@ export const OtpVerification: React.FC = () => {
         text1: t('auth.verificationFailed', 'Verification Failed'),
         text2: error?.message || t('auth.wrongCode', 'Invalid code or code expired.'),
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleResend = async () => {
     if (timer > 0) return;
     try {
-      await authServices.forgotPassword({ email });
-      setTimer(60);
-      showToast({
-        type: 'success',
-        text1: t('auth.otpResent', 'Code Resent!'),
-        text2: t('auth.checkInbox', 'A fresh code has been sent to your email.'),
-      });
+      if (phone || isPhoneVerification) {
+        const response = await authServices.resendOtp({ phone: phone.trim() });
+        setTimer(60);
+        showToast({
+          type: 'success',
+          text1: t('auth.otpResent', 'Code Resent!'),
+          text2: response?.message || t('auth.checkPhone', 'A fresh code has been sent to your phone.'),
+        });
+      } else {
+        await authServices.forgotPassword({ email });
+        setTimer(60);
+        showToast({
+          type: 'success',
+          text1: t('auth.otpResent', 'Code Resent!'),
+          text2: t('auth.checkInbox', 'A fresh code has been sent to your email.'),
+        });
+      }
     } catch (error: any) {
       showToast({
         type: 'error',
@@ -163,7 +193,7 @@ export const OtpVerification: React.FC = () => {
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
             {t('auth.otpSentTo', 'We sent a verification code to')}{' '}
-            <strong style={{ color: 'var(--text-main)' }}>{email || t('auth.yourEmailFallback', 'your email')}</strong>
+            <strong style={{ color: 'var(--text-main)' }}>{phone || email || t('auth.yourEmailFallback', 'your phone/email')}</strong>
           </p>
         </div>
 
@@ -199,7 +229,7 @@ export const OtpVerification: React.FC = () => {
 
         <Button
           onClick={handleVerify}
-          loading={loading}
+          loading={loading || submitting}
           title={t('auth.verifyAndProceed', 'Verify Code')}
           style={{ width: '100%' }}
         />
