@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, HelpCircle, ArrowLeft, RotateCw } from 'lucide-react';
+import { Sparkles, HelpCircle, ArrowLeft, RotateCw, RotateCcw, Megaphone } from 'lucide-react';
 import { Button, Container, CustomModal, showToast, triggerCoinCelebration } from '../../components';
 import { WebSound, soundAssets } from '../../utils/soundLoader';
 import images from '../../constants/images';
@@ -31,36 +31,7 @@ import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
 import { fetchUnlockedMiniGames, invalidateUnlockedMiniGamesCache } from '../../redux/Slices/gamesSlice';
 import gameServices from '../../services/gameServices';
-
-const parseWonPoints = (payload: any, fallback: number) => {
-  const candidates = [
-    payload?.points,
-    payload?.won_points,
-    payload?.reward_points,
-    payload?.data?.points,
-    payload?.data?.won_points,
-    payload?.data?.reward_points,
-    payload?.data?.wallet?.points,
-  ];
-
-  for (const candidate of candidates) {
-    const parsed = Number(candidate);
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      return parsed;
-    }
-  }
-
-  const message = String(payload?.message ?? payload?.data?.message ?? '');
-  const matchedPoints = message.match(/(\d+)\s*(pts?|points?)/i);
-  if (matchedPoints) {
-    const parsed = Number(matchedPoints[1]);
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      return parsed;
-    }
-  }
-
-  return fallback;
-};
+import { extractPlayableSlots, getNextUnlockText, parseWonPoints } from '../../utils/miniGamesUtil';
 
 const pickSegmentForPoints = (points: number) => {
   const matchingIndexes = SEGMENTS
@@ -75,15 +46,6 @@ const pickSegmentForPoints = (points: number) => {
   return matchingIndexes[Math.floor(Math.random() * matchingIndexes.length)];
 };
 
-const extractPlayableSlots = (slots: any[] | undefined) =>
-  Array.isArray(slots)
-    ? slots.filter(
-        (slot) =>
-          Number(slot?.is_open) === 1 ||
-          String(slot?.is_open).toLowerCase() === 'true',
-      ).length
-    : null;
-
 export const SpinWheel: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -97,7 +59,10 @@ export const SpinWheel: React.FC = () => {
   const [rotationAngle, setRotationAngle] = useState(0);
   const [resultModal, setResultModal] = useState<WheelSegment | null>(null);
   const [rulesModalVisible, setRulesModalVisible] = useState(false);
-  const playableSlots = extractPlayableSlots(unlockedMiniGames?.['spin-the-wheel']);
+
+  const wheelSlots = unlockedMiniGames?.['spin-the-wheel'];
+  const playableSlots = extractPlayableSlots(wheelSlots);
+  const nextUnlockText = getNextUnlockText(wheelSlots);
 
   const spinSoundRef = useRef<WebSound | null>(null);
   const winSoundRef = useRef<WebSound | null>(null);
@@ -270,272 +235,350 @@ export const SpinWheel: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="1100px" style={{ alignItems: 'center', gap: '24px', paddingBottom: '60px' }}>
-      {/* Top Bar */}
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <Container maxWidth="1000px" style={{ paddingBottom: '60px' }}>
+      {/* Top Header Navigation */}
+      <div className="game-top-nav-bar">
         <button
+          type="button"
           onClick={() => navigate(-1)}
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            width: '40px',
-            height: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: 'var(--text-main)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
+          className="game-nav-btn"
         >
           <ArrowLeft size={20} />
         </button>
 
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+        <div className="game-stage-title-wrap">
+          <h2 className="game-stage-title">
             {t('spinWheel.headerTitle', 'Spin The Wheel')}
           </h2>
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>
+          <p className="game-stage-subtitle">
             Fortune Game Show Arena
-          </span>
+          </p>
         </div>
 
         <button
+          type="button"
           onClick={() => setRulesModalVisible(true)}
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            width: '40px',
-            height: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: 'var(--text-main)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
+          className="game-nav-btn"
         >
           <HelpCircle size={20} />
         </button>
       </div>
 
-      {/* Spins Available Badge */}
-      <div
-        className="pill-badge pill-gold"
-        style={{ fontSize: '14px', padding: '8px 20px', gap: '8px' }}
-      >
-        <Sparkles size={16} />
-        <span style={{ fontWeight: 700 }}>
-          {playableSlots === null
-            ? t('spinWheel.checkingSpins', 'Checking spins...')
-            : t('spinWheel.spinsAvailable', '{{count}} Spins Available', { count: playableSlots })}
-        </span>
-      </div>
+      {/* 2-Column Responsive Layout: Left (Game Wheel) & Right (Campaign + Rules) */}
+      <div className="game-screen-grid">
+        {/* Left: Main Game Wheel Arena Card */}
+        <div className="card game-arena-card">
+          {/* Card Header */}
+          <div className="game-arena-header">
+            <div>
+              <span className="game-arena-badge game-arena-badge--spin">
+                SPIN &bull; 500 PTS TOP PRIZE
+              </span>
+              <p className="game-arena-desc">
+                {t('spinWheel.subtitle', 'Spin the wheel to win instant cash points and free re-spins!')}
+              </p>
+            </div>
+            <div className="game-slots-pill game-slots-pill--spin">
+              <Sparkles size={14} />
+              {playableSlots === null
+                ? t('spinWheel.checkingSpins', 'Checking...')
+                : `${playableSlots} Spins Left`}
+            </div>
+          </div>
 
-      {/* Game Show Arena Immersive Wrapper */}
-      <div className="game-arena-wrapper">
-        {/* Top Marquee Light Bulbs */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-          {[...Array(16)].map((_, i) => (
-            <span key={i} className="casino-bulb" />
-          ))}
-        </div>
-
-        {/* 2-Column Responsive Layout */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '32px',
-            alignItems: 'center',
-          }}
-        >
-          {/* Left Column: Wheel Stage & Spin CTA */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+          {/* Wheel Stage with Neon Drop Glow */}
+          <div
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '12px',
+              margin: '8px 0',
+            }}
+          >
+            {/* Top Pointer Needle */}
             <div
               style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '16px',
-                background: 'radial-gradient(circle, rgba(213, 173, 96, 0.15) 0%, rgba(0,0,0,0) 70%)',
-                borderRadius: '50%',
+                position: 'absolute',
+                top: '-4px',
+                zIndex: 10,
+                width: 0,
+                height: 0,
+                borderLeft: '16px solid transparent',
+                borderRight: '16px solid transparent',
+                borderTop: '32px solid #F59E0B',
+                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3)) drop-shadow(0 0 8px rgba(245, 158, 11, 0.6))',
               }}
-            >
-              {/* Top Pointer Needle */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '0px',
-                  zIndex: 10,
-                  width: 0,
-                  height: 0,
-                  borderLeft: '16px solid transparent',
-                  borderRight: '16px solid transparent',
-                  borderTop: '32px solid #FFD700',
-                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 8px #FFA500)',
-                }}
-              />
+            />
 
-              <canvas
-                ref={canvasRef}
-                width={360}
-                height={360}
-                style={{
-                  maxWidth: '100%',
-                  height: 'auto',
-                  filter: 'drop-shadow(0 12px 30px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 15px rgba(213, 173, 96, 0.3))',
-                }}
-              />
-            </div>
-
-            {/* Spin CTA Button */}
-            <Button
-              onClick={spin}
-              disabled={isSpinning || (unlockedMiniGamesFetched && playableSlots === 0)}
-              loading={isSpinning}
-              variant="gold"
-              title={
-                isSpinning
-                  ? t('spinWheel.spinning', 'SPINNING...')
-                  : unlockedMiniGamesFetched && playableSlots === 0
-                  ? t('spinWheel.noSpinsLeft', 'No Spins Left')
-                  : t('spinWheel.spinNowButton', 'SPIN NOW')
-              }
-              icon={<RotateCw size={22} />}
+            <canvas
+              ref={canvasRef}
+              width={340}
+              height={340}
               style={{
-                width: '100%',
-                maxWidth: '380px',
-                padding: '16px',
-                fontSize: '18px',
-                fontWeight: 800,
-                borderRadius: '24px',
-                boxShadow: '0 8px 24px rgba(213, 173, 96, 0.4)',
+                maxWidth: '100%',
+                height: 'auto',
+                filter: 'drop-shadow(0 12px 28px rgba(0, 0, 0, 0.18))',
               }}
             />
           </div>
 
-          {/* Right Column: Prize Table & Wheel Guide */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Top Prize Grand Banner */}
-            <div className="game-glass-panel game-glass-panel-gold">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                <Sparkles size={20} color="#FFD700" />
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  Top Fortune Reward
-                </span>
-              </div>
-              <div style={{ fontSize: '32px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                500 PTS TOP PRIZE
-              </div>
-              <p style={{ fontSize: '13px', color: '#CBD5E1', marginTop: '6px', margin: 0, lineHeight: '1.45' }}>
-                Every spin guarantees reward points or a free extra spin for more chances to win!
-              </p>
-            </div>
-
-            {/* Prize Multipliers Grid */}
-            <div className="game-glass-panel">
-              <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>
-                Wheel Prize Segments
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
-                {SEGMENTS.map((seg, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 12px',
-                      background: 'rgba(255,255,255,0.06)',
-                      borderRadius: '10px',
-                      borderLeft: `4px solid ${seg.color}`,
-                    }}
-                  >
-                    <span style={{ fontWeight: 700, color: '#FFFFFF' }}>
-                      {getSegmentLabel(seg)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Earn More Plays Promo */}
-            <div
-              className="game-glass-panel"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'linear-gradient(135deg, rgba(0, 103, 77, 0.3) 0%, rgba(16, 185, 129, 0.15) 100%)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-              }}
-            >
-              <div>
-                <h5 style={{ fontSize: '14px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-                  Need More Spins?
-                </h5>
-                <p style={{ fontSize: '12px', color: '#A7F3D0', margin: '4px 0 0 0' }}>
-                  Upload shopping receipts to get extra daily spins!
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/scan')}
-                style={{
-                  background: '#10B981',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '16px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
-                }}
-              >
-                Scan Now
-              </button>
-            </div>
-          </div>
+          {/* Spin CTA Button */}
+          <button
+            type="button"
+            onClick={spin}
+            disabled={isSpinning || playableSlots === 0}
+            style={{
+              width: '100%',
+              maxWidth: '420px',
+              padding: '16px',
+              borderRadius: '24px',
+              background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 800,
+              cursor: isSpinning || (unlockedMiniGamesFetched && playableSlots === 0) ? 'not-allowed' : 'pointer',
+              opacity: isSpinning || (unlockedMiniGamesFetched && playableSlots === 0) ? 0.7 : 1,
+              boxShadow: '0 6px 18px rgba(217, 119, 6, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'transform 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!isSpinning && playableSlots !== 0) e.currentTarget.style.transform = 'scale(1.02)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <RotateCw size={20} className={isSpinning ? 'spin-anim' : ''} />
+            <span>
+              {isSpinning
+                ? t('spinWheel.spinning', 'SPINNING...')
+                : playableSlots === 0
+                ? t('spinWheel.noSpinsLeft', 'No Spins Left')
+                : t('spinWheel.spinNowButton', 'SPIN NOW')}
+            </span>
+          </button>
+          {playableSlots === 0 && nextUnlockText && (
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '4px' }}>
+              ⏳ {nextUnlockText}
+            </span>
+          )}
         </div>
 
-        {/* Bottom Marquee Light Bulbs */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginTop: '24px' }}>
-          {[...Array(16)].map((_, i) => (
-            <span key={i} className="casino-bulb" />
-          ))}
+        {/* Right: Side Column (Campaign Ad + Rules) */}
+        <div className="game-side-column">
+          {/* Sponsored Ad / Campaign Card */}
+          <div className="card game-campaign-card">
+            <div className="game-campaign-icon">
+              <Megaphone size={28} />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {t('home.growAudienceTitle', 'Grow Your Audience!')}
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+              {t('home.growAudienceDesc', 'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!')}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/campaigns/create')}
+              className="game-campaign-btn"
+            >
+              {t('home.getStarted', 'Get Started')} &rarr;
+            </button>
+          </div>
+
+          {/* Rules & How to Play Card */}
+          <div className="card game-rules-card">
+            <h4 className="game-rules-title">
+              {t('spinWheel.rulesTitle', 'Rules & How to Play')}
+            </h4>
+            <div className="game-rules-list">
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>Tap "SPIN NOW" to launch the fortune wheel.</span>
+              </div>
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>Win instant cash points credited straight to your balance.</span>
+              </div>
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>Landing on "EXTRA SPIN" awards you a free re-spin!</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Result Modal */}
+      {/* Result Modal matching flow-video with 360° Spinning Coin */}
       <CustomModal
         visible={Boolean(resultModal)}
         onClose={() => setResultModal(null)}
-        maxWidth="400px"
+        maxWidth="390px"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
-          <img src={images.Coin} alt="Prize" style={{ width: '80px', height: '80px' }} />
-          <div>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--primary)', textTransform: 'uppercase' }}>
-              {t('spinWheel.congratulations', 'Congratulations!')}
-            </span>
-            <h3 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
-              {t('spinWheel.youWonLabel', 'You Won {{label}}!', { label: resultModal?.label })}
-            </h3>
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '6px' }}>
-              {t('spinWheel.rewardCredited', 'Your reward points have been credited to your balance.')}
-            </p>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '10px 4px 4px 4px' }}>
+          {(resultModal?.points || 0) > 0 ? (
+            <>
+              {/* 360 Degree Continuously Spinning Golden Coin in 3D */}
+              <div
+                style={{
+                  perspective: '600px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                }}
+              >
+                <img
+                  src={images.Coin}
+                  alt="Prize Coin"
+                  style={{
+                    width: '88px',
+                    height: '88px',
+                    animation: 'coin3DSpinAnimation 2.2s linear infinite',
+                    transformStyle: 'preserve-3d',
+                    filter: 'drop-shadow(0 6px 18px rgba(255, 215, 0, 0.5))',
+                  }}
+                />
+              </div>
 
-          <Button
-            title={t('spinWheel.claimAndContinue', 'Claim & Continue')}
-            onClick={() => setResultModal(null)}
-            style={{ width: '100%', marginTop: '8px' }}
-          />
+              <h3 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
+                +{resultModal?.points} Points Won!
+              </h3>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: '0 0 24px 0', lineHeight: '1.45' }}>
+                Congratulations! Your reward points have been credited to your balance.
+              </p>
+
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setResultModal(null)}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '24px',
+                    background: '#10B981',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontSize: '15.5px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.01)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  Play Again
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const points = resultModal?.points || 0;
+                    setResultModal(null);
+                    navigate('/home', {
+                      state: {
+                        rewardCelebration: {
+                          type: 'game',
+                          title: `+${points} Points Won!`,
+                          subtitle: `Added to your wallet`,
+                          points,
+                        },
+                      },
+                    });
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    fontSize: '14.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '8px 16px',
+                  }}
+                >
+                  Done
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Better Luck Next Time Distinct State (No Gold Coin) */}
+              <div
+                style={{
+                  width: '84px',
+                  height: '84px',
+                  borderRadius: '50%',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '2px dashed rgba(245, 158, 11, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                  boxShadow: '0 8px 24px rgba(245, 158, 11, 0.15)',
+                }}
+              >
+                <RotateCcw size={40} color="#F59E0B" />
+              </div>
+
+              <h3 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
+                Better Luck Next Time!
+              </h3>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: '0 0 24px 0', lineHeight: '1.45' }}>
+                The wheel stopped on zero points! Give it another spin to score rewards.
+              </p>
+
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setResultModal(null)}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '24px',
+                    background: '#F59E0B',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontSize: '15.5px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.01)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  Spin Again
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResultModal(null);
+                    navigate('/play');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    fontSize: '14.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '8px 16px',
+                  }}
+                >
+                  Back to Games
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </CustomModal>
 

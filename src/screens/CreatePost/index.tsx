@@ -30,8 +30,12 @@ export const CreatePost: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() && !selectedFile) {
-      showToast({ type: 'error', text1: t('createPost.postEmpty', 'Post cannot be empty') });
+    if (!selectedFile) {
+      showToast({
+        type: 'error',
+        text1: t('createPost.imageRequiredTitle', 'Image Required'),
+        text2: t('createPost.imageRequiredMsg', 'Please upload a receipt or image to create a post.'),
+      });
       return;
     }
 
@@ -39,9 +43,7 @@ export const CreatePost: React.FC = () => {
     if (content.trim()) {
       formData.append('description', content.trim());
     }
-    if (selectedFile) {
-      formData.append('media', selectedFile, selectedFile.name || `post_media_${Date.now()}.jpg`);
-    }
+    formData.append('media', selectedFile, selectedFile.name || `post_media_${Date.now()}.jpg`);
 
     try {
       await dispatch(createPost(formData)).unwrap();
@@ -163,16 +165,25 @@ export const CreatePost: React.FC = () => {
           onChange={handleImageSelect}
         />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
           <button
             type="button"
             className="btn-secondary"
             onClick={() => fileInputRef.current?.click()}
-            style={{ padding: '8px 14px', fontSize: '13px' }}
+            style={{
+              padding: '8px 14px',
+              fontSize: '13px',
+              border: !selectedFile ? '1.5px dashed var(--green)' : undefined,
+            }}
           >
             <ImageIcon size={16} />
-            <span>{t('createPost.addReceiptPhoto', 'Add Receipt / Photo')}</span>
+            <span>{t('createPost.addReceiptPhoto', 'Add Receipt / Photo')} <span style={{ color: 'var(--green)', fontWeight: 'bold' }}>*</span></span>
           </button>
+          {!selectedFile && (
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {t('createPost.photoRequiredHint', 'Photo required')}
+            </span>
+          )}
         </div>
       </div>
     </Container>

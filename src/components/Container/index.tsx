@@ -21,10 +21,11 @@ export const Container: React.FC<ContainerProps> = ({
         width: '100%',
         maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth,
         margin: '0 auto',
-        padding: isPadding ? '16px' : '0',
-        minHeight: 'calc(100vh - 140px)',
+        padding: isPadding ? '28px 16px 48px' : '0',
+        minHeight: 'calc(100vh - 120px)',
         display: 'flex',
         flexDirection: 'column',
+        boxSizing: 'border-box',
         ...style,
       }}
       {...props}

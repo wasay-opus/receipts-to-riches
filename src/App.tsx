@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { RootState } from './redux/Store';
 import { setDarkMode } from './redux/Slices/darkModeSlice';
 import { Header, MobileBottomNav, DesktopNavbar } from './components';
+import { RewardProvider } from './services/rewards/RewardProvider';
 
 // Screens
 import SignIn from './screens/SignIn';
@@ -130,8 +131,9 @@ function App() {
   }, [language, i18n]);
 
   return (
-    <Layout>
-      <Routes>
+    <RewardProvider>
+      <Layout>
+        <Routes>
         {/* Public / Guest Routes */}
         <Route path="/signin" element={isAuthenticated ? <Navigate to="/" replace /> : <SignIn />} />
         <Route path="/signup" element={isAuthenticated ? <Navigate to="/" replace /> : <SignUp />} />
@@ -195,6 +197,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
+  </RewardProvider>
   );
 }
 

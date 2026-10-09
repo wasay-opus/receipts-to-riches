@@ -91,6 +91,13 @@ export const CashGame: React.FC = () => {
   const [receiptTime, setReceiptTime] = useState(getUSTimeHHMM());
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ message: string; points: number } | null>(null);
+  const [successReceiptData, setSuccessReceiptData] = useState<{
+    game: string;
+    total: string;
+    time: string;
+    hasImage: boolean;
+  } | null>(null);
+  const [sessionReceiptCount, setSessionReceiptCount] = useState<number>(0);
   const [middayClosedModalOpen, setMiddayClosedModalOpen] = useState(false);
   const [middayStatusData, setMiddayStatusData] = useState<{ is_open?: boolean | null; note?: string } | null>(null);
 
@@ -166,6 +173,92 @@ export const CashGame: React.FC = () => {
     }
   };
 
+  const getReceiptTotalConfig = (slug: string) => {
+    switch (slug) {
+      case 'pick-3':
+        return {
+          min: 0.01,
+          max: 9.99,
+          maxIntDigits: 1,
+          label: '(up to 9.99)',
+          placeholder: '0.01 - 9.99',
+        };
+      case 'pick-4':
+        return {
+          min: 0.01,
+          max: 99.99,
+          maxIntDigits: 2,
+          label: '(up to 99.99)',
+          placeholder: '0.01 - 99.99',
+        };
+      case 'pick-5':
+        return {
+          min: 0.01,
+          max: 999.99,
+          maxIntDigits: 3,
+          label: '(up to 999.99)',
+          placeholder: '0.01 - 999.99',
+        };
+      default:
+        return null;
+    }
+  };
+
+  const handleReceiptTotalChange = (val: string) => {
+    if (val === '') {
+      setReceiptTotal('');
+      return;
+    }
+    // Only permit digits and a single decimal point
+    if (!/^\d*\.?\d*$/.test(val)) return;
+
+    const config = getReceiptTotalConfig(selectedGameSlug);
+    if (config) {
+      const parts = val.split('.');
+      const intPart = parts[0];
+      const decPart = parts[1];
+      if (intPart && intPart.length > config.maxIntDigits) {
+        return;
+      }
+      if (decPart && decPart.length > 2) {
+        return;
+      }
+    }
+    setReceiptTotal(val);
+  };
+
+  const format12HourTime = (timeStr?: string) => {
+    if (!timeStr) return getUSTimeHHMM();
+    const parts = timeStr.split(':');
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1] || '00';
+    if (isNaN(hours)) return timeStr;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${hours}:${minutes} ${ampm}`;
+  };
+
+  const handleEnterAnotherReceipt = () => {
+    setSuccessReceiptData(null);
+    setReceiptFile(null);
+    setReceiptPreview(null);
+    setZipCode('');
+    setReceiptTotal('');
+    clearScannedReceipt();
+  };
+
+  const handleDoneReceipt = () => {
+    setSuccessReceiptData(null);
+    sessionStorage.removeItem('pending_home_reward');
+    navigate('/home');
+  };
+
+  const handleBack = () => {
+    sessionStorage.removeItem('pending_home_reward');
+    navigate(-1);
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -174,15 +267,6 @@ export const CashGame: React.FC = () => {
         type: 'error',
         text1: t('cashGames.errors.gameNotAvailable', 'Game is not available'),
         text2: t('cashGames.errors.selectLiveGameFromPlay', 'Please select a live cash game.'),
-      });
-      return;
-    }
-
-    if (!receiptFile) {
-      showToast({
-        type: 'error',
-        text1: t('cashGames.validations.receiptImageRequired', 'Receipt image is required'),
-        text2: t('cashGames.validations.uploadReceiptImage', 'Please upload or capture an image of your receipt.'),
       });
       return;
     }
@@ -206,6 +290,19 @@ export const CashGame: React.FC = () => {
         return;
       }
 
+      const totalConfig = getReceiptTotalConfig(selectedGameSlug);
+      if (totalConfig) {
+        const numVal = parseFloat(receiptTotal);
+        if (isNaN(numVal) || numVal < totalConfig.min || numVal > totalConfig.max) {
+          showToast({
+            type: 'error',
+            text1: 'Invalid Receipt Total',
+            text2: `Receipt Total must be between $${totalConfig.min.toFixed(2)} and $${totalConfig.max.toFixed(2)} for ${gameMeta.name}.`,
+          });
+          return;
+        }
+      }
+
       if (drawOption === 'midday' && !checkIsMiddayOpen()) {
         setMiddayClosedModalOpen(true);
         setDrawOption('full day');
@@ -222,13 +319,16 @@ export const CashGame: React.FC = () => {
         date: receiptDate || getUSDateYYYYMMDD(),
         time: receiptTime || getUSTimeHHMM(),
         played_at: getUSTimeWithOffset(),
-        receipt: {
+      };
+
+      if (receiptFile) {
+        payload.receipt = {
           uri: receiptFile.name,
           type: receiptFile.type,
           name: receiptFile.name,
           file: receiptFile,
-        },
-      };
+        };
+      }
 
       if (gameMeta.isZdt) {
         payload.zip_code = zipCode.trim();
@@ -254,19 +354,29 @@ export const CashGame: React.FC = () => {
         // Fallback
       }
 
+      // Prepare modal data matching Screenshot 2
+      const formattedTotal = receiptTotal ? parseFloat(receiptTotal).toFixed(2) : (zipCode || '8.99');
+      const formattedTime = format12HourTime(receiptTime);
+
+      setSuccessReceiptData({
+        game: selectedGameSlug === 'pick-3' ? 'Pick 3' : selectedGameSlug === 'pick-4' ? 'Pick 4' : selectedGameSlug === 'pick-5' ? 'Pick 5' : gameMeta.name,
+        total: formattedTotal,
+        time: formattedTime,
+        hasImage: Boolean(receiptFile || receiptPreview),
+      });
+
+      setSessionReceiptCount((prev) => prev + 1);
+
+      // Trigger coin celebration immediately in the game when points are won
+      if (points > 0) {
+        triggerCoinCelebration();
+      }
+
       setResult({
         message: resultMessage,
         points,
       });
 
-      if (points > 0) {
-        triggerCoinCelebration();
-      }
-
-      setReceiptFile(null);
-      setReceiptPreview(null);
-      setZipCode('');
-      setReceiptTotal('');
       clearScannedReceipt();
     } catch (error: any) {
       const parsedError =
@@ -294,53 +404,39 @@ export const CashGame: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="1020px" style={{ gap: '20px', paddingBottom: '60px' }}>
+    <Container maxWidth="1000px" style={{ paddingBottom: '60px' }}>
       {/* Top Header Bar */}
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="game-top-nav-bar">
         <button
           type="button"
-          onClick={() => navigate(-1)}
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            width: '40px',
-            height: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: 'var(--text-main)',
-          }}
+          className="game-nav-btn"
+          onClick={handleBack}
         >
           <ArrowLeft size={20} />
         </button>
-        <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', textTransform: 'capitalize' }}>
-          {selectedGameSlug === 'zdt'
-            ? 'ZDT'
-            : selectedMode === 'midday'
-              ? `${selectedGameSlug === 'pick-3' ? 'Pick 3' : selectedGameSlug === 'pick-4' ? 'Pick 4' : selectedGameSlug === 'pick-5' ? 'Pick 5' : gameMeta.name} (${t('cashGames.tabs.midday', 'Mid Day')})`
-              : selectedGameSlug === 'pick-3'
-                ? 'Pick 3'
-                : selectedGameSlug === 'pick-4'
-                  ? 'Pick 4'
-                  : selectedGameSlug === 'pick-5'
-                    ? 'Pick 5'
-                    : gameMeta.name}
-        </h2>
+        <div className="game-stage-title-wrap">
+          <h2 className="game-stage-title">
+            {selectedGameSlug === 'zdt'
+              ? 'ZDT'
+              : selectedMode === 'midday'
+                ? `${selectedGameSlug === 'pick-3' ? 'Pick 3' : selectedGameSlug === 'pick-4' ? 'Pick 4' : selectedGameSlug === 'pick-5' ? 'Pick 5' : gameMeta.name} (${t('cashGames.tabs.midday', 'Mid Day')})`
+                : selectedGameSlug === 'pick-3'
+                  ? 'Pick 3'
+                  : selectedGameSlug === 'pick-4'
+                    ? 'Pick 4'
+                    : selectedGameSlug === 'pick-5'
+                      ? 'Pick 5'
+                      : gameMeta.name}
+          </h2>
+          <span className="game-stage-subtitle">
+            Official Cash Prize Challenge
+          </span>
+        </div>
         <GameHelpMenu gameSlug={selectedGameSlug} gameTitle={gameMeta.name} />
       </div>
 
       {/* Main 2-Column Responsive Web Layout */}
-      <div
-        style={{
-          width: '100%',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '24px',
-          alignItems: 'start',
-        }}
-      >
+      <div className="game-screen-grid">
         {/* Left Column: Submission Form Card */}
         <form
           onSubmit={handleSubmit}
@@ -352,6 +448,7 @@ export const CashGame: React.FC = () => {
             flexDirection: 'column',
             gap: '18px',
             borderRadius: '24px',
+            boxSizing: 'border-box',
           }}
         >
           <div
@@ -411,14 +508,19 @@ export const CashGame: React.FC = () => {
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
               {t('cashGames.labels.receiptTotal', 'Receipt Total ($)')}
+              {getReceiptTotalConfig(selectedGameSlug) && (
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#10B981', marginLeft: '6px' }}>
+                  {getReceiptTotalConfig(selectedGameSlug)?.label}
+                </span>
+              )}
             </label>
             <input
               className="form-input"
-              type="number"
-              step="0.01"
-              placeholder={t('cashGames.placeholders.enterTotal', 'Enter Total Amount')}
+              type="text"
+              inputMode="decimal"
+              placeholder={getReceiptTotalConfig(selectedGameSlug)?.placeholder || t('cashGames.placeholders.enterTotal', 'Enter Total Amount')}
               value={receiptTotal}
-              onChange={(e) => setReceiptTotal(e.target.value)}
+              onChange={(e) => handleReceiptTotalChange(e.target.value)}
               required
               style={{ borderRadius: '14px' }}
             />
@@ -631,94 +733,50 @@ export const CashGame: React.FC = () => {
         </button>
       </form>
 
-      {/* Right Column: Sponsored Campaign Card & Game Info */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
-        {/* Sponsored Ad Banner */}
-        <div
-          className="card"
-          style={{
-            padding: '24px 20px',
-            borderRadius: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center',
-            gap: '12px',
-          }}
-        >
-          <div
-            style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: 'rgba(21, 174, 54, 0.14)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#15AE36',
-            }}
-          >
-            <Megaphone size={28} />
+        {/* Right Column: Side Column (Campaign Ad + Rules) */}
+        <div className="game-side-column">
+          {/* Sponsored Ad Banner */}
+          <div className="card game-campaign-card">
+            <div className="game-campaign-icon">
+              <Megaphone size={28} />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {t('home.growAudienceTitle', 'Grow Your Audience!')}
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+              {t('home.growAudienceDesc', 'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!')}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/campaigns/create')}
+              className="game-campaign-btn"
+            >
+              {t('home.getStarted', 'Get Started')} &rarr;
+            </button>
           </div>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            {t('home.growAudienceTitle', 'Grow Your Audience!')}
-          </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
-            {t('home.growAudienceDesc', 'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!')}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/campaigns/create')}
-            style={{
-              background: '#15AE36',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '24px',
-              padding: '10px 24px',
-              fontSize: '14px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginTop: '4px',
-            }}
-          >
-            {t('home.getStarted', 'Get Started')} &rarr;
-          </button>
-        </div>
 
-        {/* Quick How to Win Card */}
-        <div
-          className="card"
-          style={{
-            padding: '22px 20px',
-            borderRadius: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <h4 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-            {t('profile.menuRules', 'How to Win & Guidelines')}
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
-              <span>{t('rules.receiptLegibilityDesc', 'Enter details exactly as printed on your store or vendor receipt.')}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
-              <span>{t('picPick.description1', 'Upload a clear photo showing the vendor name, date, time, and total.')}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <span style={{ color: '#15AE36', fontWeight: 800 }}>&bull;</span>
-              <span>{t('rules.receiptPhysicalOwnershipDesc', 'Store your physical receipt safely for winner validation.')}</span>
+          {/* Quick How to Win Card */}
+          <div className="card game-rules-card">
+            <h4 className="game-rules-title">
+              {t('profile.menuRules', 'How to Win & Guidelines')}
+            </h4>
+            <div className="game-rules-list">
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>{t('rules.receiptLegibilityDesc', 'Enter details exactly as printed on your store or vendor receipt.')}</span>
+              </div>
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>{t('picPick.description1', 'Upload a clear photo showing the vendor name, date, time, and total.')}</span>
+              </div>
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>{t('rules.receiptPhysicalOwnershipDesc', 'Store your physical receipt safely for winner validation.')}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
       {/* Mode Selection Modal matching Mobile */}
       <CustomModal
@@ -971,36 +1029,234 @@ export const CashGame: React.FC = () => {
         </div>
       </CustomModal>
 
-      {/* Success Modal */}
-      <CustomModal visible={Boolean(result)} onClose={() => navigate('/play')} maxWidth="400px">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+      {/* Receipt Entered Successfully Modal (Theme-aware with animated badge, max-width 520px) */}
+      <CustomModal
+        visible={Boolean(successReceiptData)}
+        onClose={handleDoneReceipt}
+        maxWidth="520px"
+        contentPadding="24px 22px"
+      >
+        <style>{`
+          @keyframes badgeRotateAnimation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes badgePulseGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.45)); }
+            50% { transform: scale(1.06); filter: drop-shadow(0 0 22px rgba(16, 185, 129, 0.85)); }
+          }
+        `}</style>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            width: '100%',
+          }}
+        >
+          {/* Green Rosette / Notched Badge Icon with Animated Rotating Gear & Pulsing Center */}
           <div
             style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'rgba(0, 103, 77, 0.12)',
+              width: '84px',
+              height: '84px',
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--green)',
+              marginBottom: '16px',
             }}
           >
-            <Sparkles size={32} />
+            {/* Animated rotating outer gear notches */}
+            <svg
+              width="84"
+              height="84"
+              viewBox="0 0 84 84"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                animation: 'badgeRotateAnimation 12s linear infinite',
+                transformOrigin: '42px 42px',
+              }}
+            >
+              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+                <rect
+                  key={deg}
+                  x="39"
+                  y="2"
+                  width="6"
+                  height="8"
+                  rx="2.5"
+                  fill="#10B981"
+                  transform={`rotate(${deg} 42 42)`}
+                />
+              ))}
+            </svg>
+
+            {/* Glowing pulsing center badge with checkmark */}
+            <div
+              style={{
+                width: '68px',
+                height: '68px',
+                borderRadius: '50%',
+                background: '#10B981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: 'badgePulseGlow 2.5s ease-in-out infinite',
+                position: 'relative',
+                zIndex: 2,
+              }}
+            >
+              <CheckCircle2 size={44} color="#FFFFFF" strokeWidth={2.8} />
+            </div>
           </div>
-          <h3 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)' }}>
-            {result?.message}
+
+          {/* Title */}
+          <h3
+            style={{
+              fontSize: '21px',
+              fontWeight: 800,
+              color: 'var(--text-main)',
+              margin: '0 0 18px 0',
+              letterSpacing: '-0.2px',
+            }}
+          >
+            Receipt Entered Successfully
           </h3>
-          {result?.points ? (
-            <p style={{ fontSize: '15px', color: 'var(--primary)', fontWeight: 700 }}>
-              Points Earned: +{result.points}
-            </p>
-          ) : null}
-          <Button
-            title={t('cashGames.buttons.returnToGames', 'Return to Games')}
-            onClick={() => navigate('/play')}
-            style={{ width: '100%' }}
-          />
+
+          {/* Details Table */}
+          <div
+            style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'var(--bg-card-secondary)',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              padding: '2px 18px',
+              boxSizing: 'border-box',
+            }}
+          >
+            {/* Game */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 0',
+                borderBottom: '1px solid var(--border-color)',
+              }}
+            >
+              <span style={{ fontSize: '14.5px', color: 'var(--text-muted)', fontWeight: 500 }}>Game</span>
+              <span style={{ fontSize: '15px', color: '#10B981', fontWeight: 700 }}>
+                {successReceiptData?.game}
+              </span>
+            </div>
+
+            {/* Receipt Total */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 0',
+                borderBottom: '1px solid var(--border-color)',
+              }}
+            >
+              <span style={{ fontSize: '14.5px', color: 'var(--text-muted)', fontWeight: 500 }}>Receipt Total</span>
+              <span style={{ fontSize: '15px', color: '#10B981', fontWeight: 700 }}>
+                {successReceiptData?.total}
+              </span>
+            </div>
+
+            {/* Receipt Time */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 0',
+                borderBottom: '1px solid var(--border-color)',
+              }}
+            >
+              <span style={{ fontSize: '14.5px', color: 'var(--text-muted)', fontWeight: 500 }}>Receipt Time</span>
+              <span style={{ fontSize: '15px', color: '#10B981', fontWeight: 700 }}>
+                {successReceiptData?.time}
+              </span>
+            </div>
+
+            {/* Receipt Image */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 0',
+              }}
+            >
+              <span style={{ fontSize: '14.5px', color: 'var(--text-muted)', fontWeight: 500 }}>Receipt Image</span>
+              <span style={{ fontSize: '15px', color: '#10B981', fontWeight: 700 }}>
+                {successReceiptData?.hasImage ? 'Yes' : 'No'}
+              </span>
+            </div>
+          </div>
+
+          {/* Subtext Note */}
+          <p
+            style={{
+              fontSize: '12.5px',
+              color: 'var(--text-muted)',
+              lineHeight: '1.5',
+              margin: '18px 0 22px 0',
+              textAlign: 'left',
+            }}
+          >
+            For your convenience we can email you a copy of your receipt to use for verification if you are a winner. We will also save a copy on our end.
+          </p>
+
+          {/* Actions */}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={handleEnterAnotherReceipt}
+              style={{
+                width: '100%',
+                padding: '15px',
+                borderRadius: '24px',
+                background: '#10B981',
+                color: '#FFFFFF',
+                border: 'none',
+                fontSize: '16px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)',
+                transition: 'transform 0.15s ease, background 0.15s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            >
+              Enter Another Receipt
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDoneReceipt}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                fontSize: '15px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: '10px 20px',
+              }}
+            >
+              Done
+            </button>
+          </div>
         </div>
       </CustomModal>
     </Container>

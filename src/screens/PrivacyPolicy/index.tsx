@@ -43,7 +43,7 @@ export const PrivacyPolicy: React.FC = () => {
       <div
         className="card"
         style={{
-          padding: '28px 32px',
+          padding: '26px 15px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',

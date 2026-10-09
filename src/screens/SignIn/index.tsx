@@ -25,8 +25,22 @@ declare global {
             callback: (response: { credential?: string }) => void;
             auto_select?: boolean;
             cancel_on_tap_outside?: boolean;
+            use_fedcm_for_prompt?: boolean;
           }) => void;
           prompt: (callback?: (notification: any) => void) => void;
+          renderButton: (
+            parent: HTMLElement,
+            options: {
+              type?: string;
+              theme?: string;
+              size?: string;
+              text?: string;
+              shape?: string;
+              logo_alignment?: string;
+              width?: number | string;
+              locale?: string;
+            },
+          ) => void;
         };
       };
     };
@@ -86,6 +100,7 @@ const getGoogleCredential = (clientId: string) =>
       client_id: clientId,
       auto_select: false,
       cancel_on_tap_outside: true,
+      use_fedcm_for_prompt: false,
       callback: response => {
         if (response?.credential) {
           settleOnce(() => resolve(response.credential as string));
@@ -121,6 +136,69 @@ export const SignIn: React.FC = () => {
   const [socialLoadingProvider, setSocialLoadingProvider] = useState<
     'google' | 'apple' | null
   >(null);
+  const googleBtnRef = React.useRef<HTMLDivElement>(null);
+
+  const processGoogleCredential = async (idToken: string) => {
+    setSocialLoadingProvider('google');
+    try {
+      await dispatch(
+        socialLogin({
+          provider: 'google',
+          id_token: idToken,
+          fcm_token: '',
+        }),
+      ).unwrap();
+
+      showToast({
+        type: 'success',
+        text1: t('auth.googleSignInTitle', 'Google Sign-In'),
+        text2: t('auth.loginSuccess', 'Signed in successfully.'),
+      });
+      navigate('/');
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
+        text2: error?.message || t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+      });
+    } finally {
+      setSocialLoadingProvider(null);
+    }
+  };
+
+  useEffect(() => {
+    const clientId =
+      import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_WEB_CLIENT_ID;
+    if (!clientId) return;
+
+    loadGoogleIdentityScript()
+      .then(() => {
+        if (!window.google?.accounts?.id || !googleBtnRef.current) return;
+
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: false,
+          callback: response => {
+            if (response?.credential) {
+              processGoogleCredential(response.credential);
+            }
+          },
+        });
+
+        googleBtnRef.current.innerHTML = '';
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          type: 'standard',
+          shape: 'rectangular',
+          theme: 'outline',
+          text: 'signin_with',
+          size: 'large',
+          width: 250,
+        });
+      })
+      .catch(() => {});
+  }, [dispatch, navigate, t]);
 
   useEffect(() => {
     getRememberedSignIn().then((saved) => {
@@ -197,10 +275,9 @@ export const SignIn: React.FC = () => {
       import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_WEB_CLIENT_ID;
 
     if (!clientId) {
-
       showToast({
         type: 'error',
-        text1: t('auth.googleSignInNotConfiguredTitle', 'Google Sign-In Not Configured'),
+        text1: t('auth.googleSignInNotConfiguredTitle', 'Google Sign-In'),
         text2: t('auth.googleSignInNotConfiguredMsg', 'Set VITE_GOOGLE_CLIENT_ID to enable Google login on web.'),
       });
       return;
@@ -211,28 +288,13 @@ export const SignIn: React.FC = () => {
     try {
       await loadGoogleIdentityScript();
       const idToken = await getGoogleCredential(clientId);
-
-      await dispatch(
-        socialLogin({
-          provider: 'google',
-          id_token: idToken,
-          fcm_token: '',
-        }),
-      ).unwrap();
-
-      showToast({
-        type: 'success',
-        text1: t('auth.googleSignInTitle', 'Google Sign-In'),
-        text2: t('auth.loginSuccess', 'Signed in successfully.'),
-      });
-      navigate('/');
+      await processGoogleCredential(idToken);
     } catch (error: any) {
       showToast({
         type: 'error',
         text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
         text2: error?.message || t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
       });
-    } finally {
       setSocialLoadingProvider(null);
     }
   };
@@ -354,16 +416,32 @@ export const SignIn: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ flex: 1, padding: '10px', fontSize: '13px' }}
-            disabled={loading || socialLoadingProvider !== null}
-            onClick={handleGoogleLogin}
-          >
-            <img src={images.googleIcon} alt="Google" style={{ width: '18px', height: '18px' }} />
-            <span>{socialLoadingProvider === 'google' ? t('auth.signingIn', 'Signing in...') : 'Google'}</span>
-          </button>
+          <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ width: '100%', padding: '10px', fontSize: '13px' }}
+              disabled={loading || socialLoadingProvider !== null}
+              onClick={handleGoogleLogin}
+            >
+              <img src={images.googleIcon} alt="Google" style={{ width: '18px', height: '18px' }} />
+              <span>{socialLoadingProvider === 'google' ? t('auth.signingIn', 'Signing in...') : 'Google'}</span>
+            </button>
+            <div
+              ref={googleBtnRef}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                opacity: 0.001,
+                overflow: 'hidden',
+                cursor: 'pointer',
+                zIndex: 10,
+              }}
+            />
+          </div>
           <button
             type="button"
             className="btn-secondary"

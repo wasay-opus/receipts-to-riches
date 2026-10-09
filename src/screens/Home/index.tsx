@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell,
   Camera,
+  ScanLine,
   ChevronRight,
   Lock,
   Megaphone,
@@ -31,7 +32,13 @@ const AD_DURATION_SECONDS = 15;
 export const Home: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
+
+  const [celebrationBanner, setCelebrationBanner] = useState<{
+    title: string;
+    subtitle?: string;
+  } | null>(null);
 
   const { userData } = useSelector((state: RootState) => state.user);
   const { campaigns } = useSelector((state: RootState) => state.campaigns);
@@ -132,6 +139,56 @@ export const Home: React.FC = () => {
       navigate('/secret-question', { replace: true });
     }
   }, [userData?.is_profile_complete, navigate]);
+
+  useEffect(() => {
+    const stateCelebration = (location.state as any)?.rewardCelebration;
+    let pendingReward = stateCelebration;
+    if (!pendingReward) {
+      try {
+        const stored = sessionStorage.getItem('pending_home_reward');
+        if (stored) {
+          pendingReward = JSON.parse(stored);
+        }
+      } catch {}
+    }
+
+    if (pendingReward) {
+      sessionStorage.removeItem('pending_home_reward');
+      window.history.replaceState({}, document.title);
+
+      const pointsWon = Number(pendingReward.points) || 0;
+      if (pendingReward.type === 'game' && pointsWon <= 0) {
+        return;
+      }
+
+      // Show points won (+XX Points Won!), NOT the game name
+      const title = pointsWon > 0
+        ? `+${pointsWon} Points Won!`
+        : (pendingReward.title || 'Receipt Entered Successfully');
+      const subtitle = pendingReward.subtitle || (pointsWon > 0 ? 'Added to your wallet' : undefined);
+
+      // 1. First: trigger coins falling from top to bottom with audio!
+      triggerCoinCelebration();
+      dispatch(fetchUser());
+
+      // 2. Second: after coins start raining, slide down receipt success banner
+      const bannerTimer = setTimeout(() => {
+        setCelebrationBanner({
+          title,
+          subtitle,
+        });
+      }, 750);
+
+      const dismissTimer = setTimeout(() => {
+        setCelebrationBanner(null);
+      }, 5500);
+
+      return () => {
+        clearTimeout(bannerTimer);
+        clearTimeout(dismissTimer);
+      };
+    }
+  }, [location.state, dispatch]);
 
   // Helper for countdown format
   const formatCountdown = (targetDateStr?: string | null, defaultSeconds = 9521): string => {
@@ -248,6 +305,77 @@ export const Home: React.FC = () => {
 
   return (
     <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '36px' }}>
+      <style>{`
+        @keyframes slideDownToast {
+          0% { transform: translate(-50%, -100px); opacity: 0; }
+          100% { transform: translate(-50%, 0); opacity: 1; }
+        }
+      `}</style>
+
+      {/* Top Slide-Down Celebration Banner (Receipt Entered Successfully / Game Won) */}
+      {celebrationBanner && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 99999,
+            width: 'calc(100% - 32px)',
+            maxWidth: '460px',
+            background: 'linear-gradient(135deg, #00B050 0%, #00873D 100%)',
+            color: '#FFFFFF',
+            padding: '12px 18px',
+            borderRadius: '18px',
+            boxShadow: '0 12px 32px rgba(0, 176, 80, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            animation: 'slideDownToast 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          }}
+        >
+          <div
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <CheckCircle2 size={22} color="#FFFFFF" strokeWidth={2.5} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.2px' }}>
+              {celebrationBanner.title}
+            </h4>
+            {celebrationBanner.subtitle && (
+              <p style={{ margin: '2px 0 0 0', fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.92)', fontWeight: 600 }}>
+                {celebrationBanner.subtitle}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setCelebrationBanner(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontSize: '20px',
+              lineHeight: 1,
+              cursor: 'pointer',
+              padding: '4px',
+            }}
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* 1. Header Greeting & Notification */}
       <div
         style={{
@@ -501,8 +629,10 @@ export const Home: React.FC = () => {
               : '0 6px 18px rgba(0, 103, 77, 0.32)';
           }}
         >
-          <Camera size={18} />
-          <span>{t('home.useCameraEarnPoints', 'Use Camera to earn 40 points extra')}</span>
+          <ScanLine size={20} strokeWidth={2.4} />
+          <span style={{ fontSize: '14px', fontWeight: 800 }}>
+            {t('home.useCameraEarnPoints', 'Scan Receipt to earn 40 points extra')}
+          </span>
         </button>
       </div>
 
@@ -519,10 +649,10 @@ export const Home: React.FC = () => {
         }}
       >
         <div>
-          <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)' }}>
+          <h3 className="home-streak-title" style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
             {t('home.streakTitle', 'Daily streak (Unlocks 500 points)')}
           </h3>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+          <p className="home-streak-subtitle" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: 0 }}>
             {t('home.streakSubtitle', 'Login and play consecutive 07 days to receive 500 points')}
           </p>
         </div>
@@ -634,68 +764,56 @@ export const Home: React.FC = () => {
 
       {/* 4. Win Cash Games Section (Screenshot 1) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div>
-          <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>
-            {t('home.winCashGames', 'Win Cash Games')}
-          </h3>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {t('home.winCashSubtitle', 'Play free for chance to win cash')}
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 className="home-section-title" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {t('home.winCashGames', 'Win Cash Games')}
+            </h3>
+            <p className="home-section-subtitle" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: 0 }}>
+              {t('home.winCashSubtitle', 'Play free for chance to win cash')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/play')}
+            className="home-view-all-btn"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#00D066',
+              fontWeight: 700,
+              fontSize: '14px',
+              cursor: 'pointer',
+              padding: '0',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'opacity 0.2s ease',
+            }}
+          >
+            {t('common.viewAll', 'View All')}
+          </button>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '10px',
-            overflowX: 'auto',
-            padding: '6px 2px 8px 2px',
-            margin: '-6px -2px 0 -2px',
-          }}
-        >
+        <div className="cash-game-grid">
           {cashGames.map((game) => (
             <div
               key={game.id}
               onClick={() => navigate(game.path)}
-              style={{
-                background: game.gradient,
-                borderRadius: '16px',
-                padding: '16px 6px',
-                color: '#FFFFFF',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-                cursor: 'pointer',
-                boxShadow: 'none',
-                position: 'relative',
-                overflow: 'hidden',
-                aspectRatio: '1 / 1.1',
-                transition: 'filter 0.2s ease, transform 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.filter = 'brightness(1.08)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.filter = 'brightness(1)';
-              }}
+              className={`cash-game-card cash-game-card--${game.id}`}
             >
-              {/* Comic Halftone & Rayburst Mask Overlay */}
+              {/* Comic Halftone & Rayburst Mask Overlay with Zoom on Hover */}
               <img
                 src={images.cardBgMask}
                 alt=""
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  opacity: 0.55,
-                  pointerEvents: 'none',
-                  mixBlendMode: 'screen',
-                }}
+                className="cash-game-mask-bg"
               />
+
+              {/* Top Glass Badge */}
+              <div className="cash-game-badge">
+                <span>✦ JACKPOT</span>
+              </div>
+
+              {/* Centered Game Name and Price Pill */}
               <div
                 style={{
                   position: 'relative',
@@ -704,21 +822,25 @@ export const Home: React.FC = () => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  width: '100%',
+                  margin: '4px 0',
                 }}
               >
-                <span style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '0.5px', lineHeight: 1.1 }}>
+                <span className="cash-game-item-name">
                   {game.name}
                 </span>
-                <span
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: 900,
-                    marginTop: '6px',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.35)',
-                  }}
-                >
-                  {game.price}
-                </span>
+
+                <div className="cash-game-price-pill">
+                  <span className="cash-game-item-price">
+                    {game.price}
+                  </span>
+                </div>
+              </div>
+
+              {/* Bottom Play Now Micro Tag */}
+              <div className="cash-game-play-btn">
+                <span>Play Now</span>
+                <span>→</span>
               </div>
             </div>
           ))}
@@ -811,27 +933,43 @@ export const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* 6. Instant Win Games (Screenshot 2) */}
+      {/* 6. Instant Win Games */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>
-          {t('home.instantWin', 'Instant Win Games')}
-        </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 className="home-section-title" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {t('home.instantWin', 'Instant Win Games')}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/play')}
+            className="home-view-all-btn"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#00D066',
+              fontWeight: 700,
+              fontSize: '14px',
+              cursor: 'pointer',
+              padding: '0',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'opacity 0.2s ease',
+            }}
+          >
+            {t('common.viewAll', 'View All')}
+          </button>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           {/* Pic-Pick Banner */}
           <div
             onClick={() => navigate('/play/pic-pick?variant=picpick', { state: { variant: 'picpick' } })}
+            className="boxes-card"
             style={{
-              borderRadius: '20px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              position: 'relative',
-              height: '200px',
               boxShadow: '0 6px 16px rgba(220, 38, 38, 0.25)',
-              transition: 'transform 0.2s ease',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
           >
             <img
               src={images.picpickbg}
@@ -843,17 +981,10 @@ export const Home: React.FC = () => {
           {/* State Pick Banner */}
           <div
             onClick={() => navigate('/play/pic-pick?variant=state', { state: { variant: 'state' } })}
+            className="boxes-card"
             style={{
-              borderRadius: '20px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              position: 'relative',
-              height: '200px',
               boxShadow: '0 6px 16px rgba(126, 34, 206, 0.25)',
-              transition: 'transform 0.2s ease',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
           >
             <img
               src={images.statePickbg}
@@ -864,27 +995,32 @@ export const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* 7. WIN POINTS GAMES (With Live Locks & Timers - Screenshot 2) */}
+      {/* 7. WIN POINTS GAMES */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div>
-            <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '0.2px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 className="home-section-title" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '0.2px', margin: 0 }}>
               {t('home.winPoints', 'WIN POINTS GAMES')}
             </h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <p className="home-section-subtitle" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: 0 }}>
               {t('home.winPointsSubtitle', 'Earn points and rewards with every receipt entered')}
             </p>
           </div>
           <button
+            type="button"
             onClick={() => navigate('/play')}
+            className="home-view-all-btn"
             style={{
               background: 'none',
               border: 'none',
-              color: '#00674D',
+              color: '#00D066',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '14px',
               cursor: 'pointer',
-              padding: '0 0 2px 0',
+              padding: '0',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'opacity 0.2s ease',
             }}
           >
             {t('common.viewAll', 'View All')}

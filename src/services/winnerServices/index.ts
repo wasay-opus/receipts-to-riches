@@ -26,11 +26,12 @@ class WinnerServices {
     }
   };
 
-  getResults = async (gameslug: string, draw?: string): Promise<IApiResponse> => {
+  getResults = async (gameslug: string, draw?: string, date?: string): Promise<IApiResponse> => {
     try {
       const endPoint = endPoints.RESULTS(gameslug);
       const params = {
         ...(draw ? { draw } : {}),
+        ...(date ? { date } : {}),
       };
       console.log('[ResultsAPI] Request -> GET', endPoint, params);
       const response = await fetchApi({
@@ -44,10 +45,11 @@ class WinnerServices {
         status: response?.status,
         gameslug,
         draw,
+        date,
       });
       return response;
     } catch (error) {
-      console.error('[ResultsAPI] Error -> GET results', { gameslug, error });
+      console.error('[ResultsAPI] Error -> GET results', { gameslug, draw, date, error });
       throw error;
     }
   };

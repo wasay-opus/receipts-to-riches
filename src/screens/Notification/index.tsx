@@ -114,39 +114,46 @@ export const Notification: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <Container maxWidth="640px" style={{ gap: '16px', paddingBottom: '40px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <button
             onClick={() => navigate(-1)}
             style={{
               background: 'var(--bg-card)',
               border: '1px solid var(--border-color)',
               borderRadius: '12px',
-              width: '40px',
-              height: '40px',
+              width: '38px',
+              height: '38px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               color: 'var(--text-main)',
+              flexShrink: 0,
             }}
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </button>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)' }}>
+          <h1 style={{ fontSize: '19px', fontWeight: 800, color: 'var(--text-main)', margin: 0, whiteSpace: 'nowrap' }}>
             {unreadCount !== null
               ? t('notification.headerTitleWithCount', 'Notifications ({{count}})', { count: unreadCount })
               : t('notification.headerTitle', 'Notifications')}
           </h1>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <button
             onClick={handleMarkAll}
             disabled={markAllAsReadLoading || notifications.length === 0}
             className="btn-secondary"
-            style={{ padding: '8px 12px', fontSize: '12px' }}
+            style={{
+              padding: '7px 10px',
+              fontSize: '11.5px',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              borderRadius: '10px',
+            }}
           >
             {t('notification.markAllReadButton', 'Mark all read')}
           </button>
@@ -154,7 +161,14 @@ export const Notification: React.FC = () => {
             onClick={handleClearAll}
             disabled={notifications.length === 0}
             className="btn-secondary"
-            style={{ padding: '8px 12px', fontSize: '12px', color: '#EF4444' }}
+            style={{
+              padding: '7px 10px',
+              fontSize: '11.5px',
+              fontWeight: 700,
+              color: '#EF4444',
+              whiteSpace: 'nowrap',
+              borderRadius: '10px',
+            }}
           >
             {t('notification.clearButton', 'Clear')}
           </button>

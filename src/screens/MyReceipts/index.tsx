@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -176,6 +176,31 @@ export const MyReceipts: React.FC = () => {
   const [selectedGameFilter, setSelectedGameFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
 
+  // Quick Filter horizontal drag & scroll refs/state
+  const quickFilterScrollRef = useRef<HTMLDivElement | null>(null);
+  const [isDraggingQuickFilter, setIsDraggingQuickFilter] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [scrollLeftStart, setScrollLeftStart] = useState(0);
+
+  const handleQuickFilterMouseDown = (e: React.MouseEvent) => {
+    if (!quickFilterScrollRef.current) return;
+    setIsDraggingQuickFilter(true);
+    setDragStartX(e.pageX - quickFilterScrollRef.current.offsetLeft);
+    setScrollLeftStart(quickFilterScrollRef.current.scrollLeft);
+  };
+
+  const handleQuickFilterMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingQuickFilter || !quickFilterScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - quickFilterScrollRef.current.offsetLeft;
+    const walk = (x - dragStartX) * 1.5;
+    quickFilterScrollRef.current.scrollLeft = scrollLeftStart - walk;
+  };
+
+  const handleQuickFilterMouseUp = () => {
+    setIsDraggingQuickFilter(false);
+  };
+
   // Temp Filter States inside Modal before applying
   const [tempGameFilter, setTempGameFilter] = useState('all');
   const [tempSortBy, setTempSortBy] = useState<'newest' | 'oldest'>('newest');
@@ -347,65 +372,70 @@ export const MyReceipts: React.FC = () => {
           onClick={() => navigate('/scan')}
           className="btn-primary"
           style={{
-            padding: '10px 20px',
-            borderRadius: '14px',
-            fontSize: '14px',
+            padding: '8px 14px',
+            borderRadius: '12px',
+            fontSize: '13px',
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '6px',
             boxShadow: '0 4px 14px rgba(0, 103, 77, 0.25)',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
           title={t('myReceipts.scanNew', 'Scan New')}
         >
-          <Plus size={18} />
-          <span>{t('myReceipts.scanNew', 'Scan New Receipt')}</span>
+          <Plus size={16} />
+          <span>{t('myReceipts.scanNew', 'Scan New')}</span>
         </button>
       </div>
 
       {/* 2. Search, Filter Bar & Quick Chips for Web */}
       <div
+        className="my-receipts-search-bar"
         style={{
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          gap: '14px',
+          gap: '12px',
           background: 'var(--bg-card)',
           borderRadius: '20px',
-          padding: '18px 22px',
+          padding: '14px 16px',
           border: '1px solid var(--border-color)',
           boxShadow: 'var(--shadow-sm)',
           boxSizing: 'border-box',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
           {/* Search Input Box */}
           <div
             style={{
               flex: 1,
+              minWidth: 0,
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
+              gap: '8px',
               background: 'var(--bg-card-secondary)',
               border: '1px solid var(--border-color)',
-              borderRadius: '14px',
-              padding: '11px 16px',
+              borderRadius: '12px',
+              padding: '8px 12px',
               boxSizing: 'border-box',
             }}
           >
-            <Search size={18} color="var(--text-muted)" />
+            <Search size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('myReceipts.searchPlaceholder', 'Search receipts by game, date, or store...')}
+              placeholder={t('myReceipts.searchPlaceholder', 'Search receipts...')}
               style={{
                 flex: 1,
+                minWidth: 0,
                 background: 'none',
                 border: 'none',
                 outline: 'none',
                 color: 'var(--text-main)',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontFamily: 'inherit',
               }}
             />
@@ -421,9 +451,10 @@ export const MyReceipts: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   padding: '2px',
+                  flexShrink: 0,
                 }}
               >
-                <X size={16} />
+                <X size={14} />
               </button>
             )}
           </div>
@@ -433,35 +464,36 @@ export const MyReceipts: React.FC = () => {
             type="button"
             onClick={openFilterModal}
             style={{
-              height: '46px',
-              padding: '0 18px',
-              borderRadius: '14px',
+              height: '40px',
+              padding: '0 12px',
+              borderRadius: '12px',
               background: activeFiltersCount > 0 ? 'rgba(0, 230, 118, 0.12)' : 'var(--bg-card-secondary)',
               border: activeFiltersCount > 0 ? '1.5px solid #00E676' : '1px solid var(--border-color)',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '6px',
               color: activeFiltersCount > 0 ? '#00C853' : 'var(--text-main)',
               cursor: 'pointer',
               fontWeight: 700,
-              fontSize: '14px',
+              fontSize: '13px',
               flexShrink: 0,
               position: 'relative',
               transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap',
             }}
             aria-label="Filter"
           >
-            <SlidersHorizontal size={18} />
-            <span>Filters</span>
+            <SlidersHorizontal size={16} />
+            <span>Filter</span>
             {activeFiltersCount > 0 && (
               <span
                 style={{
-                  width: '20px',
-                  height: '20px',
+                  width: '18px',
+                  height: '18px',
                   borderRadius: '50%',
                   background: '#00E676',
                   color: '#000000',
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: 800,
                   display: 'flex',
                   alignItems: 'center',
@@ -475,40 +507,35 @@ export const MyReceipts: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Filter Web Chips for 1-Click Filtering */}
+        {/* Quick Filter Web Chips for 1-Click Filtering with horizontal scroll & mouse drag */}
         <div
+          ref={quickFilterScrollRef}
+          onMouseDown={handleQuickFilterMouseDown}
+          onMouseMove={handleQuickFilterMouseMove}
+          onMouseUp={handleQuickFilterMouseUp}
+          onMouseLeave={handleQuickFilterMouseUp}
+          onWheel={(e) => {
+            if (e.deltaY !== 0 && quickFilterScrollRef.current) {
+              quickFilterScrollRef.current.scrollLeft += e.deltaY;
+            }
+          }}
+          className="quick-filter-scroll-container"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            overflowX: 'auto',
-            paddingBottom: '2px',
-            scrollbarWidth: 'none',
+            cursor: isDraggingQuickFilter ? 'grabbing' : 'grab',
+            userSelect: isDraggingQuickFilter ? 'none' : 'auto',
           }}
         >
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0, marginRight: '4px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0, marginRight: '2px' }}>
             Quick Filter:
           </span>
-          {GAME_FILTER_OPTIONS.slice(0, 7).map((opt) => {
+          {GAME_FILTER_OPTIONS.map((opt) => {
             const isSelected = selectedGameFilter === opt.id;
             return (
               <button
                 key={opt.id}
                 type="button"
                 onClick={() => setSelectedGameFilter(opt.id)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '999px',
-                  border: isSelected ? '1px solid #00E676' : '1px solid var(--border-color)',
-                  background: isSelected ? '#00E676' : 'var(--bg-card-secondary)',
-                  color: isSelected ? '#000000' : 'var(--text-main)',
-                  fontSize: '12px',
-                  fontWeight: isSelected ? 800 : 600,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
+                className={`quick-filter-chip ${isSelected ? 'quick-filter-chip--active' : ''}`}
               >
                 {opt.label}
               </button>
@@ -569,10 +596,11 @@ export const MyReceipts: React.FC = () => {
       {/* 5. Modern Web Grid with Compact, Beautiful Receipt Cards */}
       {filteredAndSortedReceipts.length > 0 && (
         <div
+          className="my-receipts-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 185px))',
-            gap: '18px',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: '14px',
             width: '100%',
           }}
         >

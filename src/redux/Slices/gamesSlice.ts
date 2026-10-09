@@ -59,7 +59,7 @@ interface GamesState {
 
 const GAMES_CACHE_KEY = '@ReceiptsToRiches/games-cache';
 const GAMES_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
-const UNLOCKED_MINI_GAMES_TTL_MS = 30 * 60 * 1000;
+const UNLOCKED_MINI_GAMES_TTL_MS = 5 * 1000;
 export const GAME_PLAY_VIDEO_AD_THRESHOLD = 5;
 
 const extractMessage = (payload: any, fallback: string): string => {

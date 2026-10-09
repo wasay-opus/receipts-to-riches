@@ -157,6 +157,37 @@ export const Play: React.FC = () => {
   const luckyLock = getGameLockStatus('lucky-7');
   const scratchLock = getGameLockStatus('scratch-2-win');
 
+  const cashGames = [
+    {
+      id: 'zdt',
+      name: 'ZDT',
+      price: '$1,000',
+      gradient: 'linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%)',
+      path: '/play/cash-game?slug=zdt',
+    },
+    {
+      id: 'pick-3',
+      name: 'PICK 3',
+      price: '$3,000',
+      gradient: 'linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%)',
+      path: '/play/cash-game?slug=pick-3',
+    },
+    {
+      id: 'pick-4',
+      name: 'PICK 4',
+      price: '$4,000',
+      gradient: 'linear-gradient(135deg, #00B050 0%, #10B981 100%)',
+      path: '/play/cash-game?slug=pick-4',
+    },
+    {
+      id: 'pick-5',
+      name: 'PICK 5',
+      price: '$5,000',
+      gradient: 'linear-gradient(135deg, #0070BA 0%, #00B4D8 100%)',
+      path: '/play/cash-game?slug=pick-5',
+    },
+  ];
+
   return (
     <Container maxWidth="1100px" style={{ gap: '24px', paddingBottom: '60px' }}>
       {/* Top Header Bar */}
@@ -327,194 +358,67 @@ export const Play: React.FC = () => {
         </div>
       </div>
 
-      {/* Section 1: Win Cash Games (2x2 Grid matching Screenshot 1) */}
-      <div style={{ width: '100%' }}>
-        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '16px' }}>
-          {t('home.winCashGames', 'Win Cash Games')}
-        </h2>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '16px',
-            width: '100%',
-          }}
-        >
-          {/* Card 1: ZDT */}
-          <div
-            onClick={() => navigate('/play/cash-game?slug=zdt')}
-            style={{
-              position: 'relative',
-              borderRadius: '24px',
-              height: '190px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              background: '#5B00F0',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: '0 8px 24px rgba(91, 0, 240, 0.3)',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-          >
-            <img
-              src={images.cardBgMask}
-              alt="mask"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                mixBlendMode: 'screen',
-                opacity: 0.7,
-                pointerEvents: 'none',
-              }}
-            />
-            <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.5px' }}>
-                ZDT
-              </div>
-              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', marginTop: '6px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                $1,000
-              </div>
-            </div>
-          </div>
+      {/* Section 1: Win Cash Games (4 boxes in 1 line matching Home) */}
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            {t('home.winCashGames', 'Win Cash Games')}
+          </h2>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: 0 }}>
+            {t('home.winCashSubtitle', 'Play free for chance to win cash')}
+          </p>
+        </div>
 
-          {/* Card 2: PICK 3 */}
-          <div
-            onClick={() => navigate('/play/cash-game?slug=pick-3')}
-            style={{
-              position: 'relative',
-              borderRadius: '24px',
-              height: '190px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              background: '#FE6104',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: '0 8px 24px rgba(254, 97, 4, 0.3)',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-          >
-            <img
-              src={images.cardBgMask}
-              alt="mask"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                mixBlendMode: 'screen',
-                opacity: 0.7,
-                pointerEvents: 'none',
-              }}
-            />
-            <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.5px' }}>
-                PICK 3
-              </div>
-              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', marginTop: '6px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                $3,000
-              </div>
-            </div>
-          </div>
+        <div className="cash-game-grid" style={{ width: '100%' }}>
+          {cashGames.map((game) => (
+            <div
+              key={game.id}
+              onClick={() => navigate(game.path)}
+              className={`cash-game-card cash-game-card--${game.id}`}
+            >
+              {/* Comic Halftone & Rayburst Mask Overlay with Zoom on Hover */}
+              <img
+                src={images.cardBgMask}
+                alt=""
+                className="cash-game-mask-bg"
+              />
 
-          {/* Card 3: PICK 4 */}
-          <div
-            onClick={() => navigate('/play/cash-game?slug=pick-4')}
-            style={{
-              position: 'relative',
-              borderRadius: '24px',
-              height: '190px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              background: '#15AE36',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: '0 8px 24px rgba(21, 174, 54, 0.3)',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-          >
-            <img
-              src={images.cardBgMask}
-              alt="mask"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                mixBlendMode: 'screen',
-                opacity: 0.7,
-                pointerEvents: 'none',
-              }}
-            />
-            <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.5px' }}>
-                PICK 4
+              {/* Top Glass Badge */}
+              <div className="cash-game-badge">
+                <span>✦ JACKPOT</span>
               </div>
-              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', marginTop: '6px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                $4,000
-              </div>
-            </div>
-          </div>
 
-          {/* Card 4: PICK 5 */}
-          <div
-            onClick={() => navigate('/play/cash-game?slug=pick-5')}
-            style={{
-              position: 'relative',
-              borderRadius: '24px',
-              height: '190px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              background: '#105998',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: '0 8px 24px rgba(16, 89, 152, 0.3)',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-          >
-            <img
-              src={images.cardBgMask}
-              alt="mask"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                mixBlendMode: 'screen',
-                opacity: 0.7,
-                pointerEvents: 'none',
-              }}
-            />
-            <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.5px' }}>
-                PICK 5
+              {/* Centered Game Name and Price Pill */}
+              <div
+                style={{
+                  position: 'relative',
+                  zIndex: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  margin: '4px 0',
+                }}
+              >
+                <span className="cash-game-item-name">
+                  {game.name}
+                </span>
+
+                <div className="cash-game-price-pill">
+                  <span className="cash-game-item-price">
+                    {game.price}
+                  </span>
+                </div>
               </div>
-              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', marginTop: '6px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                $5,000
+
+              {/* Bottom Play Now Micro Tag */}
+              <div className="cash-game-play-btn">
+                <span>Play Now</span>
+                <span>→</span>
               </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
@@ -534,45 +438,25 @@ export const Play: React.FC = () => {
           {/* Card 1: PIC-PICK */}
           <div
             onClick={() => navigate('/play/pic-pick?variant=picpick')}
+            className="boxes-card"
             style={{
-              position: 'relative',
-              borderRadius: '24px',
-              height: '220px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               backgroundImage: `url(${images.picpickbg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               boxShadow: '0 8px 24px rgba(153, 5, 3, 0.3)',
-              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-3px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
           />
 
           {/* Card 2: STATE PICK */}
           <div
             onClick={() => navigate('/play/pic-pick?variant=state')}
+            className="boxes-card"
             style={{
-              position: 'relative',
-              borderRadius: '24px',
-              height: '220px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               backgroundImage: `url(${images.statePickbg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               boxShadow: '0 8px 24px rgba(86, 4, 183, 0.3)',
-              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-3px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
           />
         </div>
       </div>

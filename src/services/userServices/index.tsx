@@ -130,8 +130,11 @@ class UserServices {
                 token: true,
             });
             return response;
-        } catch (error) {
-            console.error('Review Reward API error:', error);
+        } catch (error: any) {
+            const status = error?.response?.status;
+            if (status !== 400 && status !== 409) {
+                console.error('Review Reward API error:', error);
+            }
             throw error;
         }
     };

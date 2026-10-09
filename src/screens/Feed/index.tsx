@@ -10,10 +10,12 @@ import {
   MessageCircle,
   Pencil,
   Plus,
+  Reply,
   Send,
-  Share2,
   ThumbsDown,
   Trash2,
+  UserCheck,
+  UserPlus,
   X,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
@@ -29,13 +31,29 @@ import {
   likePost,
   reportComment,
   reportPost,
+  toggleFollowUser,
+  toggleFollowUserOptimistic,
   togglePostLikeOptimistic,
   updateComment,
   updatePost,
 } from '../../redux/Slices/feedSlice';
 import { Container, CustomModal, showToast } from '../../components';
+import feedServices from '../../services/feedServices';
 import pollServices from '../../services/pollServices';
 import { confirmAppAction, promptAppInput } from '../../utils/sweetAlert';
+
+type FeedComment = {
+  id: string | number;
+  user: string;
+  userId?: string | number;
+  text: string;
+  likes: number;
+  dislikes: number;
+  liked?: boolean;
+  disliked?: boolean;
+  parentId?: string | number;
+  replies?: FeedComment[];
+};
 
 type FeedPost = {
   id: string | number;
@@ -47,13 +65,8 @@ type FeedPost = {
   likes: number;
   liked: boolean;
   userId?: string | number;
-  comments: Array<{
-    id: string | number;
-    user: string;
-    text: string;
-    likes: number;
-    dislikes: number;
-  }>;
+  isFollowing?: boolean;
+  comments: FeedComment[];
 };
 
 type PollOption = {
@@ -102,16 +115,30 @@ const getDisplayName = (user: any): string | null => {
   return null;
 };
 
-const normalizeComment = (comment: any, t: TranslateFn) => ({
-  id: comment?.id ?? `comment-${Math.random()}`,
-  user:
-    getDisplayName(comment?.user) ??
-    comment?.name ??
-    t('feedScreen.communityMemberFallback', 'Community Member'),
-  text: comment?.body ?? comment?.comment ?? comment?.text ?? '',
-  likes: Number(comment?.likes_count ?? comment?.likes ?? 0),
-  dislikes: Number(comment?.dislikes_count ?? comment?.dislikes ?? 0),
-});
+const normalizeComment = (comment: any, t: TranslateFn): FeedComment => {
+  const user = comment?.user ?? comment?.author ?? {};
+  const userId = comment?.user_id ?? comment?.userId ?? user?.id ?? comment?.author_id;
+  const parentId = comment?.parent_id ?? comment?.parentId;
+  const rawReplies = Array.isArray(comment?.replies) ? comment.replies : [];
+  const replies = rawReplies.map((r: any) => normalizeComment(r, t));
+
+  return {
+    id: comment?.id ?? `comment-${Math.random()}`,
+    user:
+      getDisplayName(user) ??
+      comment?.name ??
+      comment?.author_name ??
+      t('feedScreen.communityMemberFallback', 'Community Member'),
+    userId,
+    text: comment?.body ?? comment?.comment ?? comment?.text ?? '',
+    likes: Number(comment?.likes_count ?? comment?.likes ?? 0),
+    dislikes: Number(comment?.dislikes_count ?? comment?.dislikes ?? 0),
+    liked: Boolean(comment?.liked ?? comment?.is_liked ?? comment?.isLiked),
+    disliked: Boolean(comment?.disliked ?? comment?.is_disliked ?? comment?.isDisliked),
+    parentId,
+    replies,
+  };
+};
 
 const normalizePost = (post: any, t: TranslateFn): FeedPost => {
   const user = post?.user ?? post?.author ?? {};
@@ -142,7 +169,13 @@ const normalizePost = (post: any, t: TranslateFn): FeedPost => {
     image,
     likes: Number(post?.likes_count ?? post?.likes ?? post?.reactions_count ?? 0),
     liked: Boolean(post?.liked ?? post?.is_liked ?? post?.isLiked),
-    userId: user?.id ?? post?.user_id,
+    userId: user?.id ?? post?.user_id ?? post?.userId,
+    isFollowing: Boolean(
+      user?.is_following ??
+      user?.is_followed ??
+      post?.is_following ??
+      post?.is_followed,
+    ),
     comments: comments.map((comment: any) => normalizeComment(comment, t)),
   };
 };
@@ -192,11 +225,25 @@ export const Feed: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { feedList, feedLoading, feedError, likeLoadingMap, commentLoadingMap, updatePostLoading } =
-    useSelector((state: RootState) => state.feed);
+  const currentUser = useSelector((state: RootState) => state.user?.userData);
+  const currentUserId = currentUser?.id ?? currentUser?._id;
+
+  const {
+    feedList,
+    feedLoading,
+    feedError,
+    likeLoadingMap,
+    commentLoadingMap,
+    updatePostLoading,
+    toggleFollowLoadingMap,
+  } = useSelector((state: RootState) => state.feed);
 
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | number | null>(null);
   const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<{ id: string | number; user: string } | null>(null);
+  const [commentReactions, setCommentReactions] = useState<
+    Record<string, { liked: boolean; disliked: boolean; likesOffset: number; dislikesOffset: number }>
+  >({});
   const [poll, setPoll] = useState<CommunityPoll | null>(null);
   const [selectedPollOption, setSelectedPollOption] = useState<string | number | null>(null);
   const [pollLoading, setPollLoading] = useState(false);
@@ -208,6 +255,24 @@ export const Feed: React.FC = () => {
   const [editMediaFile, setEditMediaFile] = useState<File | null>(null);
   const [editRemoveMedia, setEditRemoveMedia] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement | null>(null);
+  // Floating New Post button visibility (only visible when scrolled down; hides when at top)
+  const [showFloatingNewPost, setShowFloatingNewPost] = useState(false);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (headerRef.current) {
+        const rect = headerRef.current.getBoundingClientRect();
+        setShowFloatingNewPost(rect.bottom < 60);
+      } else {
+        setShowFloatingNewPost(window.scrollY > 80);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     dispatch(fetchFeed({ params: { per_page: 15, page: 1 } }));
@@ -279,7 +344,30 @@ export const Feed: React.FC = () => {
         });
       }
     },
-    [dispatch, likeLoadingMap, refreshFeed],
+    [dispatch, likeLoadingMap, refreshFeed, t],
+  );
+
+  const handleFollowUser = useCallback(
+    async (targetUserId: string | number, currentlyFollowing: boolean) => {
+      if (!targetUserId) return;
+      dispatch(toggleFollowUserOptimistic({ userId: targetUserId, isFollowing: !currentlyFollowing }));
+      try {
+        if (currentlyFollowing) {
+          await feedServices.unfollowUser(targetUserId);
+        } else {
+          await dispatch(toggleFollowUser(targetUserId)).unwrap();
+        }
+        refreshFeed();
+      } catch (error: any) {
+        dispatch(toggleFollowUserOptimistic({ userId: targetUserId, isFollowing: currentlyFollowing }));
+        showToast({
+          type: 'error',
+          text1: t('socialProfile.followNotSaved', 'Follow not saved'),
+          text2: error?.message || String(error || t('socialProfile.tryAgain', 'Please try again.')),
+        });
+      }
+    },
+    [dispatch, refreshFeed, t],
   );
 
   const handleOpenEdit = useCallback((post: FeedPost) => {
@@ -410,7 +498,7 @@ export const Feed: React.FC = () => {
         });
       }
     },
-    [activeCommentPostId, dispatch, refreshFeed],
+    [activeCommentPostId, dispatch, refreshFeed, t],
   );
 
   const handleReportPost = useCallback(
@@ -429,7 +517,7 @@ export const Feed: React.FC = () => {
         });
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   const handleEditComment = useCallback(
@@ -446,6 +534,7 @@ export const Feed: React.FC = () => {
       try {
         await dispatch(updateComment({ commentId, body })).unwrap();
         showToast({ type: 'success', text1: t('feedScreen.toast.commentUpdatedTitle', 'Comment updated') });
+        refreshFeed();
       } catch (error: any) {
         showToast({
           type: 'error',
@@ -454,7 +543,7 @@ export const Feed: React.FC = () => {
         });
       }
     },
-    [dispatch],
+    [dispatch, refreshFeed, t],
   );
 
   const handleDeleteComment = useCallback(
@@ -473,6 +562,7 @@ export const Feed: React.FC = () => {
       try {
         await dispatch(deleteComment(commentId)).unwrap();
         showToast({ type: 'success', text1: t('feedScreen.toast.commentDeletedTitle', 'Comment deleted') });
+        refreshFeed();
       } catch (error: any) {
         showToast({
           type: 'error',
@@ -481,12 +571,65 @@ export const Feed: React.FC = () => {
         });
       }
     },
-    [dispatch],
+    [dispatch, refreshFeed, t],
   );
 
   const handleCommentReaction = useCallback(
-    async (commentId: string | number, reaction: 'like' | 'dislike') => {
+    async (
+      commentId: string | number,
+      reaction: 'like' | 'dislike',
+      initialLiked = false,
+      initialDisliked = false,
+    ) => {
       if (String(commentId).startsWith('temp-')) return;
+      const key = String(commentId);
+      const prev = commentReactions[key] || {
+        liked: initialLiked,
+        disliked: initialDisliked,
+        likesOffset: 0,
+        dislikesOffset: 0,
+      };
+
+      let nextLiked = prev.liked;
+      let nextDisliked = prev.disliked;
+      let nextLikesOffset = prev.likesOffset;
+      let nextDislikesOffset = prev.dislikesOffset;
+
+      if (reaction === 'like') {
+        if (prev.liked) {
+          nextLiked = false;
+          nextLikesOffset -= 1;
+        } else {
+          nextLiked = true;
+          nextLikesOffset += 1;
+          if (prev.disliked) {
+            nextDisliked = false;
+            nextDislikesOffset -= 1;
+          }
+        }
+      } else {
+        if (prev.disliked) {
+          nextDisliked = false;
+          nextDislikesOffset -= 1;
+        } else {
+          nextDisliked = true;
+          nextDislikesOffset += 1;
+          if (prev.liked) {
+            nextLiked = false;
+            nextLikesOffset -= 1;
+          }
+        }
+      }
+
+      setCommentReactions((current) => ({
+        ...current,
+        [key]: {
+          liked: nextLiked,
+          disliked: nextDisliked,
+          likesOffset: nextLikesOffset,
+          dislikesOffset: nextDislikesOffset,
+        },
+      }));
 
       try {
         await dispatch(
@@ -494,6 +637,10 @@ export const Feed: React.FC = () => {
         ).unwrap();
         refreshFeed();
       } catch (error: any) {
+        setCommentReactions((current) => ({
+          ...current,
+          [key]: prev,
+        }));
         showToast({
           type: 'error',
           text1: t('feedScreen.toast.commentReactionNotSavedTitle', 'Comment reaction not saved'),
@@ -501,7 +648,7 @@ export const Feed: React.FC = () => {
         });
       }
     },
-    [dispatch, refreshFeed],
+    [commentReactions, dispatch, refreshFeed, t],
   );
 
   const handleReportComment = useCallback(
@@ -521,7 +668,7 @@ export const Feed: React.FC = () => {
         });
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   const handleVote = useCallback(
@@ -546,30 +693,35 @@ export const Feed: React.FC = () => {
         });
       }
     },
-    [poll, selectedPollOption],
+    [poll, selectedPollOption, t],
   );
 
   const handleAddComment = useCallback(async () => {
     const body = commentText.trim();
     if (!body || !activeCommentPostId) return;
 
+    const parentId = replyingTo?.id;
     const tempComment = {
       id: `temp-${Date.now()}`,
       body,
-      user: { name: t('feedScreen.you', 'You') },
+      user: { name: t('feedScreen.you', 'You'), id: currentUserId },
+      user_id: currentUserId,
+      parent_id: parentId,
     };
 
     dispatch(addCommentOptimistic({ postId: activeCommentPostId, comment: tempComment }));
     setCommentText('');
+    setReplyingTo(null);
 
     try {
       await dispatch(
         createComment({
           postId: activeCommentPostId,
-          payload: { body },
+          payload: { body, parent_id: parentId },
         }),
       ).unwrap();
       showToast({ type: 'success', text1: t('feedScreen.toast.commentPostedTitle', 'Comment posted!') });
+      dispatch(fetchFeed({ params: { per_page: 15, page: 1 }, isRefresh: true }));
     } catch (error: any) {
       showToast({
         type: 'error',
@@ -578,29 +730,39 @@ export const Feed: React.FC = () => {
       });
       dispatch(fetchFeed({ params: { per_page: 15, page: 1 }, isRefresh: true }));
     }
-  }, [activeCommentPostId, commentText, dispatch]);
+  }, [activeCommentPostId, commentText, currentUserId, dispatch, replyingTo, t]);
 
   return (
     <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)' }}>
+      {/* Top Header Row (Title, Subtitle & Regular New Post Button) */}
+      <div className="feed-header-wrap" ref={headerRef}>
+        <div className="feed-header-text">
+          <h1 className="feed-header-title">
             {t('feedScreen.title', 'Community Feed')}
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+          <p className="feed-header-subtitle">
             {t('feedScreen.subtitle', 'Share shopping hauls, vote on polls & see winner receipts!')}
           </p>
         </div>
 
         <button
           onClick={() => navigate('/feed/create')}
-          className="btn-primary"
-          style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '12px' }}
+          className="btn-primary feed-new-post-btn"
         >
           <Plus size={16} />
           <span>{t('feedScreen.createPost', 'New Post')}</span>
         </button>
       </div>
+
+      {/* Floating Sticky New Post Button (Only appears when scrolled down; hides when at top) */}
+      <button
+        onClick={() => navigate('/feed/create')}
+        className={`btn-primary feed-floating-btn ${showFloatingNewPost ? 'feed-floating-btn--visible' : ''}`}
+        aria-label={t('feedScreen.createPost', 'New Post')}
+      >
+        <Plus size={18} />
+        <span>{t('feedScreen.createPost', 'New Post')}</span>
+      </button>
 
       {poll && (
         <div
@@ -699,251 +861,635 @@ export const Feed: React.FC = () => {
           </div>
         )}
 
-        {posts.map((post) => (
-          <div key={post.id} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <button
-                onClick={() => post.userId && navigate(`/social-profile/${post.userId}`)}
-                style={{ display: 'flex', alignItems: 'center', gap: '10px', border: 'none', background: 'transparent', padding: 0, cursor: post.userId ? 'pointer' : 'default', textAlign: 'left' }}
+        {posts.map((post) => {
+          const isOwnPost = Boolean(
+            currentUserId && post.userId && String(currentUserId) === String(post.userId),
+          );
+
+          return (
+            <div
+              key={post.id}
+              className="card"
+              style={{
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                }}
               >
-                <img
-                  src={post.avatar}
-                  alt={post.author}
-                  style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-                <div>
-                  <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                    {post.author}
-                  </h4>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{post.time}</span>
+                <button
+                  onClick={() => post.userId && navigate(`/social-profile/${post.userId}`)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    border: 'none',
+                    background: 'transparent',
+                    padding: 0,
+                    cursor: post.userId ? 'pointer' : 'default',
+                    textAlign: 'left',
+                    minWidth: 0,
+                    flex: 1,
+                  }}
+                >
+                  <img
+                    src={post.avatar}
+                    alt={post.author}
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <h4
+                      style={{
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: 'var(--text-main)',
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {post.author}
+                    </h4>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {post.time}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Post Header Action: Edit & Delete for own post; Follow button for others */}
+                {isOwnPost ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <button
+                      onClick={() => handleOpenEdit(post)}
+                      title={t('feedScreen.editPostLabel', 'Edit post')}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-card-secondary)',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDeletePost(post.id)}
+                      title={t('feedScreen.deletePostLabel', 'Delete post')}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        background: 'rgba(239, 68, 68, 0.06)',
+                        color: '#EF4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ) : post.userId ? (
+                  <button
+                    onClick={() => handleFollowUser(post.userId!, Boolean(post.isFollowing))}
+                    disabled={Boolean(toggleFollowLoadingMap[String(post.userId)])}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      border: post.isFollowing ? '1px solid var(--border-color)' : 'none',
+                      background: post.isFollowing ? 'var(--bg-card-secondary)' : 'var(--green)',
+                      color: post.isFollowing ? 'var(--text-muted)' : '#ffffff',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      flexShrink: 0,
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {post.isFollowing ? (
+                      <>
+                        <UserCheck size={14} />
+                        <span>{t('socialProfile.following', 'Following')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={14} />
+                        <span>{t('socialProfile.follow', 'Follow')}</span>
+                      </>
+                    )}
+                  </button>
+                ) : null}
+              </div>
+
+              {post.content && (
+                <p style={{ fontSize: '14px', color: 'var(--text-main)', lineHeight: '1.5', margin: 0 }}>
+                  {post.content}
+                </p>
+              )}
+
+              {post.image && (
+                <div style={{ width: '100%', maxHeight: '340px', borderRadius: '16px', overflow: 'hidden' }}>
+                  <img
+                    src={post.image}
+                    alt={t('feedScreen.postAttachmentAlt', 'Post attachment')}
+                    style={{ width: '100%', height: '100%', maxHeight: '340px', objectFit: 'cover', display: 'block' }}
+                  />
                 </div>
-              </button>
+              )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Post Footer Action Bar */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  paddingTop: '10px',
+                  borderTop: '1px solid var(--border-color)',
+                }}
+              >
+                {/* Like Button: Heart on top, Count underneath */}
                 <button
-                  onClick={() => handleOpenEdit(post)}
-                  title={t('feedScreen.editPostLabel', 'Edit post')}
+                  onClick={() => handleLike(post)}
+                  disabled={Boolean(likeLoadingMap[String(post.id)])}
                   style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-card-secondary)',
+                    background: 'none',
+                    border: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '2px',
+                    cursor: 'pointer',
+                    color: post.liked ? '#EF4444' : 'var(--text-muted)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <Heart size={20} fill={post.liked ? '#EF4444' : 'none'} color={post.liked ? '#EF4444' : 'currentColor'} />
+                  <span>{post.likes}</span>
+                </button>
+
+                {/* Comments Button */}
+                <button
+                  onClick={() => {
+                    setActiveCommentPostId(post.id);
+                    setReplyingTo(null);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '2px',
+                    cursor: 'pointer',
                     color: 'var(--text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '4px 8px',
+                    borderRadius: '8px',
                   }}
                 >
-                  <Pencil size={14} />
+                  <MessageCircle size={20} />
+                  <span>{post.comments.length}</span>
                 </button>
-                <button
-                  onClick={() => handleReportPost(post.id)}
-                  title={t('feedScreen.reportPostLabel', 'Report post')}
-                  style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-card-secondary)',
-                    color: 'var(--text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Flag size={14} />
-                </button>
-                <button
-                  onClick={() => handleDeletePost(post.id)}
-                  title={t('feedScreen.deletePostLabel', 'Delete post')}
-                  style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(239, 68, 68, 0.25)',
-                    background: 'rgba(239, 68, 68, 0.06)',
-                    color: '#EF4444',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
+
+                {/* Report button for other users' posts only (replaces Share button) */}
+                {!isOwnPost && (
+                  <button
+                    onClick={() => handleReportPost(post.id)}
+                    title={t('feedScreen.reportPostLabel', 'Report post')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginLeft: 'auto',
+                    }}
+                  >
+                    <Flag size={18} />
+                    <span>{t('socialProfile.report', 'Report')}</span>
+                  </button>
+                )}
               </div>
             </div>
-
-            {post.content && (
-              <p style={{ fontSize: '14px', color: 'var(--text-main)', lineHeight: '1.5' }}>
-                {post.content}
-              </p>
-            )}
-
-            {post.image && (
-              <div style={{ width: '100%', maxHeight: '340px', borderRadius: '16px', overflow: 'hidden' }}>
-                <img
-                  src={post.image}
-                  alt={t('feedScreen.postAttachmentAlt', 'Post attachment')}
-                  style={{ width: '100%', height: '100%', maxHeight: '340px', objectFit: 'cover' }}
-                />
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '18px', paddingTop: '6px', borderTop: '1px solid var(--border-color)' }}>
-              <button
-                onClick={() => handleLike(post)}
-                disabled={Boolean(likeLoadingMap[String(post.id)])}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  color: post.liked ? '#EF4444' : 'var(--text-muted)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                <Heart size={18} fill={post.liked ? '#EF4444' : 'none'} />
-                <span>{post.likes}</span>
-              </button>
-
-              <button
-                onClick={() => setActiveCommentPostId(post.id)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                <MessageCircle size={18} />
-                <span>{t('feedScreen.commentsCount', '{{count}} Comments', { count: post.comments.length })}</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  showToast({ type: 'info', text1: t('feedScreen.toast.linkCopiedTitle', 'Link copied to clipboard!') });
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  marginLeft: 'auto',
-                }}
-              >
-                <Share2 size={18} />
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <CustomModal
         visible={Boolean(activeCommentPostId)}
-        onClose={() => setActiveCommentPostId(null)}
+        onClose={() => {
+          setActiveCommentPostId(null);
+          setReplyingTo(null);
+          setCommentText('');
+        }}
         title={t('feedScreen.comments.modalTitle', 'Post Comments')}
         maxWidth="480px"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '420px', overflowY: 'auto' }}>
-          {selectedPost?.comments.map((comment) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '440px', overflowY: 'auto' }}>
+          {selectedPost?.comments.length === 0 && (
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', margin: '16px 0' }}>
+              {t('feedScreen.comments.emptyState', 'No comments yet. Be the first to comment!')}
+            </p>
+          )}
+
+          {selectedPost?.comments.map((comment) => {
+            const isOwnComment = Boolean(
+              (currentUserId && comment.userId && String(currentUserId) === String(comment.userId)) ||
+                String(comment.id).startsWith('temp-'),
+            );
+
+            const cRx = commentReactions[String(comment.id)];
+            const cIsLiked = cRx ? cRx.liked : comment.liked;
+            const cIsDisliked = cRx ? cRx.disliked : comment.disliked;
+            const cLikesCount = Math.max(0, comment.likes + (cRx?.likesOffset || 0));
+            const cDislikesCount = Math.max(0, comment.dislikes + (cRx?.dislikesOffset || 0));
+
+            return (
+              <div
+                key={comment.id}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '14px',
+                  background: 'var(--bg-card-secondary)',
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{comment.user}</strong>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.4' }}>{comment.text}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                  {isOwnComment ? (
+                    <>
+                      {/* User's own comment: Edit and Delete */}
+                      <button
+                        onClick={() => handleEditComment(comment.id, comment.text)}
+                        title={t('feedScreen.comments.editLabel', 'Edit comment')}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px',
+                        }}
+                      >
+                        <Pencil size={13} />
+                        <span>{t('feedScreen.comments.editLabel', 'Edit')}</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        title={t('feedScreen.comments.deleteLabel', 'Delete comment')}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#EF4444',
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px',
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        <Trash2 size={13} />
+                        <span>{t('feedScreen.dialogs.deleteButton', 'Delete')}</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Others' comment: Like, Dislike, Reply, Report */}
+                      <button
+                        onClick={() => handleCommentReaction(comment.id, 'like', comment.liked, comment.disliked)}
+                        title={t('feedScreen.comments.likeLabel', 'Like comment')}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: cIsLiked ? '#EF4444' : 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          padding: '2px 4px',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <Heart
+                          size={14}
+                          fill={cIsLiked ? '#EF4444' : 'none'}
+                          color={cIsLiked ? '#EF4444' : 'currentColor'}
+                        />
+                        <span style={{ fontWeight: cIsLiked ? 800 : 500 }}>{cLikesCount}</span>
+                      </button>
+                      <button
+                        onClick={() => handleCommentReaction(comment.id, 'dislike', comment.liked, comment.disliked)}
+                        title={t('feedScreen.comments.dislikeLabel', 'Dislike comment')}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: cIsDisliked ? '#F59E0B' : 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          padding: '2px 4px',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <ThumbsDown
+                          size={14}
+                          fill={cIsDisliked ? '#F59E0B' : 'none'}
+                          color={cIsDisliked ? '#F59E0B' : 'currentColor'}
+                        />
+                        <span style={{ fontWeight: cIsDisliked ? 800 : 500 }}>{cDislikesCount}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReplyingTo({ id: comment.id, user: comment.user });
+                        }}
+                        title={t('feedScreen.comments.replyLabel', 'Reply')}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          padding: '2px 6px',
+                        }}
+                      >
+                        <Reply size={13} />
+                        <span>{t('feedScreen.comments.replyLabel', 'Reply')}</span>
+                      </button>
+                      <button
+                        onClick={() => handleReportComment(comment.id)}
+                        title={t('feedScreen.comments.reportLabel', 'Report comment')}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px',
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        <Flag size={13} />
+                        <span>{t('socialProfile.report', 'Report')}</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Nested Replies under this comment (User Request 2) */}
+                {comment.replies && comment.replies.length > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      marginTop: '8px',
+                      paddingLeft: '14px',
+                      borderLeft: '2px solid rgba(0, 153, 68, 0.35)',
+                    }}
+                  >
+                    {comment.replies.map((reply) => {
+                      const isOwnReply = Boolean(
+                        (currentUserId && reply.userId && String(currentUserId) === String(reply.userId)) ||
+                          String(reply.id).startsWith('temp-'),
+                      );
+                      const rRx = commentReactions[String(reply.id)];
+                      const rIsLiked = rRx ? rRx.liked : reply.liked;
+                      const rIsDisliked = rRx ? rRx.disliked : reply.disliked;
+                      const rLikesCount = Math.max(0, reply.likes + (rRx?.likesOffset || 0));
+                      const rDislikesCount = Math.max(0, reply.dislikes + (rRx?.dislikesOffset || 0));
+
+                      return (
+                        <div
+                          key={reply.id}
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            background: 'var(--bg-card)',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '3px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <strong style={{ fontSize: '12px', color: 'var(--text-main)' }}>{reply.user}</strong>
+                          </div>
+                          <p style={{ fontSize: '12.5px', color: 'var(--text-main)', margin: 0, lineHeight: '1.4' }}>
+                            {reply.text}
+                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                            {isOwnReply ? (
+                              <>
+                                <button
+                                  onClick={() => handleEditComment(reply.id, reply.text)}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '11px',
+                                  }}
+                                >
+                                  <Pencil size={11} />
+                                  <span>{t('feedScreen.comments.editLabel', 'Edit')}</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteComment(reply.id)}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#EF4444',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '11px',
+                                    marginLeft: 'auto',
+                                  }}
+                                >
+                                  <Trash2 size={11} />
+                                  <span>{t('feedScreen.dialogs.deleteButton', 'Delete')}</span>
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleCommentReaction(reply.id, 'like', reply.liked, reply.disliked)}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: rIsLiked ? '#EF4444' : 'var(--text-muted)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    cursor: 'pointer',
+                                    fontSize: '11px',
+                                    padding: 0,
+                                  }}
+                                >
+                                  <Heart
+                                    size={13}
+                                    fill={rIsLiked ? '#EF4444' : 'none'}
+                                    color={rIsLiked ? '#EF4444' : 'currentColor'}
+                                  />
+                                  <span style={{ fontWeight: rIsLiked ? 800 : 500 }}>{rLikesCount}</span>
+                                </button>
+                                <button
+                                  onClick={() => handleCommentReaction(reply.id, 'dislike', reply.liked, reply.disliked)}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: rIsDisliked ? '#F59E0B' : 'var(--text-muted)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    cursor: 'pointer',
+                                    fontSize: '11px',
+                                    padding: 0,
+                                  }}
+                                >
+                                  <ThumbsDown
+                                    size={13}
+                                    fill={rIsDisliked ? '#F59E0B' : 'none'}
+                                    color={rIsDisliked ? '#F59E0B' : 'currentColor'}
+                                  />
+                                  <span style={{ fontWeight: rIsDisliked ? 800 : 500 }}>{rDislikesCount}</span>
+                                </button>
+                                <button
+                                  onClick={() => handleReportComment(reply.id)}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '11px',
+                                    marginLeft: 'auto',
+                                  }}
+                                >
+                                  <Flag size={11} />
+                                  <span>{t('socialProfile.report', 'Report')}</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Replying banner indicator */}
+          {replyingTo && (
             <div
-              key={comment.id}
               style={{
-                padding: '10px 14px',
-                borderRadius: '12px',
-                background: 'var(--bg-card-secondary)',
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                background: 'rgba(0, 103, 77, 0.1)',
+                border: '1px solid rgba(0, 103, 77, 0.25)',
+                fontSize: '12px',
+                color: 'var(--text-main)',
               }}
             >
-              <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{comment.user}</strong>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{comment.text}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
-                <button
-                  onClick={() => handleCommentReaction(comment.id, 'like')}
-                  title={t('feedScreen.comments.likeLabel', 'Like comment')}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    padding: 0,
-                  }}
-                >
-                  <Heart size={14} />
-                  <span>{comment.likes}</span>
-                </button>
-                <button
-                  onClick={() => handleCommentReaction(comment.id, 'dislike')}
-                  title={t('feedScreen.comments.dislikeLabel', 'Dislike comment')}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    padding: 0,
-                  }}
-                >
-                  <ThumbsDown size={14} />
-                  <span>{comment.dislikes}</span>
-                </button>
-                <button
-                  onClick={() => handleEditComment(comment.id, comment.text)}
-                  title={t('feedScreen.comments.editLabel', 'Edit comment')}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  onClick={() => handleReportComment(comment.id)}
-                  title={t('feedScreen.comments.reportLabel', 'Report comment')}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-                >
-                  <Flag size={14} />
-                </button>
-                <button
-                  onClick={() => handleDeleteComment(comment.id)}
-                  title={t('feedScreen.comments.deleteLabel', 'Delete comment')}
-                  style={{ background: 'transparent', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0, marginLeft: 'auto' }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
+              <span>
+                Replying to <strong>@{replyingTo.user}</strong>
+              </span>
+              <button
+                onClick={() => setReplyingTo(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0,
+                }}
+              >
+                <X size={14} />
+              </button>
             </div>
-          ))}
+          )}
 
+          {/* Comment input row */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
             <input
               type="text"
               className="form-input"
-              placeholder={t('feedScreen.comments.placeholder', 'Write a comment...')}
+              placeholder={
+                replyingTo
+                  ? `Reply to @${replyingTo.user}...`
+                  : t('feedScreen.comments.placeholder', 'Write a comment...')
+              }
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => {
@@ -1043,30 +1589,38 @@ export const Feed: React.FC = () => {
               justifyContent: 'space-between',
               paddingTop: '12px',
               borderTop: '1px solid var(--border-color)',
-              gap: '12px',
+              gap: '10px',
               flexWrap: 'wrap',
+              width: '100%',
             }}
           >
             <button
               type="button"
               className="btn-secondary"
               onClick={() => editFileInputRef.current?.click()}
-              style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{
+                padding: '8px 12px',
+                fontSize: '12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap',
+              }}
             >
-              <ImageIcon size={16} />
+              <ImageIcon size={15} />
               <span>
                 {editMediaPreview
                   ? t('feedScreen.changeImage', 'Change Photo')
-                  : t('createPost.addReceiptPhoto', 'Add Receipt / Photo')}
+                  : t('createPost.addReceiptPhoto', 'Add Photo')}
               </span>
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
               <button
                 type="button"
                 className="btn-secondary"
                 onClick={handleCloseEdit}
-                style={{ padding: '8px 16px', fontSize: '13px' }}
+                style={{ padding: '8px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
               >
                 {t('common.cancel', 'Cancel')}
               </button>
@@ -1076,14 +1630,15 @@ export const Feed: React.FC = () => {
                 onClick={handleSaveEdit}
                 disabled={updatePostLoading}
                 style={{
-                  padding: '8px 18px',
-                  fontSize: '13px',
-                  display: 'flex',
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {updatePostLoading && <Loader2 size={16} className="animate-spin" />}
+                {updatePostLoading && <Loader2 size={14} className="animate-spin" />}
                 <span>{t('feedScreen.dialogs.updatePostButton', 'Update post')}</span>
               </button>
             </div>

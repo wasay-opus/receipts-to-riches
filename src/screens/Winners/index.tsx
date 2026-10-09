@@ -42,6 +42,9 @@ interface ResultItem {
   time: string;
   state?: string;
   amount?: string;
+  createdAt?: string;
+  rawDate?: string;
+  canonicalYMD: string;
 }
 
 interface DropdownGameOption {
@@ -84,6 +87,19 @@ export const Winners: React.FC = () => {
   const [resultsError, setResultsError] = useState<string | null>(null);
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const openDatePicker = () => {
+    try {
+      if (dateInputRef.current && typeof dateInputRef.current.showPicker === 'function') {
+        dateInputRef.current.showPicker();
+        return;
+      }
+    } catch {
+      // fallback for browsers that don't allow showPicker
+    }
+    dateInputRef.current?.focus();
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -113,35 +129,87 @@ export const Winners: React.FC = () => {
     return `${dateStr} ${timeStr}`;
   };
 
-  // 2. Format Result Date
-  const formatResultDate = (rawDate?: string, createdAt?: string): string => {
-    const val = rawDate || createdAt;
-    if (!val) return '-';
-    const parsed = new Date(val);
-    if (Number.isNaN(parsed.getTime())) return val;
-    const d = `${parsed.getDate()}`.padStart(2, '0');
-    const m = `${parsed.getMonth() + 1}`.padStart(2, '0');
-    const y = parsed.getFullYear();
-    return `${d}/${m}/${y}`;
+  // 2. Extract unified Result Date info (displayDate in DD/MM/YYYY and canonicalYMD in YYYY-MM-DD)
+  const getResultDateInfo = (
+    rawDate?: string | null,
+    createdAt?: string | null,
+  ): { displayDate: string; canonicalYMD: string } => {
+    const str =
+      rawDate && typeof rawDate === 'string' && rawDate !== '-' && rawDate !== 'null'
+        ? rawDate.trim()
+        : createdAt && typeof createdAt === 'string' && createdAt !== '-' && createdAt !== 'null'
+        ? createdAt.trim()
+        : '';
+
+    if (!str) {
+      return {
+        displayDate: '-',
+        canonicalYMD: '',
+      };
+    }
+
+    // 1. Match YYYY-MM-DD prefix directly (e.g. "2026-10-07" or "2026-10-07T22:00:02.000000Z")
+    const ymd = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (ymd) {
+      const y = ymd[1];
+      const m = ymd[2];
+      const d = ymd[3];
+      return {
+        canonicalYMD: `${y}-${m}-${d}`,
+        displayDate: `${d}/${m}/${y}`,
+      };
+    }
+
+    // 2. Match DD/MM/YYYY prefix directly (e.g. "07/10/2026")
+    const dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmy) {
+      const d = dmy[1].padStart(2, '0');
+      const m = dmy[2].padStart(2, '0');
+      const y = dmy[3];
+      return {
+        canonicalYMD: `${y}-${m}-${d}`,
+        displayDate: `${d}/${m}/${y}`,
+      };
+    }
+
+    // Fallback if full date parsing is needed
+    const parsed = new Date(str);
+    if (!Number.isNaN(parsed.getTime())) {
+      const y = parsed.getFullYear();
+      const m = `${parsed.getMonth() + 1}`.padStart(2, '0');
+      const d = `${parsed.getDate()}`.padStart(2, '0');
+      return {
+        canonicalYMD: `${y}-${m}-${d}`,
+        displayDate: `${d}/${m}/${y}`,
+      };
+    }
+
+    return {
+      displayDate: '-',
+      canonicalYMD: '',
+    };
   };
 
   // 3. Format Result Time
   const formatResultTime = (timeVal?: string, createdAt?: string): string => {
-    if (timeVal) {
-      const match = String(timeVal).match(/^(\d{1,2}):(\d{2})/);
-      if (match) {
-        const h = Number(match[1]);
-        const min = Number(match[2]);
-        const d = new Date();
-        d.setHours(h, min, 0, 0);
-        return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      }
+    const val = timeVal || createdAt;
+    if (!val) return '-';
+    const str = String(val).trim();
+    // If already a 12-hour formatted time (e.g. "10:37 AM")
+    if (/^\d{1,2}:\d{2}\s*(?:AM|PM)$/i.test(str)) {
+      return str;
     }
-    if (createdAt) {
-      const parsed = new Date(createdAt);
-      if (!Number.isNaN(parsed.getTime())) {
-        return parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      }
+    const match = str.match(/^(\d{1,2}):(\d{2})/);
+    if (match) {
+      const h = Number(match[1]);
+      const min = Number(match[2]);
+      const d = new Date();
+      d.setHours(h, min, 0, 0);
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    const parsed = new Date(str);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     }
     return '-';
   };
@@ -164,10 +232,20 @@ export const Winners: React.FC = () => {
     const gameSlug = (game?.slug || raw?.game_slug || '').toLowerCase();
     const typeSlug = (gameType?.slug || raw?.type || '').toLowerCase();
 
+    const formatGamePrice = (priceVal?: any, fallback?: string): string => {
+      if (priceVal !== undefined && priceVal !== null && priceVal !== '') {
+        const num = parseFloat(String(priceVal).replace(/[$,]/g, ''));
+        if (!Number.isNaN(num)) {
+          return `$${num.toLocaleString('en-US')}`;
+        }
+      }
+      return fallback || '$4,000';
+    };
+
     let badge: WinnerItem['badge'] = {
       type: 'cash',
       title: 'PICK 4',
-      amount: '$4,000',
+      amount: formatGamePrice(game?.price, '$4,000'),
       gradient: 'linear-gradient(135deg, #15AE36 0%, #0EA63F 100%)',
     };
 
@@ -175,28 +253,28 @@ export const Winners: React.FC = () => {
       badge = {
         type: 'cash',
         title: 'ZDT',
-        amount: '$1,000',
+        amount: formatGamePrice(game?.price, '$1,000'),
         gradient: 'linear-gradient(135deg, #5B00F0 0%, #7A1DFF 100%)',
       };
     } else if (gameSlug.includes('pick-3') || gameName.toLowerCase().includes('pick 3')) {
       badge = {
         type: 'cash',
         title: 'PICK 3',
-        amount: '$3,000',
+        amount: formatGamePrice(game?.price, '$3,000'),
         gradient: 'linear-gradient(135deg, #FF6104 0%, #FE8C00 100%)',
       };
     } else if (gameSlug.includes('pick-4') || gameName.toLowerCase().includes('pick 4')) {
       badge = {
         type: 'cash',
         title: 'PICK 4',
-        amount: '$4,000',
+        amount: formatGamePrice(game?.price, '$4,000'),
         gradient: 'linear-gradient(135deg, #15AE36 0%, #0EA63F 100%)',
       };
     } else if (gameSlug.includes('pick-5') || gameName.toLowerCase().includes('pick 5')) {
       badge = {
         type: 'cash',
         title: 'PICK 5',
-        amount: '$5,000',
+        amount: formatGamePrice(game?.price, '$5,000'),
         gradient: 'linear-gradient(135deg, #0070BA 0%, #0099E5 100%)',
       };
     } else if (
@@ -222,41 +300,58 @@ export const Winners: React.FC = () => {
       };
     }
 
+    let avatarUrl: string | null = user?.image_url || user?.image || null;
+    if (avatarUrl && typeof avatarUrl === 'string') {
+      if (avatarUrl.includes('https://lh3.googleusercontent.com')) {
+        avatarUrl = avatarUrl.substring(avatarUrl.indexOf('https://lh3.googleusercontent.com'));
+      } else if (avatarUrl.startsWith('http') && avatarUrl.lastIndexOf('http') > 0) {
+        avatarUrl = avatarUrl.substring(avatarUrl.lastIndexOf('http'));
+      }
+    }
+
     return {
       id: raw?.id || index + 1,
       name,
       drawTime,
       gameName,
-      avatarUrl: user?.image_url || user?.image || null,
+      avatarUrl,
       badge,
     };
   };
 
   // 5. Normalize Result Item from API
   const normalizeResult = (raw: any, index: number, isMidday = false): ResultItem => {
-    let resultType = raw?.type || (isMidday ? 'Midday' : 'Daily');
+    let resultType = raw?.result_type || raw?.type || (isMidday ? 'Midday' : 'Daily');
     resultType = resultType.charAt(0).toUpperCase() + resultType.slice(1);
 
     const totalVal = raw?.total ?? raw?.amount ?? raw?.price;
     let formattedAmount = '-';
     if (totalVal !== undefined && totalVal !== null && totalVal !== '') {
-      const str = String(totalVal).trim();
-      if (str.startsWith('$')) {
-        formattedAmount = str;
+      const cleanStr = String(totalVal).replace(/[$,]/g, '').trim();
+      const num = parseFloat(cleanStr);
+      if (!Number.isNaN(num)) {
+        formattedAmount = `$${num.toFixed(2)}`;
       } else {
-        const num = parseFloat(str);
-        formattedAmount = Number.isNaN(num) ? `$${str}` : `$${num}`;
+        formattedAmount = String(totalVal).startsWith('$') ? String(totalVal) : `$${totalVal}`;
       }
     }
+
+    const rawCreatedAt = raw?.created_at || raw?.createdAt;
+    const rawDate = raw?.draw_date || raw?.drawDate || raw?.date;
+    const rawTime = raw?.draw_time || raw?.drawTime || raw?.time;
+    const dateInfo = getResultDateInfo(rawDate, rawCreatedAt);
 
     return {
       id: raw?.id || index + 1,
       resultType,
       zipCode: raw?.zip_code || raw?.zip || raw?.zipcode || '-',
-      date: formatResultDate(raw?.date, raw?.created_at),
-      time: formatResultTime(raw?.time, raw?.created_at),
+      date: dateInfo.displayDate,
+      time: formatResultTime(rawTime, rawCreatedAt),
       state: raw?.state || '',
       amount: formattedAmount,
+      createdAt: rawCreatedAt,
+      rawDate: rawDate,
+      canonicalYMD: dateInfo.canonicalYMD,
     };
   };
 
@@ -282,64 +377,34 @@ export const Winners: React.FC = () => {
     }
   }, []);
 
-  // Fetch Results by game slug (multi-draw for pick-3, pick-4, pick-5)
+  // Fetch Results by game slug
   const loadResults = useCallback(async (slug: string) => {
     setResultsLoading(true);
     setResultsError(null);
+    setResults([]); // Clear results immediately to avoid stale data display
     try {
-      let fullDayList: any[] = [];
-      let middayList: any[] = [];
-
       const targetSlug =
         slug === 'state-2500' ? '2500-game-state' : slug;
 
-      if (['pick-3', 'pick-4', 'pick-5'].includes(targetSlug)) {
-        const [fullRes, midRes] = await Promise.allSettled([
-          winnerServices.getResults(targetSlug),
-          winnerServices.getResults(targetSlug, 'midday'),
-        ]);
-
-        const fullData =
-          fullRes.status === 'fulfilled' && Array.isArray(fullRes.value?.data?.data)
-            ? fullRes.value.data.data
-            : fullRes.status === 'fulfilled' && Array.isArray(fullRes.value?.data)
-            ? fullRes.value.data
-            : [];
-
-        const midData =
-          midRes.status === 'fulfilled' && Array.isArray(midRes.value?.data?.data)
-            ? midRes.value.data.data
-            : midRes.status === 'fulfilled' && Array.isArray(midRes.value?.data)
-            ? midRes.value.data
-            : [];
-
-        fullDayList = fullData.map((item: any, i: number) => normalizeResult(item, i, false));
-        middayList = midData.map((item: any, i: number) =>
-          normalizeResult(item, i + fullData.length, true),
-        );
-      } else {
-        // Try fetching targetSlug, with fallback if needed
-        let res: any = null;
-        try {
-          res = await winnerServices.getResults(targetSlug);
-        } catch (initialErr) {
-          if (targetSlug === '2500-game-pic-pick' || targetSlug === '2500-game-state') {
-            try {
-              res = await winnerServices.getResults('2500-game');
-            } catch {
-              res = null;
-            }
+      let res: any = null;
+      try {
+        res = await winnerServices.getResults(targetSlug);
+      } catch (initialErr) {
+        if (targetSlug === '2500-game-pic-pick' || targetSlug === '2500-game-state') {
+          try {
+            res = await winnerServices.getResults('2500-game');
+          } catch {
+            res = null;
           }
         }
-        const data = Array.isArray(res?.data?.data)
-          ? res.data.data
-          : Array.isArray(res?.data)
-          ? res.data
-          : [];
-        fullDayList = data.map((item: any, i: number) => normalizeResult(item, i, false));
       }
-
-      setResults([...middayList, ...fullDayList]);
+      const data = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+      const list = data.map((item: any, i: number) => normalizeResult(item, i));
+      setResults(list);
     } catch {
       setResultsError(null);
       setResults([]);
@@ -364,16 +429,20 @@ export const Winners: React.FC = () => {
     return found ? (found.group ? `${found.group} (${found.label})` : found.label) : selectedGameSlug.toUpperCase();
   }, [selectedGameSlug]);
 
-  // Filtered results by date if chosen
+  // Format YYYY-MM-DD from date input to DD/MM/YYYY for display matching the table
+  const formatDisplayFilterDate = (ymd: string): string => {
+    if (!ymd) return '';
+    const parts = ymd.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return ymd;
+  };
+
+  // Filtered results by actual game result date
   const filteredResults = useMemo(() => {
     if (!selectedDateFilter) return results;
-    // Format YYYY-MM-DD to DD/MM/YYYY
-    const parts = selectedDateFilter.split('-');
-    if (parts.length === 3) {
-      const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
-      return results.filter((r) => r.date === formatted);
-    }
-    return results;
+    return results.filter((item) => item.canonicalYMD === selectedDateFilter);
   }, [results, selectedDateFilter]);
 
   const isZdtSelected = selectedGameSlug === 'zdt';
@@ -802,43 +871,95 @@ export const Winners: React.FC = () => {
               )}
             </div>
 
-            {/* Date Picker Input matching Select date pill */}
+            {/* Custom Date Filter Pill matching Game Select Dropdown */}
             <div style={{ position: 'relative' }}>
-              <input
-                type="date"
-                value={selectedDateFilter}
-                onChange={(e) => setSelectedDateFilter(e.target.value)}
+              <div
+                onClick={openDatePicker}
                 style={{
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '24px',
                   background: 'var(--bg-card)',
-                  color: 'var(--text-main)',
+                  color: selectedDateFilter ? 'var(--text-main)' : 'var(--text-muted)',
                   border: '1px solid var(--border-color)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
+                  fontSize: '13.5px',
+                  fontWeight: selectedDateFilter ? 700 : 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  minHeight: '45px',
+                  boxSizing: 'border-box',
                 }}
-              />
-              {selectedDateFilter && (
-                <button
-                  onClick={() => setSelectedDateFilter('')}
+              >
+                {/* Formatted Date or Placeholder matching table format (DD/MM/YYYY) */}
+                <span
+                  style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                >
+                  {selectedDateFilter
+                    ? formatDisplayFilterDate(selectedDateFilter)
+                    : t('winners.selectDate', 'Select date')}
+                </span>
+
+                {/* Right controls: Clear (X) + Calendar Icon */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 2 }}>
+                  {selectedDateFilter && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setSelectedDateFilter('');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        padding: '2px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title="Clear date filter"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                  <Calendar size={18} color="#009944" style={{ pointerEvents: 'none', flexShrink: 0 }} />
+                </div>
+
+                {/* Native date input overlaying the pill for full cross-browser picker support */}
+                <input
+                  ref={dateInputRef}
+                  type="date"
+                  value={selectedDateFilter}
+                  onChange={(e) => setSelectedDateFilter(e.target.value)}
+                  onInput={(e: any) => setSelectedDateFilter(e.target.value)}
                   style={{
                     position: 'absolute',
-                    right: '32px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
+                    top: 0,
+                    left: 0,
+                    right: selectedDateFilter ? '36px' : 0,
+                    bottom: 0,
+                    width: selectedDateFilter ? 'calc(100% - 36px)' : '100%',
+                    height: '100%',
+                    opacity: 0,
                     cursor: 'pointer',
-                    color: 'var(--text-muted)',
+                    zIndex: 1,
                   }}
-                  title="Clear date filter"
-                >
-                  <X size={14} />
-                </button>
-              )}
+                  aria-label="Filter by result date"
+                />
+              </div>
             </div>
           </div>
 
@@ -858,13 +979,14 @@ export const Winners: React.FC = () => {
             {isZdtSelected ? (
               /* ZDT Header: Result Type | Zip Code | Date | Time (Screenshot 1) */
               <div
+                className="results-table-header"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1.1fr 1.1fr 1.2fr 1fr',
                   background: '#00D066',
                   color: '#052E16',
-                  padding: '13px 12px',
-                  fontSize: '13.5px',
+                  padding: '12px 10px',
+                  fontSize: '12px',
                   fontWeight: 800,
                   textAlign: 'center',
                 }}
@@ -877,13 +999,14 @@ export const Winners: React.FC = () => {
             ) : (
               /* PICK 3/4/5, Pic-Pick, State Header: Result Type | Result Date | Amount | Time (Screenshot 2) */
               <div
+                className="results-table-header"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1.1fr 1.2fr 1.1fr 1fr',
                   background: '#00D066',
                   color: '#052E16',
-                  padding: '13px 12px',
-                  fontSize: '13.5px',
+                  padding: '12px 10px',
+                  fontSize: '12px',
                   fontWeight: 800,
                   textAlign: 'center',
                 }}
@@ -912,13 +1035,14 @@ export const Winners: React.FC = () => {
               filteredResults.map((item, idx) => (
                 <div
                   key={item.id || idx}
+                  className="results-table-row"
                   style={{
                     display: 'grid',
                     gridTemplateColumns: isZdtSelected
                       ? '1.1fr 1.1fr 1.2fr 1fr'
                       : '1.1fr 1.2fr 1.1fr 1fr',
-                    padding: '12px 10px',
-                    fontSize: '13px',
+                    padding: '11px 8px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     color: 'var(--text-main)',
                     borderBottom: '1px solid var(--border-color)',
@@ -928,22 +1052,22 @@ export const Winners: React.FC = () => {
                   }}
                 >
                   {/* Column 1: Result Type */}
-                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px' }}>
+                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px', wordBreak: 'break-word' }}>
                     {item.resultType}
                   </span>
 
                   {/* Column 2: Zip Code (ZDT) or Result Date (Others) */}
-                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px' }}>
+                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px', wordBreak: 'break-word' }}>
                     {isZdtSelected ? item.zipCode : item.date}
                   </span>
 
                   {/* Column 3: Date (ZDT) or Amount (Others) */}
-                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px' }}>
+                  <span style={{ borderRight: '1px solid var(--border-color)', padding: '0 4px', wordBreak: 'break-word' }}>
                     {isZdtSelected ? item.date : item.amount}
                   </span>
 
                   {/* Column 4: Time */}
-                  <span style={{ padding: '0 4px' }}>
+                  <span style={{ padding: '0 4px', wordBreak: 'break-word' }}>
                     {item.time}
                   </span>
                 </div>

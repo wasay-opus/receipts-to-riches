@@ -144,6 +144,8 @@
     "title": "Profile",
     "personalInfo": "Personal Information",
     "changePassword": "Change Password",
+    "playGames": "Play Games",
+    "rankingLeaderboard": "Ranking Leaderboard",
     "myReceipts": "My Receipts",
     "aboutUs": "About us",
     "explainVideo": "Explain Video",
@@ -280,6 +282,7 @@
     "goHome": "Go to Home",
     "changeImage": "Change",
     "saveAndContinue": "Save & Continue",
+    "gotIt": "Got It!",
     "or": "OR"
   },
   "apiErrors": {
@@ -563,7 +566,7 @@
     "winPointsSubtitle": "Earn points and rewards with every receipt entered",
     "hello": "Hello",
     "myBalance": "My Balance",
-    "useCameraEarnPoints": "Use Camera to earn 40 points extra",
+    "useCameraEarnPoints": "Scan Receipt to earn 40 points extra",
     "totalBalance": "Total Reward Points",
     "redeem": "Redeem",
     "playGames": "Play Games",
@@ -1425,7 +1428,15 @@
     "tryAgain": "Please try again.",
     "loadingLeaderboard": "Loading leaderboard...",
     "noLeaderboardData": "No leaderboard data yet.",
-    "currentStreak": "Current streak"
+    "currentStreak": "Current streak",
+    "infoTitle": "Streak Leaderboard",
+    "infoSubtitle": "How the leaderboard works",
+    "dailyStreaksTitle": "Daily Streaks",
+    "dailyStreaksDesc": "Log in and play every day to increase your daily streak. The longer your active streak, the higher your ranking!",
+    "topThreeTitle": "Top 3 Podium",
+    "topThreeDesc": "The players with the highest active streaks earn a featured spot on the Top 3 Podium.",
+    "bonusRewardsTitle": "Bonus Rewards",
+    "bonusRewardsDesc": "Maintain your streak to earn exclusive multipliers, unlock locked games faster, and gain recognition on the leaderboard."
   },
   "rewardsScreen": {
     "catalog": "Rewards Catalog",
@@ -1503,5 +1514,40 @@
     "loading": "Loading notifications...",
     "emptyState": "No notifications yet.",
     "deleteButtonTitle": "Delete notification"
+  },
+  "profile": {
+    "myProfile": "My Profile"
+  },
+  "socialProfile": {
+    "communityMember": "Community Member",
+    "loadingProfile": "Loading profile...",
+    "following": "Following",
+    "follow": "Follow",
+    "report": "Report",
+    "posts": "Posts",
+    "followers": "Followers",
+    "followingCount": "Following",
+    "noPostsYet": "No posts yet.",
+    "followNotSaved": "Follow not saved",
+    "tryAgain": "Please try again.",
+    "reportUserTitle": "Report user",
+    "reportUserPrompt": "Why are you reporting this user?",
+    "reportDefaultReason": "Inappropriate profile",
+    "submitReport": "Submit report",
+    "reportSubmitted": "User report submitted",
+    "reportFailed": "User report not sent"
+  },
+  "createPost": {
+    "createNewPost": "Create New Post",
+    "post": "Post",
+    "sharePlaceholder": "Share your shopping deals, winning receipts, or questions with the community...",
+    "addReceiptPhoto": "Add Receipt / Photo",
+    "photoRequiredHint": "Photo required",
+    "imageRequiredTitle": "Image Required",
+    "imageRequiredMsg": "Please upload a receipt or image to create a post.",
+    "postPublished": "Post Published!",
+    "postPublishedDesc": "Your post has been saved.",
+    "postNotSaved": "Post not saved",
+    "tryAgain": "Please try again."
   }
 }

@@ -17,7 +17,7 @@ const RewardOverlay = () => {
     CoinRainController.getSnapshot,
   );
 
-  return <CoinRain active={triggerKey > 0} />;
+  return <CoinRain key={triggerKey} active={triggerKey > 0} />;
 };
 
 export const RewardProvider: React.FC<PropsWithChildren> = ({ children }) => {

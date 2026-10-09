@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Upload,
-  Camera,
   ScanLine,
   CheckCircle,
   AlertCircle,
@@ -26,7 +25,6 @@ export const Scan: React.FC = () => {
   const navigate = useNavigate();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -110,23 +108,11 @@ export const Scan: React.FC = () => {
 
   return (
     <Container maxWidth="640px" style={{ gap: '24px', paddingBottom: '40px' }}>
-      {/* Hidden File Inputs */}
+      {/* Hidden File Input */}
       <input
         type="file"
         ref={fileInputRef}
         accept="image/*"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          if (e.target.files && e.target.files[0]) {
-            handleFileProcess(e.target.files[0]);
-          }
-        }}
-      />
-      <input
-        type="file"
-        ref={cameraInputRef}
-        accept="image/*"
-        capture="environment"
         style={{ display: 'none' }}
         onChange={(e) => {
           if (e.target.files && e.target.files[0]) {
@@ -227,25 +213,13 @@ export const Scan: React.FC = () => {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          style={{
-            border: isDragging ? '2px dashed var(--green)' : '2px dashed var(--border-color)',
-            background: isDragging ? 'rgba(0, 103, 77, 0.08)' : 'var(--bg-card)',
-            borderRadius: '24px',
-            padding: '48px 24px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '16px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
+          className={`scan-dropzone-card ${isDragging ? 'scan-dropzone-card--dragging' : ''}`}
           onClick={() => fileInputRef.current?.click()}
         >
           <div
             style={{
-              width: '80px',
-              height: '80px',
+              width: '72px',
+              height: '72px',
               borderRadius: '50%',
               background: 'rgba(0, 103, 77, 0.12)',
               display: 'flex',
@@ -254,41 +228,37 @@ export const Scan: React.FC = () => {
               color: 'var(--green)',
             }}
           >
-            <ScanLine size={40} />
+            <ScanLine size={36} />
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
               {t('scanScreen.dragDropHere', 'Drag & drop your receipt here')}
             </h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
               {t('scanScreen.supportsFormat', 'Supports PNG, JPG, JPEG up to 10MB')}
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '6px', width: '100%', maxWidth: '320px' }}>
             <button
               type="button"
               className="btn-primary"
+              style={{
+                padding: '11px 24px',
+                fontSize: '13px',
+                whiteSpace: 'nowrap',
+                justifyContent: 'center',
+                borderRadius: '12px',
+                boxShadow: '0 4px 14px rgba(0, 103, 77, 0.25)',
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 fileInputRef.current?.click();
               }}
             >
-              <Upload size={18} />
+              <Upload size={16} />
               <span>{t('scanScreen.browseFiles', 'Browse Files')}</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={(e) => {
-                e.stopPropagation();
-                cameraInputRef.current?.click();
-              }}
-            >
-              <Camera size={18} />
-              <span>{t('scanScreen.takePhoto', 'Take Photo')}</span>
             </button>
           </div>
         </div>

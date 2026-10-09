@@ -117,22 +117,23 @@ export const AboutUs: React.FC = () => {
 
       {/* Main 2-Column Web Hero Section */}
       <div
+        className="about-hero-card"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-          gap: '32px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '24px',
           alignItems: 'center',
           width: '100%',
           background: 'var(--bg-card)',
           borderRadius: '24px',
-          padding: '36px',
+          padding: '28px 24px',
           border: '1px solid var(--border-color)',
           boxShadow: 'var(--shadow-md)',
           boxSizing: 'border-box',
         }}
       >
         {/* Left Column: Rich Typography & Text */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Badge */}
           <div
             style={{
@@ -155,14 +156,16 @@ export const AboutUs: React.FC = () => {
 
           {/* Emerald Green Main Title */}
           <h2
+            className="about-main-title"
             style={{
-              fontSize: '32px',
+              fontSize: '26px',
               fontWeight: 800,
               color: '#00E676',
               lineHeight: 1.25,
               margin: 0,
               textShadow: '0 2px 16px rgba(0, 230, 118, 0.25)',
               letterSpacing: '-0.02em',
+              wordBreak: 'break-word',
             }}
           >
             {t('aboutUs.uniqueLine1', 'Receipts To Riches™')}<br />

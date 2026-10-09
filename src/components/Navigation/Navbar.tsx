@@ -21,11 +21,9 @@ export const DesktopNavbar: React.FC = () => {
   const navItems = [
     { label: t('bottomTabs.home', 'Home'), path: '/', icon: <Home size={18} /> },
     { label: t('bottomTabs.feed', 'Feed'), path: '/feed', icon: <Rss size={18} /> },
-    { label: t('bottomTabs.play', 'Play'), path: '/play', icon: <Gamepad2 size={18} /> },
     { label: t('bottomTabs.scan', 'Scan Receipt'), path: '/scan', icon: <ScanLine size={18} /> },
     { label: t('bottomTabs.rewards', 'Rewards'), path: '/rewards', icon: <Gift size={18} /> },
     { label: t('bottomTabs.winners', 'Winners'), path: '/winners', icon: <Trophy size={18} /> },
-    { label: t('bottomTabs.rankings', 'Rankings'), path: '/rankings', icon: <Award size={18} /> },
   ];
 
   const isItemActive = (path: string) =>
@@ -77,17 +75,15 @@ export const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate();
 
   const leftTabs = [
-    { label: t('bottomTabs.home', 'Home'), path: '/', icon: <Home size={19} /> },
-    { label: t('bottomTabs.feed', 'Feed'), path: '/feed', icon: <Rss size={19} /> },
-    { label: t('bottomTabs.play', 'Play'), path: '/play', icon: <Gamepad2 size={19} /> },
+    { label: t('bottomTabs.home', 'Home'), path: '/', icon: <Home size={20} /> },
+    { label: t('bottomTabs.feed', 'Feed'), path: '/feed', icon: <Rss size={20} /> },
   ];
 
   const scanTab = { label: t('bottomTabs.scan', 'Scan'), path: '/scan', icon: <ScanLine size={24} /> };
 
   const rightTabs = [
-    { label: t('bottomTabs.rewards', 'Reward'), path: '/rewards', icon: <Gift size={19} /> },
-    { label: t('bottomTabs.winners', 'Winner'), path: '/winners', icon: <Trophy size={19} /> },
-    { label: t('bottomTabs.rankings', 'Ranking'), path: '/rankings', icon: <Award size={19} /> },
+    { label: t('bottomTabs.rewards', 'Rewards'), path: '/rewards', icon: <Gift size={20} /> },
+    { label: t('bottomTabs.winners', 'Winners'), path: '/winners', icon: <Trophy size={20} /> },
   ];
 
   const renderTab = (tab: { label: string; path: string; icon: React.ReactNode }) => {
@@ -106,10 +102,10 @@ export const MobileBottomNav: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '2px',
+          gap: '3px',
           cursor: 'pointer',
-          color: isActive ? '#00674D' : 'var(--text-muted)',
-          padding: '4px 2px',
+          color: isActive ? '#00D066' : 'var(--text-muted)',
+          padding: '4px 6px',
           flex: 1,
           minWidth: 0,
           transition: 'all 0.2s ease',
@@ -122,18 +118,19 @@ export const MobileBottomNav: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            color: isActive ? '#00D066' : 'inherit',
           }}
         >
           {tab.icon}
         </div>
         <span
           style={{
-            fontSize: '9.5px',
+            fontSize: '11px',
             fontWeight: isActive ? 700 : 500,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            maxWidth: '48px',
+            color: isActive ? '#00D066' : 'inherit',
           }}
         >
           {tab.label}

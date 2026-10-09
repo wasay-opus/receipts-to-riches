@@ -8,6 +8,7 @@ export interface CustomModalProps {
   children: React.ReactNode;
   maxWidth?: string | number;
   showCloseButton?: boolean;
+  contentPadding?: string | number;
 }
 
 export const CustomModal: React.FC<CustomModalProps> = ({
@@ -17,6 +18,7 @@ export const CustomModal: React.FC<CustomModalProps> = ({
   children,
   maxWidth = '460px',
   showCloseButton = true,
+  contentPadding = '20px',
 }) => {
   useEffect(() => {
     if (visible) {
@@ -57,11 +59,12 @@ export const CustomModal: React.FC<CustomModalProps> = ({
           border: '1px solid var(--border-color)',
           boxShadow: 'var(--shadow-lg)',
           overflow: 'hidden',
+          position: 'relative',
           animation: 'scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {(title || showCloseButton) && (
+        {title ? (
           <div
             style={{
               padding: '18px 20px',
@@ -71,11 +74,9 @@ export const CustomModal: React.FC<CustomModalProps> = ({
               borderBottom: '1px solid var(--border-color)',
             }}
           >
-            {title ? (
-              <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>
-                {title}
-              </h3>
-            ) : <div />}
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
+              {title}
+            </h3>
             {showCloseButton && (
               <button
                 onClick={onClose}
@@ -96,9 +97,34 @@ export const CustomModal: React.FC<CustomModalProps> = ({
               </button>
             )}
           </div>
-        )}
+        ) : showCloseButton ? (
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              zIndex: 10,
+              background: 'var(--bg-card-secondary)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              transition: 'background 0.15s ease',
+            }}
+          >
+            <X size={18} />
+          </button>
+        ) : null}
 
-        <div style={{ padding: '20px' }}>{children}</div>
+        <div style={{ padding: typeof contentPadding === 'number' ? `${contentPadding}px` : contentPadding }}>
+          {children}
+        </div>
       </div>
     </div>
   );

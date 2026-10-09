@@ -171,8 +171,8 @@ export const PersonalInfo: React.FC = () => {
   return (
     <Container maxWidth="720px" style={{ gap: '22px', paddingBottom: '90px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
           <button
             type="button"
             onClick={handleBack}
@@ -181,23 +181,24 @@ export const PersonalInfo: React.FC = () => {
               background: 'var(--bg-card)',
               border: '1px solid var(--border-color)',
               borderRadius: '12px',
-              width: '42px',
-              height: '42px',
+              width: '38px',
+              height: '38px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               color: 'var(--text-main)',
               transition: 'all 0.2s ease',
+              flexShrink: 0,
             }}
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </button>
-          <div>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2, margin: 0 }}>
               {t('profile.personalInfo', 'Personal Information')}
             </h1>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: 0 }}>
               {t('personalInfo.subtitle', 'Update your personal profile details and contact information')}
             </p>
           </div>
@@ -206,10 +207,20 @@ export const PersonalInfo: React.FC = () => {
         {hasChanges && (
           <span
             className="pill-badge pill-gold"
-            style={{ fontSize: '12px', padding: '6px 12px', animation: 'pulse 2s infinite' }}
+            style={{
+              fontSize: '11px',
+              padding: '4px 10px',
+              fontWeight: 700,
+              color: 'var(--text-main)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
           >
-            <AlertCircle size={14} />
-            <span>{t('personalInfo.unsavedBadge', 'Unsaved changes')}</span>
+            <AlertCircle size={13} color="#D97706" />
+            <span style={{ color: 'var(--text-main)' }}>{t('personalInfo.unsavedBadge', 'Unsaved changes')}</span>
           </span>
         )}
       </div>
@@ -270,7 +281,7 @@ export const PersonalInfo: React.FC = () => {
               />
             </label>
           </div>
-          <span style={{ fontSize: '13px', color: avatarFile ? '#D5AD60' : 'var(--text-muted)', fontWeight: avatarFile ? 600 : 400 }}>
+          <span style={{ fontSize: '13px', color: avatarFile ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: avatarFile ? 700 : 400 }}>
             {avatarFile ? t('personalInfo.newPhotoSelected', 'New photo selected (unsaved)') : t('personalInfo.tapToChangePhoto', 'Tap camera to change photo')}
           </span>
         </div>
@@ -429,19 +440,20 @@ export const PersonalInfo: React.FC = () => {
                     onClick={handleDiscard}
                     style={{
                       flex: 1,
-                      padding: '14px',
+                      padding: '12px 14px',
                       borderRadius: '14px',
                       background: 'var(--bg-card-secondary)',
                       color: 'var(--text-muted)',
                       border: '1px solid var(--border-color)',
                       fontWeight: 600,
-                      fontSize: '14px',
+                      fontSize: '13.5px',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
                       transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     <RotateCcw size={16} />
@@ -453,7 +465,7 @@ export const PersonalInfo: React.FC = () => {
                   title={t('personalInfo.saveChanges', 'Save Changes')}
                   icon={<Save size={18} />}
                   loading={updateLoading}
-                  style={{ flex: (dirty || avatarFile !== null || hasChanges) ? 2 : 1, width: '100%', padding: '14px' }}
+                  style={{ flex: (dirty || avatarFile !== null || hasChanges) ? 2 : 1, width: '100%', padding: '12px 16px', whiteSpace: 'nowrap' }}
                 />
               </div>
             </form>
@@ -463,45 +475,24 @@ export const PersonalInfo: React.FC = () => {
 
       {/* Floating Action Bar when Unsaved Changes exist */}
       {hasChanges && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 60,
-            width: 'calc(100% - 32px)',
-            maxWidth: '640px',
-            background: 'var(--nav-bg)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: '20px',
-            padding: '12px 18px',
-            boxShadow: 'var(--shadow-lg), 0 0 25px rgba(0, 103, 77, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            animation: 'fadeIn 0.25s ease-out',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="unsaved-changes-bar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             <div
               style={{
-                width: '10px',
-                height: '10px',
+                width: '8px',
+                height: '8px',
                 borderRadius: '50%',
-                background: '#FFD700',
-                boxShadow: '0 0 8px #FFD700',
+                background: '#F59E0B',
+                boxShadow: '0 0 8px rgba(245, 158, 11, 0.7)',
+                flexShrink: 0,
               }}
             />
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {t('personalInfo.unsavedBadge', 'Unsaved changes')}
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <button
               type="button"
               onClick={handleDiscard}
@@ -509,21 +500,41 @@ export const PersonalInfo: React.FC = () => {
                 background: 'transparent',
                 border: 'none',
                 color: 'var(--text-muted)',
-                fontSize: '13px',
-                fontWeight: 600,
+                fontSize: '12px',
+                fontWeight: 700,
                 cursor: 'pointer',
-                padding: '6px 10px',
+                padding: '6px 8px',
+                whiteSpace: 'nowrap',
               }}
             >
               {t('personalInfo.discard', 'Discard')}
             </button>
-            <Button
+            <button
+              type="button"
               onClick={() => formikRef.current?.submitForm()}
-              loading={updateLoading}
-              title={t('personalInfo.saveChanges', 'Save Changes')}
-              icon={<Save size={16} />}
-              style={{ padding: '8px 18px', fontSize: '13px', borderRadius: '12px' }}
-            />
+              disabled={updateLoading}
+              style={{
+                padding: '7px 14px',
+                fontSize: '12px',
+                fontWeight: 800,
+                borderRadius: '10px',
+                background: '#00D066',
+                color: '#052E16',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 3px 10px rgba(0, 208, 102, 0.3)',
+                transition: 'transform 0.15s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            >
+              <Save size={14} />
+              <span>{updateLoading ? t('common.loading', 'Saving...') : t('personalInfo.saveChanges', 'Save Changes')}</span>
+            </button>
           </div>
         </div>
       )}

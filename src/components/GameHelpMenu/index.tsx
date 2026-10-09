@@ -465,7 +465,50 @@ export const GameHelpMenu: React.FC<GameHelpMenuProps> = ({
 
               {/* Rendered Markdown Rules */}
               <div className="rules-markdown-content" style={{ color: '#CBD5E1' }}>
-                <ReactMarkdown>{rulesMarkdown}</ReactMarkdown>
+                <ReactMarkdown
+                  components={{
+                    h1: ({ children }) => (
+                      <h1 style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF', marginTop: '14px', marginBottom: '8px', lineHeight: 1.3 }}>
+                        {children}
+                      </h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: '#34D399', marginTop: '12px', marginBottom: '6px', lineHeight: 1.3 }}>
+                        {children}
+                      </h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#94A3B8', marginTop: '10px', marginBottom: '4px', lineHeight: 1.3 }}>
+                        {children}
+                      </h3>
+                    ),
+                    p: ({ children }) => (
+                      <p style={{ marginBottom: '8px', color: '#CBD5E1', fontSize: '12px', lineHeight: '1.55' }}>
+                        {children}
+                      </p>
+                    ),
+                    ul: ({ children }) => (
+                      <ul style={{ paddingLeft: '18px', marginBottom: '8px', color: '#CBD5E1', fontSize: '12px', lineHeight: '1.5' }}>
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol style={{ paddingLeft: '18px', marginBottom: '8px', color: '#CBD5E1', fontSize: '12px', lineHeight: '1.5' }}>
+                        {children}
+                      </ol>
+                    ),
+                    li: ({ children }) => (
+                      <li style={{ marginBottom: '4px', fontSize: '12px' }}>
+                        {children}
+                      </li>
+                    ),
+                    hr: () => (
+                      <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '10px 0' }} />
+                    ),
+                  }}
+                >
+                  {rulesMarkdown}
+                </ReactMarkdown>
               </div>
             </div>
 

@@ -1,61 +1,36 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, HelpCircle, ArrowLeft, RefreshCw, Trophy } from 'lucide-react';
+import { Sparkles, HelpCircle, ArrowLeft, RefreshCw, Trophy, Megaphone } from 'lucide-react';
 import { Button, Container, CustomModal, showToast, triggerCoinCelebration } from '../../components';
 import { WebSound } from '../../utils/soundLoader';
 import images from '../../constants/images';
 
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '../../redux/Store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
+import { fetchUnlockedMiniGames, invalidateUnlockedMiniGamesCache } from '../../redux/Slices/gamesSlice';
 import gameServices from '../../services/gameServices';
-
-const parseWonPoints = (payload: any, fallback: number) => {
-  const candidates = [
-    payload?.points,
-    payload?.won_points,
-    payload?.reward_points,
-    payload?.data?.points,
-    payload?.data?.won_points,
-    payload?.data?.reward_points,
-    payload?.data?.wallet?.points,
-  ];
-
-  for (const candidate of candidates) {
-    const parsed = Number(candidate);
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      return parsed;
-    }
-  }
-
-  // The backend doesn't return a numeric points field on this endpoint - it's
-  // embedded in the message text instead (e.g. "You won 5 points!").
-  const message = String(payload?.message ?? payload?.data?.message ?? '');
-  const matchedPoints = message.match(/(\d+)\s*(pts?|points?)/i);
-  if (matchedPoints) {
-    const parsed = Number(matchedPoints[1]);
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      return parsed;
-    }
-  }
-
-  return fallback;
-};
+import { extractPlayableSlots, getNextUnlockText, parseWonPoints } from '../../utils/miniGamesUtil';
 
 export const Scratch2Win: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { unlockedMiniGames } = useSelector((state: RootState) => state.games);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
   const [revealedPercent, setRevealedPercent] = useState(0);
-  const [cardsLeft, setCardsLeft] = useState(3);
+
+  const scratchSlots = unlockedMiniGames?.['scratch-2-win'];
+  const cardsLeft = extractPlayableSlots(scratchSlots);
+  const nextUnlockText = getNextUnlockText(scratchSlots);
   const [rulesModalVisible, setRulesModalVisible] = useState(false);
   const [prizePoints, setPrizePoints] = useState(0);
   const [cardLoading, setCardLoading] = useState(false);
+  const [resultModal, setResultModal] = useState<{ won: boolean; points: number } | null>(null);
 
   const scratchSoundRef = useRef<WebSound | null>(null);
   const winSoundRef = useRef<WebSound | null>(null);
@@ -63,8 +38,15 @@ export const Scratch2Win: React.FC = () => {
   useEffect(() => {
     scratchSoundRef.current = new WebSound('scratching');
     winSoundRef.current = new WebSound('coins');
-    initScratchCard();
-  }, []);
+    dispatch(fetchUnlockedMiniGames());
+    drawScratchOverlay();
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (cardsLeft > 0 && !isRevealed && !cardLoading && prizePoints === 0) {
+      initScratchCard();
+    }
+  }, [cardsLeft]);
 
   const drawScratchOverlay = () => {
     const canvas = canvasRef.current;
@@ -88,47 +70,51 @@ export const Scratch2Win: React.FC = () => {
     ctx.fillStyle = '#151A2A';
     ctx.font = 'bold 20px Poppins, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(t('scratch2win.canvasScratchHere', 'SCRATCH HERE TO WIN'), canvas.width / 2, canvas.height / 2 - 10);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(t('scratch2win.canvasScratchHere', 'SCRATCH HERE TO WIN'), canvas.width / 2, canvas.height / 2 - 14);
     ctx.font = '13px Poppins, sans-serif';
-    ctx.fillStyle = '#555555';
-    ctx.fillText(t('scratch2win.canvasRubInstruction', 'Rub with mouse or touch'), canvas.width / 2, canvas.height / 2 + 20);
+    ctx.fillStyle = '#444444';
+    ctx.fillText(t('scratch2win.canvasRubInstruction', 'Rub with mouse or touch'), canvas.width / 2, canvas.height / 2 + 16);
   };
 
   const initScratchCard = async () => {
+    if (cardsLeft <= 0) {
+      drawScratchOverlay();
+      return;
+    }
+
     setIsRevealed(false);
     setRevealedPercent(0);
     setCardLoading(true);
 
-    // Ask the backend for the real outcome BEFORE the card is scratchable - the
-    // number underneath must be the real award, not a client-side guess.
     try {
       const response = await gameServices.playScratch2Win();
       const wonPoints = parseWonPoints(response?.data ?? response, 0);
       setPrizePoints(wonPoints);
       dispatch(fetchUser());
+      dispatch(invalidateUnlockedMiniGamesCache());
+      dispatch(fetchUnlockedMiniGames());
     } catch (error: any) {
       setPrizePoints(0);
-      showToast({
-        type: 'error',
-        text1: t('scratch2win.cardNotAvailableTitle', 'Card not available'),
-        text2: error?.message || t('scratch2win.cardNotAvailableMsg', 'Could not load this scratch card. Please try again.'),
-      });
+      dispatch(invalidateUnlockedMiniGamesCache());
+      dispatch(fetchUnlockedMiniGames());
     } finally {
       setCardLoading(false);
+      drawScratchOverlay();
     }
-
-    drawScratchOverlay();
   };
 
   const getPosition = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const clientX = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    const scaleX = rect.width ? canvas.width / rect.width : 1;
+    const scaleY = rect.height ? canvas.height / rect.height : 1;
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
@@ -174,10 +160,17 @@ export const Scratch2Win: React.FC = () => {
         // prizePoints was already fetched from the backend when this card loaded.
         if (prizePoints > 0) {
           winSoundRef.current?.play();
-          triggerCoinCelebration();
         }
         // Clear all canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Show result modal after brief reveal
+        setTimeout(() => {
+          setResultModal({
+            won: prizePoints > 0,
+            points: prizePoints,
+          });
+        }, 500);
       }
     } catch {
       // Ignored
@@ -186,298 +179,235 @@ export const Scratch2Win: React.FC = () => {
 
   const handleNextCard = () => {
     if (cardsLeft > 0) {
-      setCardsLeft((prev) => prev - 1);
       initScratchCard();
     }
   };
 
   return (
-    <Container maxWidth="1100px" style={{ alignItems: 'center', gap: '24px', paddingBottom: '60px' }}>
+    <Container maxWidth="1000px" style={{ paddingBottom: '60px' }}>
       {/* Top Bar */}
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="game-top-nav-bar">
         <button
+          type="button"
+          className="game-nav-btn"
           onClick={() => navigate(-1)}
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            width: '40px',
-            height: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: 'var(--text-main)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
         >
           <ArrowLeft size={20} />
         </button>
 
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+        <div className="game-stage-title-wrap">
+          <h2 className="game-stage-title">
             {t('scratch2win.pageTitle', 'Scratch 2 Win')}
           </h2>
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>
+          <span className="game-stage-subtitle">
             VIP Scratch Card Lounge
           </span>
         </div>
 
         <button
+          type="button"
+          className="game-nav-btn"
           onClick={() => setRulesModalVisible(true)}
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            width: '40px',
-            height: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: 'var(--text-main)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
         >
           <HelpCircle size={20} />
         </button>
       </div>
 
-      <div className="pill-badge pill-gold" style={{ fontSize: '14px', padding: '8px 20px', gap: '8px' }}>
-        <Sparkles size={16} />
-        <span style={{ fontWeight: 700 }}>
-          {t('scratch2win.cardsRemaining', '{{count}} Scratch Cards Remaining', { count: cardsLeft })}
-        </span>
-      </div>
-
-      {/* VIP Scratch Arena Immersive Wrapper */}
-      <div className="game-arena-wrapper game-arena-wrapper--green">
-        {/* Top Marquee Light Bulbs */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-          {[...Array(16)].map((_, i) => (
-            <span key={i} className="casino-bulb" />
-          ))}
-        </div>
-
-        {/* 2-Column Responsive Layout */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '32px',
-            alignItems: 'center',
-          }}
-        >
-          {/* Left Column: Interactive Gold Foil Scratch Card */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-            <div
-              style={{
-                position: 'relative',
-                width: '360px',
-                maxWidth: '100%',
-                height: '250px',
-                borderRadius: '28px',
-                overflow: 'hidden',
-                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(213, 173, 96, 0.3)',
-                border: '4px solid #D5AD60',
-                background: 'linear-gradient(135deg, #0A291E 0%, #151A2A 100%)',
-              }}
-            >
-              {/* Hidden Prize Underneath */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'radial-gradient(circle at center, #0F382B 0%, #061A13 100%)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  color: '#FFFFFF',
-                }}
+      {/* 2-Column Responsive Layout: Left (Scratch Card) & Right (Campaign + Rules) */}
+      <div className="game-screen-grid">
+        {/* Left: Interactive Gold Foil Scratch Card Arena */}
+        <div className="card game-arena-card">
+          {/* Card Header */}
+          <div className="game-arena-header">
+            <div>
+              <span
+                className="game-arena-badge"
+                style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
               >
-                <img src={images.Coin} alt={t('scratch2win.prizeAlt', 'Prize')} style={{ width: '70px', height: '70px', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))' }} />
-                <h3 style={{ fontSize: '30px', fontWeight: 900, color: '#FFD700', margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-                  {prizePoints > 0
-                    ? t('scratch2win.wonPointsDisplay', '+{{points}} PTS!', { points: prizePoints })
-                    : t('scratch2win.noWinDisplay', 'No Win')}
-                </h3>
-                <span style={{ fontSize: '13px', color: prizePoints > 0 ? '#34D399' : '#94A3B8', fontWeight: 700 }}>
-                  {prizePoints > 0
-                    ? t('scratch2win.winnerInstantReward', 'Winner Instant Reward')
-                    : t('scratch2win.betterLuckNextTime', 'Better luck next time')}
-                </span>
-              </div>
-
-              {/* Scratchable Canvas Overlay */}
-              <canvas
-                ref={canvasRef}
-                width={360}
-                height={250}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  cursor: 'grab',
-                  touchAction: 'none',
-                }}
-                onMouseDown={(e) => {
-                  setIsDrawing(true);
-                  const { x, y } = getPosition(e);
-                  scratch(x, y);
-                }}
-                onMouseMove={(e) => {
-                  if (isDrawing) {
-                    const { x, y } = getPosition(e);
-                    scratch(x, y);
-                  }
-                }}
-                onMouseUp={() => setIsDrawing(false)}
-                onMouseLeave={() => setIsDrawing(false)}
-                onTouchStart={(e) => {
-                  setIsDrawing(true);
-                  const { x, y } = getPosition(e);
-                  scratch(x, y);
-                }}
-                onTouchMove={(e) => {
-                  if (isDrawing) {
-                    const { x, y } = getPosition(e);
-                    scratch(x, y);
-                  }
-                }}
-                onTouchEnd={() => setIsDrawing(false)}
-              />
-            </div>
-
-            {/* Progress Bar & Next Card Action */}
-            <div style={{ width: '360px', maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
-              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#CBD5E1', fontWeight: 600 }}>
-                <span>{t('scratch2win.scratchedLabel', 'Scratched')}</span>
-                <span style={{ color: '#10B981', fontWeight: 800 }}>{revealedPercent}%</span>
-              </div>
-              <div style={{ width: '100%', height: '10px', borderRadius: '5px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    width: `${Math.min(revealedPercent, 100)}%`,
-                    height: '100%',
-                    background: 'linear-gradient(90deg, #00674D, #10B981)',
-                    boxShadow: '0 0 10px #10B981',
-                    transition: 'width 0.1s ease',
-                  }}
-                />
-              </div>
-
-              {isRevealed && (
-                <Button
-                  onClick={handleNextCard}
-                  disabled={cardsLeft <= 0}
-                  variant="gold"
-                  title={cardsLeft > 0 ? t('scratch2win.scratchNextCard', 'Scratch Next Card') : t('scratch2win.noCardsLeft', 'No Cards Left')}
-                  icon={<RefreshCw size={20} />}
-                  style={{
-                    width: '100%',
-                    padding: '16px',
-                    fontSize: '17px',
-                    fontWeight: 800,
-                    borderRadius: '20px',
-                    marginTop: '8px',
-                    boxShadow: '0 8px 24px rgba(213, 173, 96, 0.4)',
-                  }}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Scratch Guide & Rewards Panel */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Top Prize Card */}
-            <div className="game-glass-panel game-glass-panel-gold">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                <Trophy size={20} color="#FFD700" />
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  Instant Scratch Jackpot
-                </span>
-              </div>
-              <div style={{ fontSize: '32px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                UP TO 1,000 PTS
-              </div>
-              <p style={{ fontSize: '13px', color: '#CBD5E1', marginTop: '6px', margin: 0, lineHeight: '1.45' }}>
-                Rub the metallic foil surface to 45% to instantly uncover your secret cash points prize!
+                SCRATCH &bull; UP TO 1,000 PTS
+              </span>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px', marginBottom: 0 }}>
+                {t('scratch2win.subtitle', 'Rub the metallic foil surface to uncover your secret cash points prize!')}
               </p>
             </div>
-
-            {/* How It Works Guide */}
-            <div className="game-glass-panel">
-              <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>
-                Scratch & Win Rules
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#E2E8F0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>
-                    1
-                  </span>
-                  <span>Use cursor or touch to rub the gold overlay foil.</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>
-                    2
-                  </span>
-                  <span>Reach 45% scratched to automatically reveal winnings.</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>
-                    3
-                  </span>
-                  <span>Winnings are directly credited into your reward points.</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Earn More Plays Promo */}
             <div
-              className="game-glass-panel"
+              className="game-slots-pill"
+              style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669' }}
+            >
+              <Sparkles size={14} />
+              {t('scratch2win.cardsRemainingShort', '{{count}} Cards Left', { count: cardsLeft })}
+            </div>
+          </div>
+
+          {/* Interactive Gold Foil Scratch Card */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '360px',
+              height: '240px',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              margin: '12px auto',
+              boxShadow: '0 12px 30px rgba(0, 0, 0, 0.25)',
+              border: '3px solid #D5AD60',
+              background: 'linear-gradient(135deg, #0A291E 0%, #151A2A 100%)',
+            }}
+          >
+            {/* Hidden Prize Underneath */}
+            <div
               style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(circle at center, #0F382B 0%, #061A13 100%)',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'linear-gradient(135deg, rgba(0, 103, 77, 0.4) 0%, rgba(16, 185, 129, 0.2) 100%)',
-                border: '1px solid rgba(16, 185, 129, 0.5)',
+                justifyContent: 'center',
+                gap: '8px',
+                color: '#FFFFFF',
+                textAlign: 'center',
+                padding: '16px',
+                boxSizing: 'border-box',
               }}
             >
-              <div>
-                <h5 style={{ fontSize: '14px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-                  Need More Scratch Cards?
-                </h5>
-                <p style={{ fontSize: '12px', color: '#A7F3D0', margin: '4px 0 0 0' }}>
-                  Upload shopping receipts to get extra daily cards!
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/scan')}
-                style={{
-                  background: '#10B981',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '16px',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
-                }}
-              >
-                Scan Now
-              </button>
+              <img src={images.Coin} alt={t('scratch2win.prizeAlt', 'Prize')} style={{ width: '64px', height: '64px', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))' }} />
+              <h3 style={{ fontSize: '26px', fontWeight: 900, color: '#FFD700', margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                {prizePoints > 0
+                  ? t('scratch2win.wonPointsDisplay', '+{{points}} PTS!', { points: prizePoints })
+                  : t('scratch2win.noWinDisplay', 'No Win')}
+              </h3>
+              <span style={{ fontSize: '13px', color: prizePoints > 0 ? '#34D399' : '#94A3B8', fontWeight: 700 }}>
+                {prizePoints > 0
+                  ? t('scratch2win.winnerInstantReward', 'Winner Instant Reward')
+                  : t('scratch2win.betterLuckNextTime', 'Better luck next time')}
+              </span>
             </div>
+
+            {/* Scratchable Canvas Overlay */}
+            <canvas
+              ref={canvasRef}
+              width={360}
+              height={240}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                cursor: 'grab',
+                touchAction: 'none',
+              }}
+              onMouseDown={(e) => {
+                setIsDrawing(true);
+                const { x, y } = getPosition(e);
+                scratch(x, y);
+              }}
+              onMouseMove={(e) => {
+                if (isDrawing) {
+                  const { x, y } = getPosition(e);
+                  scratch(x, y);
+                }
+              }}
+              onMouseUp={() => setIsDrawing(false)}
+              onMouseLeave={() => setIsDrawing(false)}
+              onTouchStart={(e) => {
+                setIsDrawing(true);
+                const { x, y } = getPosition(e);
+                scratch(x, y);
+              }}
+              onTouchMove={(e) => {
+                if (isDrawing) {
+                  const { x, y } = getPosition(e);
+                  scratch(x, y);
+                }
+              }}
+              onTouchEnd={() => setIsDrawing(false)}
+            />
+          </div>
+
+          {/* Next Card Action Button */}
+          <div style={{ width: '100%', maxWidth: '360px' }}>
+            <button
+              type="button"
+              onClick={handleNextCard}
+              disabled={cardsLeft <= 0}
+              style={{
+                width: '100%',
+                padding: '16px',
+                borderRadius: '24px',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                fontSize: '16px',
+                fontWeight: 800,
+                cursor: cardsLeft <= 0 ? 'not-allowed' : 'pointer',
+                opacity: cardsLeft <= 0 ? 0.6 : 1,
+                boxShadow: '0 6px 18px rgba(16, 185, 129, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'transform 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (cardsLeft > 0) e.currentTarget.style.transform = 'scale(1.02)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              <RefreshCw size={20} />
+              <span>
+                {cardsLeft > 0
+                  ? t('scratch2win.scratchNextCard', 'Scratch Next Card')
+                  : t('scratch2win.noCardsLeft', 'No Cards Left')}
+              </span>
+            </button>
           </div>
         </div>
 
-        {/* Bottom Marquee Light Bulbs */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginTop: '24px' }}>
-          {[...Array(16)].map((_, i) => (
-            <span key={i} className="casino-bulb" />
-          ))}
+        {/* Right: Side Column (Campaign Ad + Rules) */}
+        <div className="game-side-column">
+          {/* Sponsored Ad Banner */}
+          <div className="card game-campaign-card">
+            <div className="game-campaign-icon">
+              <Megaphone size={28} />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              {t('home.growAudienceTitle', 'Grow Your Audience!')}
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+              {t('home.growAudienceDesc', 'Advertise your brand, website, or mobile app directly to our active users. Tap here to launch your campaign!')}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/campaigns/create')}
+              className="game-campaign-btn"
+            >
+              {t('home.getStarted', 'Get Started')} &rarr;
+            </button>
+          </div>
+
+          {/* Rules & How to Play Card */}
+          <div className="card game-rules-card">
+            <h4 className="game-rules-title">
+              {t('scratch2win.rulesTitle', 'Rules & How to Play')}
+            </h4>
+            <div className="game-rules-list">
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>Use cursor or touch to rub the metallic gold foil overlay.</span>
+              </div>
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>Scratching 45% or more reveals your surprise reward.</span>
+              </div>
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>Winnings are directly credited into your reward points balance.</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -496,6 +426,102 @@ export const Scratch2Win: React.FC = () => {
             onClick={() => setRulesModalVisible(false)}
             style={{ width: '100%', marginTop: '12px' }}
           />
+        </div>
+      </CustomModal>
+
+      {/* Result Modal matching flow-video with 360° Spinning Coin */}
+      <CustomModal
+        visible={Boolean(resultModal)}
+        onClose={() => setResultModal(null)}
+        maxWidth="390px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '10px 4px 4px 4px' }}>
+          {/* 360 Degree Continuously Spinning Golden Coin in 3D */}
+          <div
+            style={{
+              perspective: '600px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+            }}
+          >
+            <img
+              src={images.Coin}
+              alt="Prize Coin"
+              style={{
+                width: '88px',
+                height: '88px',
+                animation: 'coin3DSpinAnimation 2.2s linear infinite',
+                transformStyle: 'preserve-3d',
+                filter: 'drop-shadow(0 6px 18px rgba(255, 215, 0, 0.5))',
+              }}
+            />
+          </div>
+
+          <h3 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
+            {resultModal?.won ? `You won ${resultModal.points} points!` : 'Better luck next time!'}
+          </h3>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: '0 0 24px 0', lineHeight: '1.45' }}>
+            {resultModal?.won
+              ? 'Your winnings have been credited to your balance.'
+              : 'Keep scratching to uncover instant cash points!'}
+          </p>
+
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setResultModal(null);
+                handleNextCard();
+              }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '24px',
+                background: '#10B981',
+                color: '#FFFFFF',
+                border: 'none',
+                fontSize: '15.5px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                transition: 'transform 0.15s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.01)')}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            >
+              Play Again
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setResultModal(null);
+                navigate('/home', {
+                  state: {
+                    rewardCelebration: {
+                      type: 'game',
+                      title: 'Scratch & Win',
+                      subtitle: resultModal?.won ? `You won ${resultModal.points} points!` : undefined,
+                      points: resultModal?.points || 0,
+                    },
+                  },
+                });
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                fontSize: '14.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: '8px 16px',
+              }}
+            >
+              Done
+            </button>
+          </div>
         </div>
       </CustomModal>
     </Container>

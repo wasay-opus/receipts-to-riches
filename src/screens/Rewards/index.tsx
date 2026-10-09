@@ -10,56 +10,58 @@ import { Button, Container, CustomModal, triggerCoinCelebration } from '../../co
 import images from '../../constants/images';
 import { getUserRewardPoints } from '../../utils/userDisplay';
 
-// Crisp, perfectly-scaled vector logos for vouchers
+// Vector logos for vouchers matching Screenshot 1 exactly
 const McDonaldLogo = () => (
-  <svg viewBox="0 0 100 100" style={{ width: '64px', height: '64px' }}>
-    <path
-      d="M20 82 V44 C20 28 32 20 42 35 C50 48 50 82 50 82 C50 82 50 48 58 35 C68 20 80 28 80 44 V82"
-      fill="none"
-      stroke="#FFC72C"
-      strokeWidth="11"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <text
-      x="50"
-      y="94"
-      textAnchor="middle"
-      fill="#FFFFFF"
-      fontFamily="Poppins, Arial, sans-serif"
-      fontSize="11"
-      fontWeight="700"
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <svg viewBox="0 0 100 68" style={{ width: '74px', height: '50px' }}>
+      <path
+        d="M18 66 V32 C18 14 32 8 42 24 C50 36 50 66 50 66 C50 66 50 36 58 24 C68 8 82 14 82 32 V66"
+        fill="none"
+        stroke="#FFC72C"
+        strokeWidth="11"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+    <span
+      style={{
+        color: '#FFFFFF',
+        fontWeight: 800,
+        fontSize: '13px',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        marginTop: '-2px',
+        letterSpacing: '-0.3px',
+      }}
     >
       McDonald's
-    </text>
-  </svg>
+    </span>
+  </div>
 );
 
 const StarbucksLogo = () => (
-  <svg viewBox="0 0 100 100" style={{ width: '68px', height: '68px' }}>
-    <circle cx="50" cy="50" r="44" fill="#00704A" />
-    <circle cx="50" cy="50" r="40" fill="none" stroke="#FFFFFF" strokeWidth="2.5" />
+  <svg viewBox="0 0 100 100" style={{ width: '84px', height: '84px' }}>
+    <circle cx="50" cy="50" r="46" fill="#006241" />
+    <circle cx="50" cy="50" r="41" fill="none" stroke="#FFFFFF" strokeWidth="2" />
+    {/* Inner Siren */}
     <path
-      d="M50 24 L53 32 L61 32 L55 37 L57 45 L50 40 L43 45 L45 37 L39 32 L47 32 Z"
+      d="M50 20 L53.5 28 L61 28 L55 32.5 L57 40 L50 35 L43 40 L45 32.5 L39 28 L46.5 28 Z"
       fill="#FFFFFF"
     />
-    <circle cx="50" cy="52" r="10" fill="#FFFFFF" />
-    <path
-      d="M35 62 Q50 78 65 62 Q50 84 35 62 Z"
-      fill="#FFFFFF"
-    />
-    {/* Mermaid crown stars */}
-    <circle cx="32" cy="42" r="2.5" fill="#FFFFFF" />
-    <circle cx="68" cy="42" r="2.5" fill="#FFFFFF" />
+    <circle cx="50" cy="46" r="7.5" fill="#FFFFFF" />
+    <path d="M34 54 Q50 72 66 54 Q50 82 34 54 Z" fill="#FFFFFF" />
+    <path d="M26 44 Q38 62 28 74" stroke="#FFFFFF" strokeWidth="3" fill="none" strokeLinecap="round" />
+    <path d="M74 44 Q62 62 72 74" stroke="#FFFFFF" strokeWidth="3" fill="none" strokeLinecap="round" />
+    <circle cx="28" cy="38" r="2.5" fill="#FFFFFF" />
+    <circle cx="72" cy="38" r="2.5" fill="#FFFFFF" />
   </svg>
 );
 
 const WalmartLogo = () => (
-  <svg viewBox="0 0 100 100" style={{ width: '64px', height: '64px' }}>
+  <svg viewBox="0 0 100 100" style={{ width: '82px', height: '82px' }}>
     {[0, 60, 120, 180, 240, 300].map((angle, i) => (
       <g key={i} transform={`rotate(${angle} 50 50)`}>
         <path
-          d="M50 16 C47 25 47 35 50 42 C53 35 53 25 50 16 Z"
+          d="M50 12 C45.5 23 45.5 35 50 44 C54.5 35 54.5 23 50 12 Z"
           fill="#FFC220"
         />
       </g>
@@ -68,29 +70,71 @@ const WalmartLogo = () => (
 );
 
 const DunkinLogo = () => (
-  <svg viewBox="0 0 120 70" style={{ width: '80px', height: '50px' }}>
-    <text
-      x="8"
-      y="48"
-      fontFamily="Poppins, Arial, sans-serif"
-      fontSize="42"
-      fontWeight="900"
-      fill="#FF671F"
-      letterSpacing="-2"
-    >
-      D
-    </text>
-    <text
-      x="56"
-      y="48"
-      fontFamily="Poppins, Arial, sans-serif"
-      fontSize="42"
-      fontWeight="900"
-      fill="#DA1884"
-      letterSpacing="-2"
-    >
-      D
-    </text>
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <svg viewBox="0 0 28 36" style={{ width: '22px', height: '28px' }}>
+        <path d="M6 10 L22 10 L19 32 L9 32 Z" fill="#FFFFFF" stroke="#FF671F" strokeWidth="1.5" />
+        <path d="M4 10 L24 10 L24 7 L4 7 Z" fill="#FF671F" />
+        <circle cx="14" cy="21" r="3.5" fill="#DA1884" />
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.05, textAlign: 'left' }}>
+        <span
+          style={{
+            color: '#FF671F',
+            fontWeight: 900,
+            fontSize: '15px',
+            fontFamily: 'Arial, sans-serif',
+            letterSpacing: '-0.3px',
+          }}
+        >
+          DUNKIN'
+        </span>
+        <span
+          style={{
+            color: '#FFFFFF',
+            fontWeight: 900,
+            fontSize: '13px',
+            fontFamily: 'Arial, sans-serif',
+            letterSpacing: '-0.2px',
+          }}
+        >
+          DONUTS
+        </span>
+      </div>
+    </div>
+  </div>
+);
+
+const RedGiftBoxIcon = () => (
+  <svg viewBox="0 0 48 48" style={{ width: '38px', height: '38px' }}>
+    <defs>
+      <linearGradient id="giftRedBg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#EF4444" />
+        <stop offset="100%" stopColor="#DC2626" />
+      </linearGradient>
+      <linearGradient id="goldRibbon" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#FDE68A" />
+        <stop offset="100%" stopColor="#F59E0B" />
+      </linearGradient>
+    </defs>
+    {/* Box body */}
+    <rect x="8" y="18" width="32" height="24" rx="4" fill="url(#giftRedBg)" />
+    {/* Lid */}
+    <rect x="6" y="13" width="36" height="7" rx="2" fill="#B91C1C" />
+    {/* Vertical Ribbon */}
+    <rect x="21" y="13" width="6" height="29" fill="url(#goldRibbon)" />
+    {/* Horizontal Ribbon */}
+    <rect x="8" y="27" width="32" height="6" fill="url(#goldRibbon)" />
+    {/* Bow loops */}
+    <path
+      d="M24 13 C20 7 13 7 14 11 C15 14 21 13 24 13 Z"
+      fill="url(#goldRibbon)"
+    />
+    <path
+      d="M24 13 C28 7 35 7 34 11 C33 14 27 13 24 13 Z"
+      fill="url(#goldRibbon)"
+    />
+    <circle cx="24" cy="13" r="2" fill="#FDE68A" />
   </svg>
 );
 
@@ -106,8 +150,6 @@ export const Rewards: React.FC = () => {
   } = useSelector((state: RootState) => state.rewards);
 
   const totalCoins = getUserRewardPoints(user);
-  const targetPoints = 15000;
-  const progressPercent = Math.min(100, Math.max(0, (totalCoins / targetPoints) * 100));
 
   const [selectedReward, setSelectedReward] = useState<any | null>(null);
   const [resultModal, setResultModal] = useState<{
@@ -127,20 +169,20 @@ export const Rewards: React.FC = () => {
     dispatch(fetchUser());
   }, [dispatch]);
 
-  // Pre-configured popular vouchers matching Screenshot 3
+  // Pre-configured popular vouchers matching Screenshot 1
   const popularVouchers = useMemo(() => [
     {
       id: 'mcdonald-10',
       name: "McDonald's $10 Voucher",
       points: 15000,
-      bgColor: '#D9221C',
+      bgColor: '#DA291C',
       component: <McDonaldLogo />,
     },
     {
       id: 'starbucks-10',
       name: 'StarBucks $10 Voucher',
       points: 15000,
-      bgColor: '#00704A',
+      bgColor: '#006241',
       component: <StarbucksLogo />,
     },
     {
@@ -154,7 +196,7 @@ export const Rewards: React.FC = () => {
       id: 'dunkin-10',
       name: 'Dunkin-Donuts $10 Voucher',
       points: 15000,
-      bgColor: '#E43590',
+      bgColor: '#EA1586',
       component: <DunkinLogo />,
     },
   ], []);
@@ -232,12 +274,23 @@ export const Rewards: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="500px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      {/* 1. Header with Back Arrow */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingTop: '4px' }}>
+    <Container maxWidth="760px" style={{ gap: '20px', paddingBottom: '40px' }}>
+      {/* 1. Header matching Screenshot 1 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          width: '100%',
+          paddingTop: '6px',
+        }}
+      >
         <button
           onClick={() => navigate(-1)}
           style={{
+            position: 'absolute',
+            left: 0,
             width: '40px',
             height: '40px',
             borderRadius: '50%',
@@ -247,84 +300,91 @@ export const Rewards: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#00674D',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+            color: '#00D066',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           }}
           aria-label={t('common.back', 'Back')}
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>
+        <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
           {t('rewards.title', 'Reward')}
         </h1>
       </div>
 
-      {/* 2. Next Reward Progress Card (Screenshot 3 - Dark Theme) */}
+      {/* 2. My Balance Card matching Screenshot 1 */}
       <div
         style={{
-          background: '#121212',
+          background: 'linear-gradient(135deg, #183327 0%, #11261D 100%)',
           borderRadius: '24px',
-          padding: '20px 20px',
+          padding: '20px 22px',
           color: '#FFFFFF',
           display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          boxShadow: '0 10px 24px rgba(0,0,0,0.25)',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          border: '1px solid rgba(0, 208, 102, 0.25)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
-          <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.2px' }}>
-            {t('rewards.nextReward', 'Next Reward $10')}
-          </h2>
-          <span style={{ fontSize: '12.5px', color: '#9CA3AF', fontWeight: 500 }}>
-            ({targetPoints.toLocaleString()} Points=$10)
+        <div>
+          <span style={{ fontSize: '13px', color: '#9EB6A9', fontWeight: 600, display: 'block' }}>
+            {t('home.myBalance', 'My Balance')}
           </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+            <img
+              src={images.Coin}
+              alt="Coin"
+              style={{
+                width: '28px',
+                height: '28px',
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
+              }}
+            />
+            <span
+              style={{
+                fontSize: '28px',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                letterSpacing: '-0.5px',
+                lineHeight: 1,
+              }}
+            >
+              {Number(totalCoins).toLocaleString()}
+            </span>
+            <span style={{ fontSize: '15px', fontWeight: 600, color: '#D5E6DC', marginTop: '3px' }}>
+              {t('home.points', 'Points')}
+            </span>
+          </div>
         </div>
 
-        {/* Progress Track */}
         <div
           style={{
-            width: '100%',
-            height: '10px',
-            borderRadius: '6px',
-            background: '#262626',
-            overflow: 'hidden',
-            position: 'relative',
+            width: '58px',
+            height: '58px',
+            borderRadius: '18px',
+            background: '#091510',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
           }}
         >
-          <div
-            style={{
-              width: `${progressPercent}%`,
-              height: '100%',
-              borderRadius: '6px',
-              background: '#009944',
-              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-          />
-        </div>
-
-        {/* Points Row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: '#00B050' }}>
-            {t('rewards.points', 'Points')}
-          </span>
-          <div style={{ fontSize: '14px', fontWeight: 700 }}>
-            <span style={{ color: '#00B050' }}>{Number(totalCoins).toLocaleString()}</span>
-            <span style={{ color: '#FFFFFF' }}>/{targetPoints.toLocaleString()}</span>
-          </div>
+          <RedGiftBoxIcon />
         </div>
       </div>
 
-      {/* 3. Popular Rewards Section (Screenshot 3) */}
+      {/* 3. Popular Rewards Section (3 Column Grid) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
           {t('rewards.popularRewards', 'Popular Rewards')}
         </h3>
 
         <div
+          className="rewards-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
+            gridTemplateColumns: 'repeat(3, 1fr)',
             gap: '14px',
           }}
         >
@@ -343,23 +403,23 @@ export const Rewards: React.FC = () => {
                 gap: '8px',
                 cursor: 'pointer',
                 border: '1px solid var(--border-color)',
-                boxShadow: '0 3px 12px rgba(0,0,0,0.06)',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.1)';
+                e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 3px 12px rgba(0,0,0,0.06)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.06)';
               }}
             >
-              {/* Compact Brand Logo Container */}
+              {/* Brand Logo Container */}
               <div
                 style={{
                   width: '100%',
-                  height: '135px',
+                  height: '140px',
                   borderRadius: '18px',
                   background: item.bgColor || '#00674D',
                   display: 'flex',
@@ -367,7 +427,7 @@ export const Rewards: React.FC = () => {
                   justifyContent: 'center',
                   overflow: 'hidden',
                   position: 'relative',
-                  padding: '10px',
+                  padding: '12px',
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)',
                 }}
               >
@@ -388,28 +448,29 @@ export const Rewards: React.FC = () => {
                 )}
               </div>
 
-              {/* Title & Points */}
-              <div style={{ width: '100%', padding: '0 4px' }}>
+              {/* Title & Points matching Screenshot 1 */}
+              <div style={{ width: '100%', padding: '2px 4px 4px 4px' }}>
                 <h4
                   style={{
-                    fontSize: '13px',
-                    fontWeight: 700,
+                    fontSize: '13.5px',
+                    fontWeight: 600,
                     color: 'var(--text-main)',
                     lineHeight: 1.3,
                     minHeight: '34px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    margin: 0,
                   }}
                 >
                   {item.name}
                 </h4>
                 <span
                   style={{
-                    fontSize: '13px',
+                    fontSize: '13.5px',
                     fontWeight: 700,
-                    color: '#009944',
-                    marginTop: '2px',
+                    color: '#00D066',
+                    marginTop: '4px',
                     display: 'block',
                   }}
                 >

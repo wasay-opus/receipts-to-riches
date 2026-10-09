@@ -40,60 +40,110 @@ export const HelpSupport: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div
+          className="card"
+          style={{
+            padding: '16px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
             <div
               style={{
-                width: '44px',
-                height: '44px',
+                width: '42px',
+                height: '42px',
                 borderRadius: '12px',
                 background: 'rgba(0, 103, 77, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'var(--green)',
+                flexShrink: 0,
               }}
             >
-              <Mail size={22} />
+              <Mail size={20} />
             </div>
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>{t('help.emailSupport', 'Email Support')}</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>support@receiptstoriches.net</p>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                {t('help.emailSupport', 'Email Support')}
+              </h3>
+              <p
+                style={{
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                  marginTop: '2px',
+                  marginBottom: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                support@receiptstoriches.net
+              </p>
             </div>
           </div>
           <Button
             title={t('help.sendEmail', 'Send Email')}
             onClick={() => openSupportEmail('Receipts To Riches Support')}
-            style={{ padding: '8px 16px', fontSize: '13px' }}
+            style={{
+              padding: '8px 14px',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              borderRadius: '12px',
+            }}
           />
         </div>
 
-        <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div
+          className="card"
+          style={{
+            padding: '16px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
             <div
               style={{
-                width: '44px',
-                height: '44px',
+                width: '42px',
+                height: '42px',
                 borderRadius: '12px',
                 background: 'rgba(213, 173, 96, 0.15)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#D5AD60',
+                flexShrink: 0,
               }}
             >
-              <MessageCircle size={22} />
+              <MessageCircle size={20} />
             </div>
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>{t('help.liveChat', 'Live Chat')}</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('help.hours', 'Available Monday - Friday, 9 AM - 6 PM')}</p>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                {t('help.liveChat', 'Live Chat')}
+              </h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: 0 }}>
+                {t('help.hours', 'Available Monday - Friday, 9 AM - 6 PM')}
+              </p>
             </div>
           </div>
           <Button
             variant="secondary"
             title={t('help.contact', 'Contact')}
             onClick={() => openSupportEmail('Receipts To Riches Live Chat Request')}
-            style={{ padding: '8px 16px', fontSize: '13px' }}
+            style={{
+              padding: '8px 14px',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              borderRadius: '12px',
+            }}
           />
         </div>
       </div>

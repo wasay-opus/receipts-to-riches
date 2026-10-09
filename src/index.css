@@ -1,3 +1,5 @@
+@import './styles/components.css';
+
 /* Receipts To Riches - Core Design System & Styles */
 :root {
   --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -371,6 +373,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 12px var(--green-glow);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 15px;
+  white-space: nowrap;
 }
 
 .btn-primary:hover {
@@ -404,6 +407,7 @@ h1, h2, h3, h4, h5, h6 {
   gap: 8px;
   transition: all 0.2s ease;
   font-size: 15px;
+  white-space: nowrap;
 }
 
 .btn-secondary:hover {
@@ -425,6 +429,7 @@ h1, h2, h3, h4, h5, h6 {
   gap: 8px;
   box-shadow: 0 4px 15px rgba(213, 173, 96, 0.35);
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn-gold:hover {
@@ -486,9 +491,44 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pill-gold {
+  background: rgba(245, 158, 11, 0.15);
+  color: #92400E;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.dark .pill-gold {
   background: rgba(213, 173, 96, 0.15);
-  color: #D5AD60;
-  border: 1px solid rgba(213, 173, 96, 0.3);
+  color: #FCD34D;
+  border: 1px solid rgba(213, 173, 96, 0.35);
+}
+
+
+
+/* Floating Unsaved Changes Bar */
+.unsaved-changes-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  width: calc(100% - 32px);
+  max-width: 560px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 12px 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28), 0 0 0 1px var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+@media (min-width: 1024px) {
+  .app-shell--with-sidebar .unsaved-changes-bar {
+    left: calc(50% + 124px);
+  }
 }
 
 /* Layout Utilities */
@@ -763,6 +803,352 @@ svg.animate-spin,
   padding: 10px !important;
   background: rgba(213, 173, 96, 0.08) !important;
 }
+
+/* -------------------------------------------------------------
+   Mobile-Only Optimization Rules (Strictly screens <= 640px)
+   Desktop styles remain completely untouched
+------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .home-view-all-btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    font-size: 13.5px !important;
+    padding: 0 !important;
+    display: inline-block !important;
+    line-height: 1 !important;
+  }
+
+  .home-section-title {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+  }
+
+  .home-section-subtitle {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .home-streak-title {
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+  }
+
+  .home-streak-subtitle {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  .cash-game-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    padding: 6px 2px !important;
+    margin: 0 !important;
+  }
+
+  .cash-game-card {
+    padding: 12px 8px 10px 8px !important;
+    border-radius: 18px !important;
+    min-height: 140px !important;
+  }
+
+  .cash-game-item-name {
+    font-size: 19px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.4px !important;
+    line-height: 1.1 !important;
+    word-break: normal !important;
+  }
+
+  .cash-game-item-price {
+    font-size: 15px !important;
+    font-weight: 900 !important;
+    margin-top: 2px !important;
+  }
+
+  .mobile-bottom-nav__bar {
+    padding: 6px 14px !important;
+    border-radius: 30px !important;
+  }
+
+  /* Game Arenas and Mini Games Mobile Tuning */
+  .game-arena-wrapper {
+    padding: 18px 12px !important;
+    border-radius: 20px !important;
+  }
+
+  .casino-cabinet-frame {
+    padding: 16px 12px !important;
+    border-radius: 20px !important;
+    border-width: 2.5px !important;
+  }
+
+  .reel-box {
+    height: 94px !important;
+    font-size: 38px !important;
+    border-radius: 14px !important;
+  }
+
+  .game-glass-panel {
+    padding: 14px 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .results-table-header {
+    font-size: 12px !important;
+    padding: 11px 6px !important;
+  }
+
+  .results-table-row {
+    font-size: 12px !important;
+    padding: 10px 4px !important;
+  }
+
+  /* My Receipts Mobile Grid & Search */
+  .my-receipts-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .my-receipts-search-bar {
+    padding: 12px 14px !important;
+  }
+
+  /* Unsaved Changes Bar Mobile Placement */
+  .unsaved-changes-bar {
+    bottom: 76px !important;
+    width: calc(100% - 20px) !important;
+    max-width: 480px !important;
+    padding: 8px 12px !important;
+    border-radius: 16px !important;
+    gap: 8px !important;
+  }
+
+  /* About Us Page Mobile Optimization */
+  .about-hero-card {
+    padding: 20px 14px !important;
+    border-radius: 18px !important;
+    gap: 18px !important;
+  }
+
+  .about-main-title {
+    font-size: 22px !important;
+    line-height: 1.25 !important;
+  }
+}
+
+/* -------------------------------------------------------------
+   Game Instructions / Markdown Rules Global Styling
+------------------------------------------------------------- */
+.rules-markdown-content {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #CBD5E1;
+}
+
+.rules-markdown-content h1 {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+  margin: 14px 0 8px 0 !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.rules-markdown-content h2 {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: #34D399 !important;
+  margin: 12px 0 6px 0 !important;
+  line-height: 1.3 !important;
+}
+
+.rules-markdown-content h3 {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #94A3B8 !important;
+  margin: 10px 0 4px 0 !important;
+  line-height: 1.3 !important;
+}
+
+.rules-markdown-content p {
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  color: #CBD5E1 !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.rules-markdown-content ul,
+.rules-markdown-content ol {
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  color: #CBD5E1 !important;
+  padding-left: 18px !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.rules-markdown-content li {
+  margin-bottom: 4px !important;
+}
+
+.rules-markdown-content hr {
+  border: none !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  margin: 10px 0 !important;
+}
+
+@keyframes coin3DSpinAnimation {
+  0% {
+    transform: perspective(400px) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(400px) rotateY(360deg);
+  }
+}
+
+@keyframes fallingCoinAnimation {
+  0% {
+    transform: translateY(-90px) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(115vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes slideDownToast {
+  0% {
+    transform: translate(-50%, -100px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+/* Reusable Card & Modal Classes */
+.receipt-success-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg-card);
+  border-radius: 24px;
+  padding: 32px 24px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+.receipt-details-table {
+  width: 100%;
+  background: var(--bg-card-secondary);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+}
+
+.receipt-details-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.receipt-details-row .label {
+  color: var(--text-muted);
+}
+
+.receipt-details-row .value {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.better-luck-modal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px 4px 4px 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Feed Comments & Nested Replies */
+.feed-comment-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feed-reply-item {
+  background: var(--bg-card-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 20px;
+}
+
+.feed-action-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+/* Responsive Containers for Games */
+@media (max-width: 640px) {
+  .app-content-container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-top: 16px !important;
+  }
+
+  .receipt-success-card {
+    padding: 24px 16px 20px 16px;
+    border-radius: 20px;
+  }
+
+  .receipt-details-table {
+    padding: 12px;
+  }
+
+  .feed-reply-item {
+    margin-left: 10px;
+  }
+}
+
+
+
+
+
 
 
 

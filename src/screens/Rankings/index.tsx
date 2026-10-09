@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Flame, ArrowLeft, User as UserIcon } from 'lucide-react';
-import { Container, showToast } from '../../components';
+import { Flame, ArrowLeft, User as UserIcon, Info, Trophy, Gift } from 'lucide-react';
+import { Container, CustomModal, showToast } from '../../components';
 import gameServices from '../../services/gameServices';
 import { mapApiStreakLeaderboardToDataset } from './rankingsMapper';
 import { LeaderboardDataset, PodiumUserData } from './types';
@@ -317,6 +317,7 @@ export const Rankings: React.FC = () => {
   const navigate = useNavigate();
   const [dataset, setDataset] = useState<LeaderboardDataset>(emptyDataset);
   const [loading, setLoading] = useState(false);
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -369,7 +370,7 @@ export const Rankings: React.FC = () => {
 
   return (
     <Container maxWidth="640px" style={{ gap: '22px', paddingBottom: '40px' }}>
-      {/* Top Header Bar matching Screenshot 2 */}
+      {/* Top Header Bar matching Screenshot 2 & 3 */}
       <div
         style={{
           width: '100%',
@@ -414,7 +415,27 @@ export const Rankings: React.FC = () => {
           {t('rankingsScreen.leaderboard', 'Leaderboard')}
         </h1>
 
-        <div style={{ width: '40px' }} />
+        <button
+          type="button"
+          onClick={() => setInfoModalOpen(true)}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#00D066',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s ease',
+          }}
+          aria-label="How the leaderboard works"
+        >
+          <Info size={20} />
+        </button>
       </div>
 
       {/* Subtitle / Description */}
@@ -572,8 +593,201 @@ export const Rankings: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Streak Leaderboard Info Modal */}
+      <CustomModal
+        visible={infoModalOpen}
+        onClose={() => setInfoModalOpen(false)}
+        maxWidth="560px"
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '20px',
+            padding: '10px 12px 14px 12px',
+          }}
+        >
+          {/* Circular Green Info Icon Badge */}
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'rgba(0, 208, 102, 0.14)',
+              border: '1.5px solid rgba(0, 208, 102, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#00D066',
+              boxShadow: '0 0 20px rgba(0, 208, 102, 0.15)',
+            }}
+          >
+            <Info size={32} strokeWidth={2.4} />
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0, letterSpacing: '-0.2px' }}>
+              {t('rankingsScreen.infoTitle', 'Streak Leaderboard')}
+            </h3>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
+              {t('rankingsScreen.infoSubtitle', 'How the leaderboard works')}
+            </p>
+          </div>
+
+          {/* 3 Info Cards */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', textAlign: 'left' }}>
+            {/* Card 1: Daily Streaks */}
+            <div
+              style={{
+                padding: '16px 18px',
+                borderRadius: '20px',
+                background: 'var(--bg-card-secondary)',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                gap: '16px',
+                alignItems: 'flex-start',
+                transition: 'border-color 0.2s ease',
+              }}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'rgba(249, 115, 22, 0.15)',
+                  border: '1px solid rgba(249, 115, 22, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#F97316',
+                  flexShrink: 0,
+                  marginTop: '2px',
+                }}
+              >
+                <Flame size={22} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '15.5px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+                  {t('rankingsScreen.dailyStreaksTitle', 'Daily Streaks')}
+                </h4>
+                <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+                  {t('rankingsScreen.dailyStreaksDesc', 'Log in and play every day to increase your daily streak. The longer your active streak, the higher your ranking!')}
+                </p>
+              </div>
+            </div>
+
+            {/* Card 2: Top 3 Podium */}
+            <div
+              style={{
+                padding: '16px 18px',
+                borderRadius: '20px',
+                background: 'var(--bg-card-secondary)',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                gap: '16px',
+                alignItems: 'flex-start',
+                transition: 'border-color 0.2s ease',
+              }}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#F59E0B',
+                  flexShrink: 0,
+                  marginTop: '2px',
+                }}
+              >
+                <Trophy size={21} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '15.5px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+                  {t('rankingsScreen.topThreeTitle', 'Top 3 Podium')}
+                </h4>
+                <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+                  {t('rankingsScreen.topThreeDesc', 'The players with the highest active streaks earn a featured spot on the Top 3 Podium.')}
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3: Bonus Rewards */}
+            <div
+              style={{
+                padding: '16px 18px',
+                borderRadius: '20px',
+                background: 'var(--bg-card-secondary)',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                gap: '16px',
+                alignItems: 'flex-start',
+                transition: 'border-color 0.2s ease',
+              }}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 208, 102, 0.15)',
+                  border: '1px solid rgba(0, 208, 102, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#00D066',
+                  flexShrink: 0,
+                  marginTop: '2px',
+                }}
+              >
+                <Gift size={21} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '15.5px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+                  {t('rankingsScreen.bonusRewardsTitle', 'Bonus Rewards')}
+                </h4>
+                <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
+                  {t('rankingsScreen.bonusRewardsDesc', 'Maintain your streak to earn exclusive multipliers, unlock locked games faster, and gain recognition on the leaderboard.')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Green Got It Button */}
+          <button
+            type="button"
+            onClick={() => setInfoModalOpen(false)}
+            style={{
+              width: '100%',
+              padding: '16px',
+              borderRadius: '26px',
+              background: '#00D066',
+              color: '#052E16',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(0, 208, 102, 0.35)',
+              marginTop: '4px',
+              transition: 'transform 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            {t('common.gotIt', 'Got It!')}
+          </button>
+        </div>
+      </CustomModal>
     </Container>
   );
 };
 
 export default Rankings;
+

@@ -47,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
+      className="app-main-header"
       style={{
         width: '100%',
         padding: '12px 16px',
@@ -58,25 +59,15 @@ export const Header: React.FC<HeaderProps> = ({
         zIndex: 50,
         background: 'var(--nav-bg)',
         backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid var(--glass-border)',
+        borderBottom: 'none',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {showBackButton ? (
           <button
             onClick={handleBack}
-            style={{
-              background: 'var(--bg-card-secondary)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '10px',
-              width: '36px',
-              height: '36px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: 'var(--text-main)',
-            }}
+            className="header-icon-btn"
+            style={{ borderRadius: '10px', width: '36px', height: '36px' }}
           >
             <ArrowLeft size={18} />
           </button>
@@ -94,9 +85,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-
         {title && (
-          <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
             {title}
           </h2>
         )}
@@ -110,19 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
             {showBalance && (
               <div
                 onClick={() => navigate('/rewards')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'rgba(213, 173, 96, 0.12)',
-                  border: '1px solid rgba(213, 173, 96, 0.35)',
-                  borderRadius: '20px',
-                  padding: '4px 10px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  color: 'var(--primary)',
-                }}
+                className="header-coin-badge"
               >
                 <img src={images.Coin} alt="Coins" style={{ width: '18px', height: '18px' }} />
                 <span>{Number(totalCoins).toLocaleString()}</span>
@@ -132,20 +110,8 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={handleLanguageToggle}
               title="Change Language"
-              style={{
-                background: 'var(--bg-card-secondary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '50%',
-                width: '34px',
-                height: '34px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--text-main)',
-                fontSize: '11px',
-                fontWeight: 700,
-              }}
+              className="header-icon-btn"
+              style={{ fontSize: '11px', fontWeight: 700 }}
             >
               {i18n.language?.toUpperCase().slice(0, 2) || 'EN'}
             </button>
@@ -153,18 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => dispatch(toggleDarkMode())}
               title="Toggle Dark/Light Mode"
-              style={{
-                background: 'var(--bg-card-secondary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '50%',
-                width: '34px',
-                height: '34px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--text-main)',
-              }}
+              className="header-icon-btn"
             >
               {isDarkMode ? <Sun size={17} color="#FFD700" /> : <Moon size={17} />}
             </button>
@@ -172,19 +127,8 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => navigate('/notifications')}
               title="Notifications"
-              style={{
-                background: 'var(--bg-card-secondary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '50%',
-                width: '34px',
-                height: '34px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--text-main)',
-                position: 'relative',
-              }}
+              className="header-icon-btn"
+              style={{ position: 'relative' }}
             >
               <Bell size={17} />
             </button>

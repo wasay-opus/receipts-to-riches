@@ -144,6 +144,8 @@
     "title": "Perfil",
     "personalInfo": "Información personal",
     "changePassword": "Cambiar contraseña",
+    "playGames": "Jugar Juegos",
+    "rankingLeaderboard": "Tabla de Clasificación",
     "myReceipts": "Mis recibos",
     "aboutUs": "Sobre nosotros",
     "explainVideo": "Video explicativo",
@@ -279,6 +281,7 @@
     "playAgain": "Jugar de nuevo",
     "changeImage": "Cambiar",
     "saveAndContinue": "Guardar y Continuar",
+    "gotIt": "¡Entendido!",
     "or": "O",
     "goHome": "Ir al Inicio"
   },
@@ -1420,7 +1423,15 @@
     "tryAgain": "Inténtalo de nuevo, por favor.",
     "loadingLeaderboard": "Cargando clasificación...",
     "noLeaderboardData": "Todavía no hay datos de la clasificación.",
-    "currentStreak": "Racha actual"
+    "currentStreak": "Racha actual",
+    "infoTitle": "Tabla de Rachas",
+    "infoSubtitle": "Cómo funciona la clasificación",
+    "dailyStreaksTitle": "Rachas Diarias",
+    "dailyStreaksDesc": "Inicia sesión y juega todos los días para aumentar tu racha diaria. ¡Cuanto más larga sea tu racha activa, mayor será tu clasificación!",
+    "topThreeTitle": "Podio del Top 3",
+    "topThreeDesc": "Los jugadores con las rachas activas más altas obtienen un lugar destacado en el podio del Top 3.",
+    "bonusRewardsTitle": "Recompensas de Bonificación",
+    "bonusRewardsDesc": "Mantén tu racha para ganar multiplicadores exclusivos, desbloquear juegos bloqueados más rápido y obtener reconocimiento en la clasificación."
   },
   "rewardsScreen": {
     "catalog": "Catálogo de Recompensas",
@@ -1503,5 +1514,40 @@
     "loading": "Cargando notificaciones...",
     "emptyState": "Aún no tienes notificaciones.",
     "deleteButtonTitle": "Eliminar notificación"
+  },
+  "profile": {
+    "myProfile": "Mi Perfil"
+  },
+  "socialProfile": {
+    "communityMember": "Miembro de la comunidad",
+    "loadingProfile": "Cargando perfil...",
+    "following": "Siguiendo",
+    "follow": "Seguir",
+    "report": "Reportar",
+    "posts": "Publicaciones",
+    "followers": "Seguidores",
+    "followingCount": "Siguiendo",
+    "noPostsYet": "Aún no hay publicaciones.",
+    "followNotSaved": "No se pudo guardar el seguimiento",
+    "tryAgain": "Inténtalo de nuevo.",
+    "reportUserTitle": "Reportar usuario",
+    "reportUserPrompt": "¿Por qué reportas a este usuario?",
+    "reportDefaultReason": "Perfil inapropiado",
+    "submitReport": "Enviar reporte",
+    "reportSubmitted": "Reporte de usuario enviado",
+    "reportFailed": "No se pudo enviar el reporte"
+  },
+  "createPost": {
+    "createNewPost": "Crear nueva publicación",
+    "post": "Publicar",
+    "sharePlaceholder": "Comparte tus ofertas, recibos ganadores o preguntas con la comunidad...",
+    "addReceiptPhoto": "Añadir recibo / foto",
+    "photoRequiredHint": "Foto requerida",
+    "imageRequiredTitle": "Foto requerida",
+    "imageRequiredMsg": "Por favor sube un recibo o foto para crear tu publicación.",
+    "postPublished": "¡Publicación publicada!",
+    "postPublishedDesc": "Tu publicación ha sido guardada.",
+    "postNotSaved": "No se guardó la publicación",
+    "tryAgain": "Inténtalo de nuevo."
   }
 }
