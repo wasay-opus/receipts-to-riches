@@ -261,7 +261,53 @@ const userSlice = createSlice({
       })
       .addCase(fetchUser.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        state.userData = action.payload?.data ?? action.payload ?? null;
+        const fetched = action.payload?.data ?? action.payload ?? null;
+        if (!fetched) {
+          state.userData = null;
+          return;
+        }
+        const userId = fetched.id || state.userData?.id;
+        const cachedAvatar =
+          (userId ? localStorage.getItem(`user_avatar_${userId}`) : null) ||
+          localStorage.getItem('user_avatar') ||
+          localStorage.getItem('user_avatar_me');
+        const cachedCover =
+          (userId ? localStorage.getItem(`user_cover_${userId}`) : null) ||
+          localStorage.getItem('user_cover') ||
+          localStorage.getItem('user_cover_me');
+
+        state.userData = {
+          ...(state.userData || {}),
+          ...fetched,
+          image:
+            fetched.image ||
+            fetched.image_url ||
+            state.userData?.image ||
+            state.userData?.image_url ||
+            cachedAvatar ||
+            null,
+          image_url:
+            fetched.image_url ||
+            fetched.image ||
+            state.userData?.image_url ||
+            state.userData?.image ||
+            cachedAvatar ||
+            null,
+          cover_image:
+            fetched.cover_image ||
+            fetched.cover_image_url ||
+            state.userData?.cover_image ||
+            state.userData?.cover_image_url ||
+            cachedCover ||
+            null,
+          cover_image_url:
+            fetched.cover_image_url ||
+            fetched.cover_image ||
+            state.userData?.cover_image_url ||
+            state.userData?.cover_image ||
+            cachedCover ||
+            null,
+        };
       })
       .addCase(fetchUser.rejected, (state, action) => {
         state.loading = false;
@@ -281,10 +327,44 @@ const userSlice = createSlice({
           action.payload?.data?.user ??
           action.payload?.data ??
           action.payload;
+        const userId = updatedUser?.id || state.userData?.id;
+        const cachedAvatar =
+          (userId ? localStorage.getItem(`user_avatar_${userId}`) : null) ||
+          localStorage.getItem('user_avatar') ||
+          localStorage.getItem('user_avatar_me');
+        const cachedCover =
+          (userId ? localStorage.getItem(`user_cover_${userId}`) : null) ||
+          localStorage.getItem('user_cover') ||
+          localStorage.getItem('user_cover_me');
+
         if (state.userData) {
           state.userData = {
             ...state.userData,
-            ...updatedUser,
+            ...(updatedUser || {}),
+            image:
+              updatedUser?.image ||
+              updatedUser?.image_url ||
+              state.userData.image ||
+              state.userData.image_url ||
+              cachedAvatar,
+            image_url:
+              updatedUser?.image_url ||
+              updatedUser?.image ||
+              state.userData.image_url ||
+              state.userData.image ||
+              cachedAvatar,
+            cover_image:
+              updatedUser?.cover_image ||
+              updatedUser?.cover_image_url ||
+              state.userData.cover_image ||
+              state.userData.cover_image_url ||
+              cachedCover,
+            cover_image_url:
+              updatedUser?.cover_image_url ||
+              updatedUser?.cover_image ||
+              state.userData.cover_image_url ||
+              state.userData.cover_image ||
+              cachedCover,
           };
         } else {
           state.userData = updatedUser ?? null;

@@ -193,9 +193,7 @@ export const PicPickGame: React.FC = () => {
         points,
       });
 
-      if (points > 0) {
-        triggerCoinCelebration();
-      }
+      triggerCoinCelebration();
 
       setReceiptFile(null);
       setReceiptPreview(null);
@@ -527,7 +525,7 @@ export const PicPickGame: React.FC = () => {
       </div>
 
       {/* Success Modal */}
-      <CustomModal visible={Boolean(result)} onClose={() => navigate('/play')} maxWidth="400px">
+      <CustomModal visible={Boolean(result)} onClose={() => navigate('/home')} maxWidth="400px">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
           <img src={images.Coin} alt="Prize" style={{ width: '80px', height: '80px' }} />
           <div>
@@ -539,8 +537,8 @@ export const PicPickGame: React.FC = () => {
             </p>
           </div>
           <Button
-            title={t('cashGames.buttons.returnToGames', 'Return to Games')}
-            onClick={() => navigate('/play')}
+            title={t('common.backToHome', 'Back to Home')}
+            onClick={() => navigate('/home')}
             style={{ width: '100%', marginTop: '8px' }}
           />
         </div>

@@ -193,8 +193,9 @@ export const fetchApi = async ({
       }
     }
 
-    if (formData) {
-      // Allow browser Axios to set Content-Type header with multipart boundary
+    const isFormData = formData || (typeof FormData !== 'undefined' && data instanceof FormData);
+    if (isFormData) {
+      delete headers['Content-Type'];
     } else if (data) {
       headers['Content-Type'] = 'application/json';
     }

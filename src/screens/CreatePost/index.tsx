@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { ArrowLeft, Image as ImageIcon, Sparkles, Send, X } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Sparkles, Send, X, Video } from 'lucide-react';
 import { Button, Container, showToast } from '../../components';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { createPost, fetchFeed } from '../../redux/Slices/feedSlice';
@@ -18,6 +18,11 @@ export const CreatePost: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const isSubmitting = useSelector((state: RootState) => state.feed.createPostLoading);
 
+  const isVideo = Boolean(
+    selectedFile?.type?.startsWith('video/') ||
+    /\.(mp4|mov|webm|m4v|ogg)$/i.test(selectedFile?.name || '')
+  );
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -30,11 +35,11 @@ export const CreatePost: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedFile) {
+    if (!content.trim() && !selectedFile) {
       showToast({
         type: 'error',
-        text1: t('createPost.imageRequiredTitle', 'Image Required'),
-        text2: t('createPost.imageRequiredMsg', 'Please upload a receipt or image to create a post.'),
+        text1: t('createPost.postEmptyTitle', 'Post Empty'),
+        text2: t('createPost.postEmptyMsg', 'Please enter some text or attach a photo / video.'),
       });
       return;
     }
@@ -43,7 +48,9 @@ export const CreatePost: React.FC = () => {
     if (content.trim()) {
       formData.append('description', content.trim());
     }
-    formData.append('media', selectedFile, selectedFile.name || `post_media_${Date.now()}.jpg`);
+    if (selectedFile) {
+      formData.append('media', selectedFile, selectedFile.name || `post_media_${Date.now()}`);
+    }
 
     try {
       await dispatch(createPost(formData)).unwrap();
@@ -119,13 +126,38 @@ export const CreatePost: React.FC = () => {
         />
 
         {imagePreview && (
-          <div style={{ position: 'relative', width: '100%', maxHeight: '280px', borderRadius: '14px', overflow: 'hidden' }}>
-            <img
-              src={imagePreview}
-              alt={t('createPost.previewImageAlt', 'Preview')}
-              style={{ width: '100%', maxHeight: '280px', objectFit: 'cover' }}
-            />
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxHeight: '320px',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              background: '#000',
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            {isVideo ? (
+              <video
+                src={imagePreview}
+                controls
+                playsInline
+                style={{
+                  width: '100%',
+                  maxHeight: '320px',
+                  display: 'block',
+                  background: '#000',
+                }}
+              />
+            ) : (
+              <img
+                src={imagePreview}
+                alt={t('createPost.previewImageAlt', 'Preview')}
+                style={{ width: '100%', maxHeight: '320px', objectFit: 'cover', display: 'block' }}
+              />
+            )}
             <button
+              type="button"
               onClick={() => {
                 if (imagePreview) {
                   URL.revokeObjectURL(imagePreview);
@@ -140,16 +172,18 @@ export const CreatePost: React.FC = () => {
                 position: 'absolute',
                 top: '10px',
                 right: '10px',
-                background: 'rgba(0,0,0,0.6)',
+                background: 'rgba(0,0,0,0.65)',
                 border: 'none',
                 borderRadius: '50%',
-                width: '30px',
-                height: '30px',
+                width: '32px',
+                height: '32px',
                 color: '#fff',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                zIndex: 10,
               }}
             >
               <X size={16} />
@@ -160,7 +194,7 @@ export const CreatePost: React.FC = () => {
         <input
           type="file"
           ref={fileInputRef}
-          accept="image/*"
+          accept="image/*,video/*"
           style={{ display: 'none' }}
           onChange={handleImageSelect}
         />
@@ -171,19 +205,25 @@ export const CreatePost: React.FC = () => {
             className="btn-secondary"
             onClick={() => fileInputRef.current?.click()}
             style={{
-              padding: '8px 14px',
+              padding: '9px 16px',
               fontSize: '13px',
-              border: !selectedFile ? '1.5px dashed var(--green)' : undefined,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              borderRadius: '12px',
             }}
           >
-            <ImageIcon size={16} />
-            <span>{t('createPost.addReceiptPhoto', 'Add Receipt / Photo')} <span style={{ color: 'var(--green)', fontWeight: 'bold' }}>*</span></span>
+            <ImageIcon size={16} color="var(--green)" />
+            <Video size={16} color="#3B82F6" />
+            <span>{t('createPost.addMedia', 'Add Photo / Video')}</span>
           </button>
-          {!selectedFile && (
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {t('createPost.photoRequiredHint', 'Photo required')}
-            </span>
-          )}
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            {selectedFile
+              ? isVideo
+                ? '🎬 Video selected'
+                : '📷 Photo selected'
+              : t('createPost.optionalHint', 'Media optional')}
+          </span>
         </div>
       </div>
     </Container>

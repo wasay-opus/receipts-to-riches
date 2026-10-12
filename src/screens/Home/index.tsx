@@ -156,10 +156,12 @@ export const Home: React.FC = () => {
       sessionStorage.removeItem('pending_home_reward');
       window.history.replaceState({}, document.title);
 
-      const pointsWon = Number(pendingReward.points) || 0;
-      if (pendingReward.type === 'game' && pointsWon <= 0) {
+      // If coming from a game, coins already rained inside the game - do not rain on Home!
+      if (pendingReward.type === 'game') {
         return;
       }
+
+      const pointsWon = Number(pendingReward.points) || 0;
 
       // Show points won (+XX Points Won!), NOT the game name
       const title = pointsWon > 0

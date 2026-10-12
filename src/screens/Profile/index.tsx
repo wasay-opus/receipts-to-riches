@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -17,13 +17,20 @@ import {
   Gamepad2,
   Trophy,
   PlayCircle,
+  Camera,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { logout } from '../../redux/Slices/authSlice';
-import { deleteUser } from '../../redux/Slices/userSlice';
+import { deleteUser, fetchUser } from '../../redux/Slices/userSlice';
 import { showToast } from '../../components';
-import { getUserAvatarUrl, getUserFullName } from '../../utils/userDisplay';
+import {
+  getUserAvatarUrl,
+  getUserCoverUrl,
+  getUserFullName,
+  DEFAULT_COVER_URL,
+} from '../../utils/userDisplay';
 import { confirmAppAction } from '../../utils/sweetAlert';
+import images from '../../constants/images';
 
 export const Profile: React.FC = () => {
   const { t } = useTranslation();
@@ -35,6 +42,20 @@ export const Profile: React.FC = () => {
   const fullName = getUserFullName(user);
   const avatarUrl = getUserAvatarUrl(user);
   const [avatarError, setAvatarError] = useState(false);
+  const coverPhotoUrl = getUserCoverUrl(user);
+  const [coverError, setCoverError] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchUser());
+  }, [dispatch]);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [avatarUrl]);
+
+  useEffect(() => {
+    setCoverError(false);
+  }, [coverPhotoUrl]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -82,31 +103,89 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="profile-screen-container">
-      {/* Profile Header */}
-      <div className="profile-header">
-        {/* Centered Avatar */}
-        <div className="profile-avatar-wrap">
-          {avatarUrl && !avatarError ? (
-            <img
-              src={avatarUrl}
-              alt={fullName || 'User'}
-              onError={() => setAvatarError(true)}
-              className="profile-avatar-img"
-            />
-          ) : (
-            <div className="profile-avatar-placeholder">
-              {fullName ? fullName[0].toUpperCase() : 'U'}
-            </div>
-          )}
+      {/* Profile Header Card with Cover Photo Banner */}
+      <div className="card" style={{ borderRadius: '24px', overflow: 'hidden', padding: 0 }}>
+        {/* Cover Photo */}
+        <div
+          style={{
+            width: '100%',
+            height: '150px',
+            position: 'relative',
+            overflow: 'hidden',
+            backgroundColor: '#1E293B',
+          }}
+        >
+          <img
+            src={coverError ? DEFAULT_COVER_URL : coverPhotoUrl}
+            alt="Cover"
+            onError={() => setCoverError(true)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 60%, rgba(0,0,0,0.25) 100%)' }} />
+          <button
+            type="button"
+            onClick={() => navigate('/profile/personal-info')}
+            title="Edit profile & cover photo"
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: 'rgba(0,0,0,0.55)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 3,
+            }}
+          >
+            <Camera size={16} />
+          </button>
         </div>
 
-        <div>
-          <h2 className="profile-user-name">
-            {fullName || t('profile.defaultUserName', 'Receipts Hunter')}
-          </h2>
-          <span className="profile-user-email">
-            {user?.email || t('profile.defaultEmail', 'user@example.com')}
-          </span>
+        {/* User Info below banner with overlapping avatar */}
+        <div className="profile-header" style={{ marginTop: '-44px', paddingBottom: '20px' }}>
+          {/* Centered Avatar */}
+          <div className="profile-avatar-wrap">
+            {avatarUrl && !avatarError ? (
+              <img
+                src={avatarUrl}
+                alt={fullName || 'User'}
+                onError={() => setAvatarError(true)}
+                className="profile-avatar-img"
+              />
+            ) : images.Profile || images.example ? (
+              <img
+                src={images.Profile || images.example}
+                alt={fullName || 'User'}
+                className="profile-avatar-img"
+              />
+            ) : (
+              <div className="profile-avatar-placeholder">
+                {fullName ? fullName[0].toUpperCase() : 'U'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h2 className="profile-user-name">
+              {fullName || t('profile.defaultUserName', 'Receipts Hunter')}
+            </h2>
+            <span className="profile-user-email">
+              {user?.email || t('profile.defaultEmail', 'user@example.com')}
+            </span>
+          </div>
         </div>
       </div>
 

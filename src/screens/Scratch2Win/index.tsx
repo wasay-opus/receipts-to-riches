@@ -160,6 +160,7 @@ export const Scratch2Win: React.FC = () => {
         // prizePoints was already fetched from the backend when this card loaded.
         if (prizePoints > 0) {
           winSoundRef.current?.play();
+          triggerCoinCelebration();
         }
         // Clear all canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -498,16 +499,7 @@ export const Scratch2Win: React.FC = () => {
               type="button"
               onClick={() => {
                 setResultModal(null);
-                navigate('/home', {
-                  state: {
-                    rewardCelebration: {
-                      type: 'game',
-                      title: 'Scratch & Win',
-                      subtitle: resultModal?.won ? `You won ${resultModal.points} points!` : undefined,
-                      points: resultModal?.points || 0,
-                    },
-                  },
-                });
+                navigate('/home');
               }}
               style={{
                 background: 'none',
@@ -519,7 +511,7 @@ export const Scratch2Win: React.FC = () => {
                 padding: '8px 16px',
               }}
             >
-              Done
+              Back to Home
             </button>
           </div>
         </div>

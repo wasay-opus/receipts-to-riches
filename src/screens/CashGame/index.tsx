@@ -1254,7 +1254,7 @@ export const CashGame: React.FC = () => {
                 padding: '10px 20px',
               }}
             >
-              Done
+              Back to Home
             </button>
           </div>
         </div>

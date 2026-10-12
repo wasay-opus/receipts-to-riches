@@ -180,6 +180,8 @@ function App() {
         {/* Settings & Info */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/profile/personal-info" element={<ProtectedRoute><PersonalInfo /></ProtectedRoute>} />
+        <Route path="/edit-profile" element={<ProtectedRoute><PersonalInfo /></ProtectedRoute>} />
+        <Route path="/profile/edit" element={<ProtectedRoute><PersonalInfo /></ProtectedRoute>} />
         <Route path="/profile/change-password" element={<ProtectedRoute><PasswordScreen /></ProtectedRoute>} />
         <Route path="/profile/languages" element={<ProtectedRoute><Languages /></ProtectedRoute>} />
         <Route path="/profile/terms" element={<TermsNCondition />} />

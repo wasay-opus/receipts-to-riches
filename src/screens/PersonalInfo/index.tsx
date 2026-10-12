@@ -8,20 +8,27 @@ import { ArrowLeft, User, Mail, Phone, Calendar, Save, Camera, MapPin, AlertCirc
 import { AppDispatch, RootState } from '../../redux/Store';
 import { Button, Container, FormInput, showToast } from '../../components';
 import { editProfile, fetchUser, updateUserDataLocally } from '../../redux/Slices/userSlice';
-import { getUserFullName, splitFullName } from '../../utils/userDisplay';
+import {
+  getUserAvatarUrl,
+  getUserCoverUrl,
+  getUserFullName,
+  splitFullName,
+  DEFAULT_COVER_URL,
+} from '../../utils/userDisplay';
 import { confirmUnsavedChanges } from '../../utils/sweetAlert';
 import images from '../../constants/images';
 
 // Internal helper component to synchronize Formik dirty state to parent in real time
 const FormDirtyWatcher: React.FC<{
   avatarChanged: boolean;
+  coverChanged: boolean;
   onDirtyChange: (isDirty: boolean) => void;
-}> = ({ avatarChanged, onDirtyChange }) => {
+}> = ({ avatarChanged, coverChanged, onDirtyChange }) => {
   const { dirty } = useFormikContext<any>();
 
   useEffect(() => {
-    onDirtyChange(dirty || avatarChanged);
-  }, [dirty, avatarChanged, onDirtyChange]);
+    onDirtyChange(dirty || avatarChanged || coverChanged);
+  }, [dirty, avatarChanged, coverChanged, onDirtyChange]);
 
   return null;
 };
@@ -36,26 +43,81 @@ export const PersonalInfo: React.FC = () => {
 
   const formikRef = useRef<FormikProps<any>>(null);
   const saveSectionRef = useRef<HTMLDivElement | null>(null);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    user?.image_url || user?.image || null
+    () => getUserAvatarUrl(user) || null
+  );
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string>(
+    () => getUserCoverUrl(user) || DEFAULT_COVER_URL
   );
   const [hasChanges, setHasChanges] = useState(false);
   const [isHighlighted, setIsHighlighted] = useState(false);
+
+  useEffect(() => {
+    if (!avatarFile) {
+      const url = getUserAvatarUrl(user);
+      if (url) setAvatarPreview(url);
+    }
+  }, [user, avatarFile]);
+
+  useEffect(() => {
+    if (!coverFile) {
+      const url = getUserCoverUrl(user);
+      if (url) setCoverPreview(url);
+    }
+  }, [user, coverFile]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
       setHasChanges(true);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          const base64 = reader.result;
+          setAvatarPreview(base64);
+          localStorage.setItem('user_avatar', base64);
+          localStorage.setItem('user_avatar_me', base64);
+          if (user?.id) {
+            localStorage.setItem(`user_avatar_${user.id}`, base64);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverFile(file);
+      setHasChanges(true);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          const base64 = reader.result;
+          setCoverPreview(base64);
+          localStorage.setItem('user_cover', base64);
+          localStorage.setItem('user_cover_me', base64);
+          if (user?.id) {
+            localStorage.setItem(`user_cover_${user.id}`, base64);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const validationSchema = Yup.object().shape({
-    first_name: Yup.string().required(t('validation.firstNameRequired', 'First name is required')),
-    last_name: Yup.string().required(t('validation.lastNameRequired', 'Last name is required')),
-    email: Yup.string().email(t('validation.invalidEmail', 'Invalid email')).required(t('validation.emailRequired', 'Email is required')),
+    first_name: Yup.string(),
+    last_name: Yup.string(),
+    email: Yup.string().email(t('validation.invalidEmail', 'Invalid email')),
     phone: Yup.string(),
     bio: Yup.string(),
     dob: Yup.string(),
@@ -63,24 +125,46 @@ export const PersonalInfo: React.FC = () => {
     city: Yup.string(),
     state: Yup.string(),
     zip_code: Yup.string(),
+    password: Yup.string(),
+    password_confirmation: Yup.string(),
   });
 
   const handleSubmit = async (values: any) => {
     const trimmedBio = values.bio?.trim?.() ?? '';
     const payload = new FormData();
-    payload.append('first_name', values.first_name.trim());
-    payload.append('last_name', values.last_name.trim());
-    payload.append('name', `${values.first_name.trim()} ${values.last_name.trim()}`);
-    payload.append('phone', values.phone?.trim?.() ?? '');
-    payload.append('bio', trimmedBio);
-    payload.append('description', trimmedBio);
-    payload.append('about', trimmedBio);
-    if (values.dob) payload.append('dob', values.dob);
-    if (values.address) payload.append('address', values.address.trim());
-    if (values.city) payload.append('city', values.city.trim());
-    if (values.state) payload.append('state', values.state.trim());
-    if (values.zip_code) payload.append('zip_code', values.zip_code.trim());
 
+    if (values.first_name?.trim()) payload.append('first_name', values.first_name.trim());
+    if (values.last_name?.trim()) payload.append('last_name', values.last_name.trim());
+    const combinedName = `${values.first_name?.trim() || ''} ${values.last_name?.trim() || ''}`.trim();
+    if (combinedName) {
+      payload.append('name', combinedName);
+    }
+    if (values.email?.trim()) payload.append('email', values.email.trim());
+    if (values.phone?.trim()) payload.append('phone', values.phone.trim());
+    if (trimmedBio) {
+      payload.append('bio', trimmedBio);
+      payload.append('description', trimmedBio);
+      payload.append('about', trimmedBio);
+    }
+    if (values.dob) payload.append('dob', values.dob);
+    if (values.address?.trim()) payload.append('address', values.address.trim());
+    if (values.city?.trim()) payload.append('city', values.city.trim());
+    if (values.state?.trim()) payload.append('state', values.state.trim());
+    if (values.zip_code?.trim()) payload.append('zip_code', values.zip_code.trim());
+    if (values.password) {
+      payload.append('password', values.password);
+      if (values.password_confirmation) {
+        payload.append('password_confirmation', values.password_confirmation);
+      }
+    }
+
+    // Two SEPARATE optional image fields:
+    // 1. "cover_image" -> Cover photo (banner) — file
+    if (coverFile) {
+      payload.append('cover_image', coverFile);
+    }
+
+    // 2. "image" -> Profile photo (avatar/dp) — file
     if (avatarFile) {
       payload.append('image', avatarFile);
     }
@@ -101,8 +185,23 @@ export const PersonalInfo: React.FC = () => {
           city: values.city?.trim?.() ?? '',
           state: values.state?.trim?.() ?? '',
           zip_code: values.zip_code?.trim?.() ?? '',
+          cover_image: coverPreview,
+          cover_image_url: coverPreview,
+          cover_photo: coverPreview,
+          image: avatarPreview || user?.image,
+          image_url: avatarPreview || user?.image_url,
         })
       );
+      if (coverPreview) {
+        localStorage.setItem('user_cover', coverPreview);
+        localStorage.setItem('user_cover_me', coverPreview);
+        if (user?.id) localStorage.setItem(`user_cover_${user.id}`, coverPreview);
+      }
+      if (avatarPreview) {
+        localStorage.setItem('user_avatar', avatarPreview);
+        localStorage.setItem('user_avatar_me', avatarPreview);
+        if (user?.id) localStorage.setItem(`user_avatar_${user.id}`, avatarPreview);
+      }
       if (trimmedBio) {
         localStorage.setItem(`user_bio_${user?.id || 'me'}`, trimmedBio);
       } else {
@@ -113,6 +212,7 @@ export const PersonalInfo: React.FC = () => {
       } catch (err) {
         // User fetch error should not block navigation
       }
+      setCoverFile(null);
       setAvatarFile(null);
       setHasChanges(false);
       showToast({
@@ -131,7 +231,7 @@ export const PersonalInfo: React.FC = () => {
   };
 
   const handleBack = async () => {
-    const isDirty = hasChanges || Boolean(formikRef.current?.dirty) || avatarFile !== null;
+    const isDirty = hasChanges || Boolean(formikRef.current?.dirty) || avatarFile !== null || coverFile !== null;
 
     if (!isDirty) {
       navigate(-1);
@@ -159,7 +259,9 @@ export const PersonalInfo: React.FC = () => {
     } else if (action === 'discard') {
       formikRef.current?.resetForm();
       setAvatarFile(null);
-      setAvatarPreview(user?.image_url || user?.image || null);
+      setCoverFile(null);
+      setAvatarPreview(getUserAvatarUrl(user) || null);
+      setCoverPreview(getUserCoverUrl(user) || DEFAULT_COVER_URL);
       setHasChanges(false);
       navigate(-1);
     } else {
@@ -172,7 +274,9 @@ export const PersonalInfo: React.FC = () => {
   const handleDiscard = () => {
     formikRef.current?.resetForm();
     setAvatarFile(null);
-    setAvatarPreview(user?.image_url || user?.image || null);
+    setCoverFile(null);
+    setAvatarPreview(getUserAvatarUrl(user) || null);
+    setCoverPreview(getUserCoverUrl(user) || DEFAULT_COVER_URL);
     setHasChanges(false);
     showToast({
       type: 'info',
@@ -253,66 +357,154 @@ export const PersonalInfo: React.FC = () => {
         )}
       </div>
 
-      <div className="card" style={{ padding: '28px', borderRadius: '22px' }}>
-        {/* Avatar Upload Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-          <div style={{ position: 'relative' }}>
+      <div className="card" style={{ padding: '0', borderRadius: '24px', overflow: 'hidden' }}>
+        {/* Cover Photo Banner - Tapping anywhere opens file picker for cover_image */}
+        <div
+          onClick={() => coverInputRef.current?.click()}
+          title={t('personalInfo.changeCover', 'Click anywhere on cover banner to change')}
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '180px',
+            overflow: 'hidden',
+            backgroundColor: '#1E293B',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <img
+            src={coverPreview || DEFAULT_COVER_URL}
+            alt="Cover Banner"
+            onError={(e) => {
+              e.currentTarget.src = DEFAULT_COVER_URL;
+            }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 60%, rgba(0,0,0,0.3) 100%)',
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverChange}
+            style={{ display: 'none' }}
+          />
+
+          {/* Cover photo change camera indicator on bottom-right */}
+          <div
+            title={t('personalInfo.changeCover', 'Change Cover Photo')}
+            style={{
+              position: 'absolute',
+              bottom: '14px',
+              right: '16px',
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+              transition: 'transform 0.15s ease',
+              zIndex: 5,
+            }}
+          >
+            <Camera size={20} />
+          </div>
+        </div>
+
+        {/* Overlapping Avatar, Name & Bio Info */}
+        <div style={{ padding: '0 24px 24px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '-48px', marginBottom: '14px' }}>
+            {/* Avatar Circle - Tapping anywhere opens file picker for image */}
             <div
-              style={{
-                width: '96px',
-                height: '96px',
-                borderRadius: '50%',
-                overflow: 'hidden',
-                background: 'var(--bg-card-secondary)',
-                border: avatarFile ? '3px solid #D5AD60' : '3px solid var(--green)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: avatarFile ? '0 0 20px rgba(213, 173, 96, 0.45)' : 'var(--shadow-sm)',
-                transition: 'all 0.25s ease',
-              }}
+              onClick={() => avatarInputRef.current?.click()}
+              title={t('personalInfo.changeAvatar', 'Click avatar to change profile photo')}
+              style={{ position: 'relative', cursor: 'pointer', userSelect: 'none' }}
             >
-              <img
-                src={avatarPreview || images.example || images.Profile}
-                alt="Avatar"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e) => {
-                  e.currentTarget.src = images.example || images.Profile;
-                }}
-              />
-            </div>
-            <label
-              title="Change profile picture"
-              style={{
-                position: 'absolute',
-                bottom: '0',
-                right: '0',
-                width: '34px',
-                height: '34px',
-                borderRadius: '50%',
-                background: 'var(--green)',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 3px 8px rgba(0,0,0,0.35)',
-                transition: 'transform 0.15s ease',
-              }}
-            >
-              <Camera size={17} />
               <input
+                ref={avatarInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleAvatarChange}
                 style={{ display: 'none' }}
               />
-            </label>
+
+              <div
+                style={{
+                  width: '96px',
+                  height: '96px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  background: 'var(--bg-card-secondary)',
+                  border: '4px solid var(--bg-card)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                  transition: 'transform 0.15s ease',
+                }}
+              >
+                <img
+                  src={avatarPreview || images.example || images.Profile}
+                  alt="Avatar"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.currentTarget.src = images.example || images.Profile;
+                  }}
+                />
+              </div>
+
+              {/* Avatar camera badge indicator */}
+              <div
+                title={t('personalInfo.changeAvatar', 'Change Profile Photo')}
+                style={{
+                  position: 'absolute',
+                  bottom: '2px',
+                  right: '2px',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'var(--green)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid var(--bg-card)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  zIndex: 2,
+                }}
+              >
+                <Camera size={15} />
+              </div>
+            </div>
           </div>
-          <span style={{ fontSize: '13px', color: avatarFile ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: avatarFile ? 700 : 400 }}>
-            {avatarFile ? t('personalInfo.newPhotoSelected', 'New photo selected (unsaved)') : t('personalInfo.tapToChangePhoto', 'Tap camera to change photo')}
-          </span>
-        </div>
+
+          {/* User Name & Bio Header matching Screenshot 1 */}
+          <div style={{ marginBottom: '22px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+              {fullName || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Your Name'}
+            </h2>
+            <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>
+              {user?.bio || user?.description || user?.about || localStorage.getItem(`user_bio_${user?.id || 'me'}`) || 'No bio yet'}
+            </p>
+          </div>
 
         <Formik
           innerRef={formikRef}
@@ -339,7 +531,7 @@ export const PersonalInfo: React.FC = () => {
         >
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched, dirty }) => (
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <FormDirtyWatcher avatarChanged={avatarFile !== null} onDirtyChange={setHasChanges} />
+              <FormDirtyWatcher avatarChanged={avatarFile !== null} coverChanged={coverFile !== null} onDirtyChange={setHasChanges} />
 
               {/* Row 1: First Name (50%) + Last Name (50%) */}
               <div className="form-grid-2">
@@ -504,6 +696,7 @@ export const PersonalInfo: React.FC = () => {
             </form>
           )}
         </Formik>
+        </div>
       </div>
 
       {/* Floating Action Bar when Unsaved Changes exist */}

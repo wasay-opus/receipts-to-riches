@@ -391,18 +391,8 @@ export const Lucky7: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    const points = resultModal?.points || 0;
                     setResultModal(null);
-                    navigate('/home', {
-                      state: {
-                        rewardCelebration: {
-                          type: 'game',
-                          title: `+${points} Points Won!`,
-                          subtitle: `Added to your wallet`,
-                          points,
-                        },
-                      },
-                    });
+                    navigate('/home');
                   }}
                   style={{
                     background: 'none',
@@ -414,7 +404,7 @@ export const Lucky7: React.FC = () => {
                     padding: '8px 16px',
                   }}
                 >
-                  Done
+                  Back to Home
                 </button>
               </div>
             </>
@@ -472,7 +462,7 @@ export const Lucky7: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setResultModal(null);
-                    navigate('/play');
+                    navigate('/home');
                   }}
                   style={{
                     background: 'none',
@@ -484,7 +474,7 @@ export const Lucky7: React.FC = () => {
                     padding: '8px 16px',
                   }}
                 >
-                  Back to Games
+                  Back to Home
                 </button>
               </div>
             </>

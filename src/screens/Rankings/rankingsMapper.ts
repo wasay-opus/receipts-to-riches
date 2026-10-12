@@ -82,8 +82,9 @@ export const mapApiStreakLeaderboardToDataset = (
         name,
         avatar,
         streak,
-        ringColor: 'var(--text-main)',
-        badgeColor: 'var(--text-main)',
+        title: user.title || user.badge || user.status || user.tier || 'Dominating',
+        ringColor: '#F59E0B',
+        badgeColor: '#D97706',
       });
     } else if (rank === 2) {
       topThree.push({
@@ -92,8 +93,9 @@ export const mapApiStreakLeaderboardToDataset = (
         name,
         avatar,
         streak,
-        ringColor: 'var(--text-muted)',
-        badgeColor: 'var(--text-muted)',
+        title: user.title || user.badge || user.status || user.tier || 'Active Chaser',
+        ringColor: '#3B82F6',
+        badgeColor: '#1E293B',
       });
     } else if (rank === 3) {
       topThree.push({
@@ -102,8 +104,9 @@ export const mapApiStreakLeaderboardToDataset = (
         name,
         avatar,
         streak,
-        ringColor: 'var(--border-color)',
-        badgeColor: 'var(--border-color)',
+        title: user.title || user.badge || user.status || user.tier || 'Rising Star',
+        ringColor: '#F97316',
+        badgeColor: '#9A3412',
       });
     } else {
       rankings.push({

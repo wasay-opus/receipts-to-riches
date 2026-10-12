@@ -18,6 +18,7 @@ export interface PodiumUserData {
   name: string;
   avatar: string;
   streak: number | string;
+  title?: string;
   ringColor?: string;
   badgeColor?: string;
 }

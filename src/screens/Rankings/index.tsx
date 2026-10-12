@@ -35,87 +35,80 @@ const getLeaderboardList = (payload: any): any[] => {
   return [];
 };
 
-// Royal 5-peak golden crown for 1st place
+// Crown for 1st place matching Screenshot 4
 const GoldenCrown: React.FC = () => (
   <svg
-    width="48"
-    height="36"
-    viewBox="0 0 44 32"
+    width="42"
+    height="32"
+    viewBox="0 0 38 28"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     style={{
       position: 'absolute',
-      top: '-24px',
+      top: '-22px',
       left: '50%',
       transform: 'translateX(-50%)',
-      zIndex: 4,
-      filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+      zIndex: 6,
+      filter: 'drop-shadow(0 2px 4px rgba(217, 119, 6, 0.45))',
       pointerEvents: 'none',
     }}
   >
-    <defs>
-      <linearGradient id="goldCrownGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#FFF275" />
-        <stop offset="30%" stopColor="#FFC820" />
-        <stop offset="70%" stopColor="#FFA000" />
-        <stop offset="100%" stopColor="#FF8F00" />
-      </linearGradient>
-    </defs>
-    {/* Base rim */}
     <path
-      d="M7 25C14 27.5 30 27.5 37 25C37.5 28 35 29 22 29C9 29 6.5 28 7 25Z"
-      fill="url(#goldCrownGradient)"
-      stroke="#D97706"
-      strokeWidth="0.8"
-    />
-    {/* Crown body with 5 peaks */}
-    <path
-      d="M6 24L7 9L15 17L22 4L29 17L37 9L38 24C31 27 13 27 6 24Z"
-      fill="url(#goldCrownGradient)"
+      d="M4 22C10 24.5 28 24.5 34 22L32 9L24 16L19 4L14 16L6 9L4 22Z"
+      fill="#F59E0B"
       stroke="#D97706"
       strokeWidth="1.2"
       strokeLinejoin="round"
     />
-    {/* Peak spheres */}
-    <circle cx="7" cy="9" r="2.5" fill="#FFF275" stroke="#D97706" strokeWidth="0.8" />
-    <circle cx="15" cy="17" r="2" fill="#FFF275" stroke="#D97706" strokeWidth="0.8" />
-    <circle cx="22" cy="4" r="3" fill="#FFFFFF" stroke="#D97706" strokeWidth="1" />
-    <circle cx="29" cy="17" r="2" fill="#FFF275" stroke="#D97706" strokeWidth="0.8" />
-    <circle cx="37" cy="9" r="2.5" fill="#FFF275" stroke="#D97706" strokeWidth="0.8" />
-    {/* Center red jewel */}
-    <circle cx="22" cy="18" r="2.2" fill="#EF4444" stroke="#991B1B" strokeWidth="0.6" />
+    <circle cx="6" cy="9" r="2.2" fill="#FEF3C7" />
+    <circle cx="19" cy="4" r="2.8" fill="#FFFFFF" />
+    <circle cx="32" cy="9" r="2.2" fill="#FEF3C7" />
   </svg>
 );
 
-// Fire flame badge on bottom rim of avatar
-const AvatarFlame: React.FC = () => (
-  <div
-    style={{
-      position: 'absolute',
-      bottom: '-8px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      zIndex: 4,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '17px',
-      lineHeight: 1,
-      filter: 'drop-shadow(0 2px 4px rgba(255, 107, 0, 0.6))',
-      pointerEvents: 'none',
-    }}
-  >
-    🔥
-  </div>
-);
+// Rank Badge (1st, 2nd, 3rd) overlapping bottom-left of avatar matching Screenshot 4
+const RankBadge: React.FC<{ rank: 1 | 2 | 3 }> = ({ rank }) => {
+  const configs: Record<1 | 2 | 3, { text: string; bg: string; size: number; fontSize: string }> = {
+    1: { text: '1st', bg: '#D97706', size: 26, fontSize: '11px' },
+    2: { text: '2nd', bg: '#1E293B', size: 24, fontSize: '10.5px' },
+    3: { text: '3rd', bg: '#78350F', size: 24, fontSize: '10.5px' },
+  };
+  const config = configs[rank];
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: '-2px',
+        left: '-4px',
+        width: `${config.size}px`,
+        height: `${config.size}px`,
+        borderRadius: '50%',
+        backgroundColor: config.bg,
+        border: '2px solid #FFFFFF',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#FFFFFF',
+        fontSize: config.fontSize,
+        fontWeight: 800,
+        lineHeight: 1,
+        zIndex: 6,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+      }}
+    >
+      {config.text}
+    </div>
+  );
+};
 
 // Fallback avatar handler
 const UserAvatar: React.FC<{
   src?: string;
   name: string;
   size: number;
-  borderColor: string;
-}> = ({ src, name, size, borderColor }) => {
+  borderColor?: string;
+}> = ({ src, name, size, borderColor = '#FFFFFF' }) => {
   const [imageError, setImageError] = useState(false);
 
   if (!src || imageError) {
@@ -125,14 +118,14 @@ const UserAvatar: React.FC<{
           width: `${size}px`,
           height: `${size}px`,
           borderRadius: '50%',
-          border: `3.5px solid ${borderColor}`,
-          background: '#181A20',
+          border: `3px solid ${borderColor}`,
+          background: '#475569',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: '#FFFFFF',
           flexShrink: 0,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
         }}
       >
         <UserIcon size={Math.round(size * 0.52)} color="#FFFFFF" strokeWidth={2.2} />
@@ -150,68 +143,26 @@ const UserAvatar: React.FC<{
         height: `${size}px`,
         borderRadius: '50%',
         objectFit: 'cover',
-        border: `3.5px solid ${borderColor}`,
-        background: '#181A20',
+        border: `3px solid ${borderColor}`,
+        background: '#475569',
         flexShrink: 0,
-        boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.16)',
       }}
     />
   );
 };
 
-interface PodiumTheme {
-  background: string;
-  borderColor: string;
-  ringColor: string;
-  cardHeight: number;
-  avatarSize: number;
-  overlapOffset: number;
-  glow: string;
-  nameColor: string;
-  streakColor: string;
-}
-
-const PODIUM_STYLES: Record<1 | 2 | 3, PodiumTheme> = {
-  1: {
-    // Rich Golden Amber Gradient matching screenshot 2 (rank 1)
-    background: 'linear-gradient(180deg, #FFC043 0%, #FFB020 50%, #FFA200 100%)',
-    borderColor: '#FFD56B',
-    ringColor: '#FFB800',
-    cardHeight: 235,
-    avatarSize: 76,
-    overlapOffset: 38,
-    glow: '0 10px 30px rgba(255, 178, 36, 0.35)',
-    nameColor: '#111827',
-    streakColor: '#1F2937',
-  },
-  2: {
-    // Soft Warm Light-Gold / Cream-Yellow matching screenshot 2 (rank 2)
-    background: 'linear-gradient(180deg, #FDE69E 0%, #FDD97A 50%, #FED062 100%)',
-    borderColor: '#FFEEBA',
-    ringColor: '#F59E0B',
-    cardHeight: 185,
-    avatarSize: 66,
-    overlapOffset: 33,
-    glow: '0 8px 24px rgba(253, 217, 122, 0.28)',
-    nameColor: '#111827',
-    streakColor: '#1F2937',
-  },
-  3: {
-    // Warm Bronze-Peach Golden matching 3rd place podium
-    background: 'linear-gradient(180deg, #FFD8A8 0%, #FFBE76 50%, #FFA94D 100%)',
-    borderColor: '#FFE3C2',
-    ringColor: '#F97316',
-    cardHeight: 160,
-    avatarSize: 60,
-    overlapOffset: 30,
-    glow: '0 8px 20px rgba(255, 190, 118, 0.25)',
-    nameColor: '#111827',
-    streakColor: '#1F2937',
-  },
-};
-
 const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
-  const theme = PODIUM_STYLES[user.rank] || PODIUM_STYLES[3];
+  const isFirst = user.rank === 1;
+  const isSecond = user.rank === 2;
+  const cardHeight = isFirst ? 230 : isSecond ? 190 : 170;
+  const avatarSize = isFirst ? 74 : isSecond ? 64 : 60;
+  const overlapOffset = Math.round(avatarSize / 2);
+
+  // Status title matching Screenshot 4: 1st Dominating, 2nd Active Chaser, 3rd Rising Star
+  const tierTitle =
+    user.title ||
+    (user.rank === 1 ? 'Dominating' : user.rank === 2 ? 'Active Chaser' : 'Rising Star');
 
   return (
     <div
@@ -221,7 +172,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
         alignItems: 'center',
         flex: 1,
         maxWidth: '175px',
-        minWidth: '120px',
+        minWidth: '110px',
         position: 'relative',
       }}
     >
@@ -229,49 +180,50 @@ const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
       <div
         style={{
           position: 'relative',
-          zIndex: 3,
-          marginBottom: `-${theme.overlapOffset}px`,
+          zIndex: 4,
+          marginBottom: `-${overlapOffset}px`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        {user.rank === 1 && <GoldenCrown />}
+        {isFirst && <GoldenCrown />}
         <UserAvatar
           src={user.avatar}
           name={user.name}
-          size={theme.avatarSize}
-          borderColor={theme.ringColor}
+          size={avatarSize}
+          borderColor="#FFFFFF"
         />
-        <AvatarFlame />
+        <RankBadge rank={user.rank} />
       </div>
 
-      {/* Styled Golden Podium Card matching mobile screenshot */}
+      {/* Styled Golden/Cream Podium Card matching Screenshot 4 */}
       <div
         style={{
           width: '100%',
-          height: `${theme.cardHeight}px`,
-          background: theme.background,
-          border: `1px solid ${theme.borderColor}`,
+          height: `${cardHeight}px`,
+          background: '#FFF8E7',
+          border: isFirst ? '2px solid #FCD34D' : '1.5px solid #FEE5A5',
           borderRadius: '22px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          paddingTop: `${theme.overlapOffset + 14}px`,
+          paddingTop: `${overlapOffset + 12}px`,
           paddingBottom: '14px',
-          paddingLeft: '8px',
-          paddingRight: '8px',
-          boxShadow: theme.glow,
+          paddingLeft: '6px',
+          paddingRight: '6px',
+          boxShadow: isFirst
+            ? '0 10px 24px rgba(251, 191, 36, 0.22)'
+            : '0 6px 16px rgba(0, 0, 0, 0.05)',
           boxSizing: 'border-box',
-          transition: 'transform 0.25s ease, box-shadow 0.25s ease',
         }}
       >
-        {/* Username */}
+        {/* Full Name */}
         <strong
           style={{
-            fontSize: user.rank === 1 ? '16px' : '14px',
+            fontSize: isFirst ? '15px' : '13.5px',
             fontWeight: 800,
-            color: theme.nameColor,
+            color: '#111827',
             textAlign: 'center',
             maxWidth: '100%',
             overflow: 'hidden',
@@ -285,22 +237,39 @@ const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
           {user.name}
         </strong>
 
-        {/* Streak with Fire Flame Icon matching screenshot 2 */}
+        {/* Tier Title: Dominating, Active Chaser, Rising Star */}
+        <span
+          style={{
+            fontSize: isFirst ? '13px' : '12px',
+            fontWeight: 600,
+            color: '#374151',
+            textAlign: 'center',
+            marginTop: '4px',
+            maxWidth: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {tierTitle}
+        </span>
+
+        {/* Streak with Fire Flame Icon matching Screenshot 4 */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '5px',
-            marginTop: '8px',
+            marginTop: isFirst ? '12px' : '8px',
           }}
         >
           <span style={{ fontSize: '15px', lineHeight: 1 }}>🔥</span>
           <span
             style={{
-              fontSize: user.rank === 1 ? '14px' : '13px',
+              fontSize: isFirst ? '14px' : '13px',
               fontWeight: 700,
-              color: theme.streakColor,
+              color: '#111827',
               whiteSpace: 'nowrap',
             }}
           >
@@ -317,7 +286,7 @@ export const Rankings: React.FC = () => {
   const navigate = useNavigate();
   const [dataset, setDataset] = useState<LeaderboardDataset>(emptyDataset);
   const [loading, setLoading] = useState(false);
-  const [infoModalOpen, setInfoModalOpen] = useState(true);
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -492,100 +461,90 @@ export const Rankings: React.FC = () => {
         </div>
       )}
 
-      {/* Remaining Leaderboard Rankings (Rank 4, 5, 6...) */}
+      {/* Remaining Leaderboard Rankings (Rank 4, 5, 6...) matching Screenshot 4 */}
       {dataset.rankings.length > 0 && (
         <div
-          className="card"
           style={{
-            padding: '12px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px',
-            borderRadius: '18px',
-            boxShadow: 'var(--shadow-sm)',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
+            gap: '10px',
+            width: '100%',
           }}
         >
           {dataset.rankings.map((item) => (
             <div
               key={item.id}
+              className="card"
               style={{
-                padding: '10px 12px',
+                padding: '12px 16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderRadius: '12px',
-                background: 'var(--bg-card-secondary)',
+                borderRadius: '16px',
+                background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)',
-                transition: 'transform 0.15s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                boxSizing: 'border-box',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                {/* Rank Number */}
                 <span
                   style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '50%',
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border-color)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '13px',
+                    fontSize: '15.5px',
                     fontWeight: 800,
                     color: 'var(--text-muted)',
+                    minWidth: '22px',
+                    textAlign: 'center',
                     flexShrink: 0,
                   }}
                 >
                   {item.rank}
                 </span>
 
+                {/* Avatar */}
                 <UserAvatar
                   src={item.avatar}
                   name={item.name}
-                  size={40}
+                  size={42}
                   borderColor="var(--border-color)"
                 />
 
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <h4
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      color: 'var(--text-main)',
-                      margin: 0,
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {item.name}
-                  </h4>
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      color: 'var(--text-muted)',
-                      marginTop: '2px',
-                    }}
-                  >
-                    {t('rankingsScreen.currentStreak', 'Current streak')}
-                  </span>
-                </div>
+                {/* User Name */}
+                <span
+                  style={{
+                    fontSize: '14.5px',
+                    fontWeight: 700,
+                    color: 'var(--text-main)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={item.name}
+                >
+                  {item.name}
+                </span>
               </div>
 
+              {/* Streak with flame */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 14px',
-                  borderRadius: '999px',
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-color)',
-                  boxShadow: 'var(--shadow-sm)',
+                  gap: '4px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  marginLeft: '12px',
                 }}
               >
-                <span style={{ fontSize: '14px', lineHeight: 1 }}>🔥</span>
-                <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                <span style={{ fontSize: '15px', lineHeight: 1 }}>🔥</span>
+                <strong
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 800,
+                    color: '#EA580C',
+                  }}
+                >
                   {item.streak}
                 </strong>
               </div>

@@ -16,6 +16,7 @@ import {
   Trash2,
   UserCheck,
   UserPlus,
+  Video,
   X,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
@@ -37,7 +38,7 @@ import {
   updateComment,
   updatePost,
 } from '../../redux/Slices/feedSlice';
-import { Container, CustomModal, showToast } from '../../components';
+import { Container, CustomModal, ReportModal, showToast } from '../../components';
 import feedServices from '../../services/feedServices';
 import pollServices from '../../services/pollServices';
 import { confirmAppAction, promptAppInput } from '../../utils/sweetAlert';
@@ -62,6 +63,7 @@ type FeedPost = {
   time: string;
   content: string;
   image?: string;
+  media_type?: string;
   likes: number;
   liked: boolean;
   userId?: string | number;
@@ -140,6 +142,12 @@ const normalizeComment = (comment: any, t: TranslateFn): FeedComment => {
   };
 };
 
+const isVideoUrl = (url?: string, type?: string) => {
+  if (!url) return false;
+  if (type === 'video') return true;
+  return /\.(mp4|mov|webm|m4v|ogg)(\?.*)?$/i.test(url);
+};
+
 const normalizePost = (post: any, t: TranslateFn): FeedPost => {
   const user = post?.user ?? post?.author ?? {};
   const comments = Array.isArray(post?.comments) ? post.comments : [];
@@ -150,6 +158,7 @@ const normalizePost = (post: any, t: TranslateFn): FeedPost => {
     post?.imageUrl ??
     post?.media ??
     post?.file_url;
+  const media_type = post?.media_type ?? (isVideoUrl(image) ? 'video' : 'image');
 
   return {
     id: post?.id,
@@ -167,6 +176,7 @@ const normalizePost = (post: any, t: TranslateFn): FeedPost => {
     time: formatTime(post?.created_at ?? post?.createdAt),
     content: post?.description ?? post?.content ?? post?.body ?? '',
     image,
+    media_type,
     likes: Number(post?.likes_count ?? post?.likes ?? post?.reactions_count ?? 0),
     liked: Boolean(post?.liked ?? post?.is_liked ?? post?.isLiked),
     userId: user?.id ?? post?.user_id ?? post?.userId,
@@ -257,6 +267,17 @@ export const Feed: React.FC = () => {
   const editFileInputRef = useRef<HTMLInputElement | null>(null);
   // Floating New Post button visibility (only visible when scrolled down; hides when at top)
   const [showFloatingNewPost, setShowFloatingNewPost] = useState(false);
+  const [reportModalState, setReportModalState] = useState<{
+    visible: boolean;
+    targetId: string | number;
+    targetType: 'post' | 'comment' | 'account';
+    targetName?: string;
+  }>({
+    visible: false,
+    targetId: '',
+    targetType: 'post',
+    targetName: '',
+  });
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -502,22 +523,15 @@ export const Feed: React.FC = () => {
   );
 
   const handleReportPost = useCallback(
-    async (postId: string | number) => {
-      const reason = await getReportReason(t('feedScreen.reportTargetPost', 'post'));
-      if (!reason) return;
-
-      try {
-        await dispatch(reportPost({ postId, reason })).unwrap();
-        showToast({ type: 'success', text1: t('feedScreen.toast.postReportSubmittedTitle', 'Post report submitted') });
-      } catch (error: any) {
-        showToast({
-          type: 'error',
-          text1: t('feedScreen.toast.postReportNotSentTitle', 'Post report not sent'),
-          text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
-        });
-      }
+    (postId: string | number, authorName?: string) => {
+      setReportModalState({
+        visible: true,
+        targetId: postId,
+        targetType: 'post',
+        targetName: authorName,
+      });
     },
-    [dispatch, t],
+    [],
   );
 
   const handleEditComment = useCallback(
@@ -652,23 +666,16 @@ export const Feed: React.FC = () => {
   );
 
   const handleReportComment = useCallback(
-    async (commentId: string | number) => {
+    (commentId: string | number, authorName?: string) => {
       if (String(commentId).startsWith('temp-')) return;
-      const reason = await getReportReason(t('feedScreen.reportTargetComment', 'comment'));
-      if (!reason) return;
-
-      try {
-        await dispatch(reportComment({ commentId, reason })).unwrap();
-        showToast({ type: 'success', text1: t('feedScreen.toast.commentReportSubmittedTitle', 'Comment report submitted') });
-      } catch (error: any) {
-        showToast({
-          type: 'error',
-          text1: t('feedScreen.toast.commentReportNotSentTitle', 'Comment report not sent'),
-          text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
-        });
-      }
+      setReportModalState({
+        visible: true,
+        targetId: commentId,
+        targetType: 'comment',
+        targetName: authorName,
+      });
     },
-    [dispatch, t],
+    [],
   );
 
   const handleVote = useCallback(
@@ -1007,18 +1014,65 @@ export const Feed: React.FC = () => {
               </div>
 
               {post.content && (
-                <p style={{ fontSize: '14px', color: 'var(--text-main)', lineHeight: '1.5', margin: 0 }}>
-                  {post.content}
-                </p>
+                <div
+                  style={{
+                    padding: !post.image ? '14px 18px' : '0',
+                    background: !post.image ? 'var(--bg-card-secondary)' : 'transparent',
+                    borderRadius: !post.image ? '14px' : '0',
+                    border: !post.image ? '1px solid var(--border-color)' : 'none',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: !post.image ? '15.5px' : '14px',
+                      fontWeight: !post.image ? 500 : 400,
+                      color: 'var(--text-main)',
+                      lineHeight: '1.6',
+                      margin: 0,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {post.content}
+                  </p>
+                </div>
               )}
 
               {post.image && (
-                <div style={{ width: '100%', maxHeight: '340px', borderRadius: '16px', overflow: 'hidden' }}>
-                  <img
-                    src={post.image}
-                    alt={t('feedScreen.postAttachmentAlt', 'Post attachment')}
-                    style={{ width: '100%', height: '100%', maxHeight: '340px', objectFit: 'cover', display: 'block' }}
-                  />
+                <div
+                  style={{
+                    width: '100%',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    background: 'var(--bg-card-secondary)',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  {isVideoUrl(post.image, post.media_type) ? (
+                    <video
+                      src={post.image}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      style={{
+                        width: '100%',
+                        maxHeight: '440px',
+                        display: 'block',
+                        background: '#000000',
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={post.image}
+                      alt={t('feedScreen.postAttachmentAlt', 'Post attachment')}
+                      style={{
+                        width: '100%',
+                        maxHeight: '380px',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
+                  )}
                 </div>
               )}
 
@@ -1085,7 +1139,7 @@ export const Feed: React.FC = () => {
                 {/* Report button for other users' posts only (replaces Share button) */}
                 {!isOwnPost && (
                   <button
-                    onClick={() => handleReportPost(post.id)}
+                    onClick={() => handleReportPost(post.id, post.author)}
                     title={t('feedScreen.reportPostLabel', 'Report post')}
                     style={{
                       background: 'none',
@@ -1268,7 +1322,7 @@ export const Feed: React.FC = () => {
                         <span>{t('feedScreen.comments.replyLabel', 'Reply')}</span>
                       </button>
                       <button
-                        onClick={() => handleReportComment(comment.id)}
+                        onClick={() => handleReportComment(comment.id, comment.user)}
                         title={t('feedScreen.comments.reportLabel', 'Report comment')}
                         style={{
                           background: 'transparent',
@@ -1537,18 +1591,27 @@ export const Feed: React.FC = () => {
               style={{
                 position: 'relative',
                 width: '100%',
-                maxHeight: '260px',
+                maxHeight: '280px',
                 borderRadius: '14px',
                 overflow: 'hidden',
                 border: '1px solid var(--border-color)',
-                background: 'var(--bg-card-secondary)',
+                background: '#000',
               }}
             >
-              <img
-                src={editMediaPreview}
-                alt={t('createPost.previewImageAlt', 'Preview')}
-                style={{ width: '100%', maxHeight: '260px', objectFit: 'cover', display: 'block' }}
-              />
+              {isVideoUrl(editMediaPreview, editMediaFile?.type) ? (
+                <video
+                  src={editMediaPreview}
+                  controls
+                  playsInline
+                  style={{ width: '100%', maxHeight: '280px', display: 'block', background: '#000' }}
+                />
+              ) : (
+                <img
+                  src={editMediaPreview}
+                  alt={t('createPost.previewImageAlt', 'Preview')}
+                  style={{ width: '100%', maxHeight: '260px', objectFit: 'cover', display: 'block' }}
+                />
+              )}
               <button
                 type="button"
                 onClick={handleRemoveEditImage}
@@ -1577,7 +1640,7 @@ export const Feed: React.FC = () => {
           <input
             type="file"
             ref={editFileInputRef}
-            accept="image/*"
+            accept="image/*,video/*"
             style={{ display: 'none' }}
             onChange={handleEditImageSelect}
           />
@@ -1608,10 +1671,11 @@ export const Feed: React.FC = () => {
               }}
             >
               <ImageIcon size={15} />
+              <Video size={15} />
               <span>
                 {editMediaPreview
-                  ? t('feedScreen.changeImage', 'Change Photo')
-                  : t('createPost.addReceiptPhoto', 'Add Photo')}
+                  ? t('feedScreen.changeMedia', 'Change Media')
+                  : t('createPost.addMedia', 'Add Photo / Video')}
               </span>
             </button>
 
@@ -1645,6 +1709,15 @@ export const Feed: React.FC = () => {
           </div>
         </div>
       </CustomModal>
+
+      {/* Reusable Report Modal Bottom Sheet matching mobile design */}
+      <ReportModal
+        visible={reportModalState.visible}
+        onClose={() => setReportModalState((prev) => ({ ...prev, visible: false }))}
+        targetId={reportModalState.targetId}
+        targetType={reportModalState.targetType}
+        targetName={reportModalState.targetName}
+      />
     </Container>
   );
 };
