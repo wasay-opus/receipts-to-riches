@@ -295,9 +295,7 @@
   box-shadow: none !important;
   transform: translateZ(0);
   will-change: transform;
-  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
-    border-color 0.25s ease,
-    filter 0.25s ease !important;
+  transition: .5s;
   user-select: none;
 }
 
@@ -586,6 +584,17 @@
   color: var(--text-main);
   margin: 0;
   letter-spacing: -0.3px;
+}
+
+.social-profile-bio {
+  font-size: 14.5px;
+  color: var(--text-main);
+  margin-top: 6px;
+  margin-bottom: 4px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 650px;
 }
 
 .social-profile-location {

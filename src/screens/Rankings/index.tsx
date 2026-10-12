@@ -317,7 +317,7 @@ export const Rankings: React.FC = () => {
   const navigate = useNavigate();
   const [dataset, setDataset] = useState<LeaderboardDataset>(emptyDataset);
   const [loading, setLoading] = useState(false);
-  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [infoModalOpen, setInfoModalOpen] = useState(true);
 
   useEffect(() => {
     let isMounted = true;

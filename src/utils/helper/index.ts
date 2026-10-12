@@ -21,7 +21,8 @@ export const formatDOBForAPI = (date: Date) => {
 
 const base_url: string =
   (import.meta as any).env?.VITE_BASE_URL ||
-  'https://receipts-to-riches.koderspedia.live/api';
+  (import.meta as any).env?.BASE_URL ||
+  'https://api.receiptstoriches.net/api';
 
 const API_TIMEOUT_MS = 30000;
 const API_FEEDBACK_COOLDOWN_MS = 3000;

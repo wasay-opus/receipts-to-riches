@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Moon, Sun, Bell, Globe } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Bell, Globe, Crown } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { RootState } from '../../redux/Store';
@@ -106,6 +106,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>{Number(totalCoins).toLocaleString()}</span>
               </div>
             )}
+
+            <button
+              onClick={() => navigate('/rankings')}
+              title="Rankings Leaderboard"
+              className="header-icon-btn"
+            >
+              <Crown size={17} color="#f59e0b" />
+            </button>
 
             <button
               onClick={handleLanguageToggle}

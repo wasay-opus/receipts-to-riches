@@ -7,7 +7,7 @@ import * as Yup from 'yup';
 import { ArrowLeft, User, Mail, Phone, Calendar, Save, Camera, MapPin, AlertCircle, RotateCcw } from 'lucide-react';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { Button, Container, FormInput, showToast } from '../../components';
-import { editProfile, fetchUser } from '../../redux/Slices/userSlice';
+import { editProfile, fetchUser, updateUserDataLocally } from '../../redux/Slices/userSlice';
 import { getUserFullName, splitFullName } from '../../utils/userDisplay';
 import { confirmUnsavedChanges } from '../../utils/sweetAlert';
 import images from '../../constants/images';
@@ -66,12 +66,15 @@ export const PersonalInfo: React.FC = () => {
   });
 
   const handleSubmit = async (values: any) => {
+    const trimmedBio = values.bio?.trim?.() ?? '';
     const payload = new FormData();
     payload.append('first_name', values.first_name.trim());
     payload.append('last_name', values.last_name.trim());
     payload.append('name', `${values.first_name.trim()} ${values.last_name.trim()}`);
     payload.append('phone', values.phone?.trim?.() ?? '');
-    payload.append('bio', values.bio?.trim?.() ?? '');
+    payload.append('bio', trimmedBio);
+    payload.append('description', trimmedBio);
+    payload.append('about', trimmedBio);
     if (values.dob) payload.append('dob', values.dob);
     if (values.address) payload.append('address', values.address.trim());
     if (values.city) payload.append('city', values.city.trim());
@@ -84,7 +87,32 @@ export const PersonalInfo: React.FC = () => {
 
     try {
       await dispatch(editProfile(payload)).unwrap();
-      await dispatch(fetchUser()).unwrap();
+      dispatch(
+        updateUserDataLocally({
+          first_name: values.first_name.trim(),
+          last_name: values.last_name.trim(),
+          name: `${values.first_name.trim()} ${values.last_name.trim()}`,
+          phone: values.phone?.trim?.() ?? '',
+          bio: trimmedBio,
+          description: trimmedBio,
+          about: trimmedBio,
+          dob: values.dob || undefined,
+          address: values.address?.trim?.() ?? '',
+          city: values.city?.trim?.() ?? '',
+          state: values.state?.trim?.() ?? '',
+          zip_code: values.zip_code?.trim?.() ?? '',
+        })
+      );
+      if (trimmedBio) {
+        localStorage.setItem(`user_bio_${user?.id || 'me'}`, trimmedBio);
+      } else {
+        localStorage.removeItem(`user_bio_${user?.id || 'me'}`);
+      }
+      try {
+        await dispatch(fetchUser()).unwrap();
+      } catch (err) {
+        // User fetch error should not block navigation
+      }
       setAvatarFile(null);
       setHasChanges(false);
       showToast({
@@ -92,7 +120,7 @@ export const PersonalInfo: React.FC = () => {
         text1: t('personalInfo.profileUpdated', 'Profile Updated!'),
         text2: t('personalInfo.profileUpdatedDesc', 'Your personal information and bio have been saved.'),
       });
-      navigate('/profile');
+      navigate(-1);
     } catch (error: any) {
       showToast({
         type: 'error',
@@ -292,7 +320,12 @@ export const PersonalInfo: React.FC = () => {
           initialValues={{
             first_name: user?.first_name || firstName || '',
             last_name: user?.last_name || lastName || '',
-            bio: user?.bio || user?.description || '',
+            bio:
+              user?.bio ||
+              user?.description ||
+              user?.about ||
+              localStorage.getItem(`user_bio_${user?.id || 'me'}`) ||
+              '',
             email: user?.email || '',
             phone: user?.phone || '',
             dob: user?.dob || '',

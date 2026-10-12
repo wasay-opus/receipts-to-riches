@@ -139,6 +139,23 @@ export const SocialProfile: React.FC = () => {
     return 'New York City, New York';
   }, [activeProfile]);
 
+  const userBio = useMemo(() => {
+    const storedBio = localStorage.getItem(`user_bio_${currentUser?.id || 'me'}`) || '';
+    if (isOwnProfile) {
+      return (
+        currentUser?.bio ||
+        currentUser?.about ||
+        currentUser?.description ||
+        activeProfile?.bio ||
+        activeProfile?.about ||
+        activeProfile?.description ||
+        storedBio ||
+        ''
+      );
+    }
+    return activeProfile?.bio || activeProfile?.about || activeProfile?.description || '';
+  }, [isOwnProfile, currentUser, activeProfile]);
+
   const handleFollow = async () => {
     if (!profileId) return;
 
@@ -274,11 +291,17 @@ export const SocialProfile: React.FC = () => {
           )}
         </div>
 
-        {/* User Display Name & Location */}
+        {/* User Display Name, Bio & Location */}
         <div className="social-profile-header-info">
           <h2 className="social-profile-name">
             {displayName}
           </h2>
+
+          {userBio ? (
+            <p className="social-profile-bio">
+              {userBio}
+            </p>
+          ) : null}
 
           <div className="social-profile-location">
             <MapPin size={16} color="var(--text-muted)" />

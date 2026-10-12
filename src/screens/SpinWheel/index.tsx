@@ -117,10 +117,10 @@ export const SpinWheel: React.FC = () => {
       ctx.rotate(segAngle + arcSize / 2);
       ctx.textAlign = 'right';
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 12px Poppins, sans-serif';
+      ctx.font = 'bold 11px Poppins, sans-serif';
       ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(getSegmentLabel(seg), radius - 16, 4);
+      ctx.shadowBlur = 3;
+      ctx.fillText(getSegmentLabel(seg), radius - 14, 4);
       ctx.restore();
     });
 
@@ -128,22 +128,22 @@ export const SpinWheel: React.FC = () => {
 
     // Draw Outer Rim with Golden Border
     ctx.beginPath();
-    ctx.arc(center, center, radius + 5, 0, 2 * Math.PI);
-    ctx.lineWidth = 10;
+    ctx.arc(center, center, radius + 4, 0, 2 * Math.PI);
+    ctx.lineWidth = 8;
     ctx.strokeStyle = '#D5AD60';
     ctx.stroke();
 
     // Draw Center Cap
     ctx.beginPath();
-    ctx.arc(center, center, 28, 0, 2 * Math.PI);
+    ctx.arc(center, center, 22, 0, 2 * Math.PI);
     ctx.fillStyle = '#151A2A';
     ctx.fill();
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = '#FFD700';
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(center, center, 14, 0, 2 * Math.PI);
+    ctx.arc(center, center, 11, 0, 2 * Math.PI);
     ctx.fillStyle = '#FFD700';
     ctx.fill();
   };
@@ -267,14 +267,20 @@ export const SpinWheel: React.FC = () => {
       {/* 2-Column Responsive Layout: Left (Game Wheel) & Right (Campaign + Rules) */}
       <div className="game-screen-grid">
         {/* Left: Main Game Wheel Arena Card */}
-        <div className="card game-arena-card">
+        <div
+          className="card game-arena-card"
+          style={{
+            padding: '20px 20px 18px 20px',
+            gap: '12px',
+          }}
+        >
           {/* Card Header */}
-          <div className="game-arena-header">
+          <div className="game-arena-header" style={{ paddingBottom: '10px' }}>
             <div>
               <span className="game-arena-badge game-arena-badge--spin">
                 SPIN &bull; 500 PTS TOP PRIZE
               </span>
-              <p className="game-arena-desc">
+              <p className="game-arena-desc" style={{ marginTop: '4px', fontSize: '12.5px' }}>
                 {t('spinWheel.subtitle', 'Spin the wheel to win instant cash points and free re-spins!')}
               </p>
             </div>
@@ -293,33 +299,33 @@ export const SpinWheel: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '12px',
-              margin: '8px 0',
+              padding: '4px',
+              margin: '2px 0',
             }}
           >
             {/* Top Pointer Needle */}
             <div
               style={{
                 position: 'absolute',
-                top: '-4px',
+                top: '-2px',
                 zIndex: 10,
                 width: 0,
                 height: 0,
-                borderLeft: '16px solid transparent',
-                borderRight: '16px solid transparent',
-                borderTop: '32px solid #F59E0B',
-                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3)) drop-shadow(0 0 8px rgba(245, 158, 11, 0.6))',
+                borderLeft: '13px solid transparent',
+                borderRight: '13px solid transparent',
+                borderTop: '26px solid #F59E0B',
+                filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.3)) drop-shadow(0 0 6px rgba(245, 158, 11, 0.6))',
               }}
             />
 
             <canvas
               ref={canvasRef}
-              width={340}
-              height={340}
+              width={260}
+              height={260}
               style={{
                 maxWidth: '100%',
                 height: 'auto',
-                filter: 'drop-shadow(0 12px 28px rgba(0, 0, 0, 0.18))',
+                filter: 'drop-shadow(0 10px 24px rgba(0, 0, 0, 0.16))',
               }}
             />
           </div>
@@ -331,17 +337,17 @@ export const SpinWheel: React.FC = () => {
             disabled={isSpinning || playableSlots === 0}
             style={{
               width: '100%',
-              maxWidth: '420px',
-              padding: '16px',
-              borderRadius: '24px',
+              maxWidth: '380px',
+              padding: '13px 20px',
+              borderRadius: '20px',
               background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
               color: '#FFFFFF',
               border: 'none',
-              fontSize: '16px',
+              fontSize: '15px',
               fontWeight: 800,
               cursor: isSpinning || (unlockedMiniGamesFetched && playableSlots === 0) ? 'not-allowed' : 'pointer',
               opacity: isSpinning || (unlockedMiniGamesFetched && playableSlots === 0) ? 0.7 : 1,
-              boxShadow: '0 6px 18px rgba(217, 119, 6, 0.35)',
+              boxShadow: '0 5px 15px rgba(217, 119, 6, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -355,7 +361,7 @@ export const SpinWheel: React.FC = () => {
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <RotateCw size={20} className={isSpinning ? 'spin-anim' : ''} />
+            <RotateCw size={19} className={isSpinning ? 'spin-anim' : ''} />
             <span>
               {isSpinning
                 ? t('spinWheel.spinning', 'SPINNING...')
