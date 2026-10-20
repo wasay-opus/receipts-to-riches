@@ -11,6 +11,9 @@ import {
   X,
   Search,
   Check,
+  Play,
+  Video,
+  Sparkles,
 } from 'lucide-react';
 import { Container, Button } from '../../components';
 import images from '../../constants/images';
@@ -18,6 +21,46 @@ import winnerServices from '../../services/winnerServices';
 import gameServices from '../../services/gameServices';
 
 type WinnerTab = 'winner' | 'results';
+
+export interface WinnerVideoItem {
+  id: string;
+  winnerName: string;
+  gameTitle: string;
+  prizeAmount: string;
+  videoUrl: string;
+  tag: string;
+  description?: string;
+}
+
+export const PREVIOUS_WINNERS_VIDEOS: WinnerVideoItem[] = [
+  {
+    id: 'vid-1',
+    winnerName: 'Sarah Jenkins',
+    gameTitle: 'Pick 4 Game',
+    prizeAmount: '$4,000 Cash',
+    videoUrl: 'https://api.receiptstoriches.net/images/game-guide/video-folder/ourWinners.mov',
+    tag: 'Previous Grand Winner',
+    description: 'Celebrating a massive $4,000 winning receipt upload!',
+  },
+  {
+    id: 'vid-2',
+    winnerName: 'Marcus Johnson',
+    gameTitle: 'Pic-Pick Instant Game',
+    prizeAmount: '$2,500 Cash',
+    videoUrl: 'https://api.receiptstoriches.net/images/game-guide/video-folder/IMG_6536.mp4',
+    tag: 'Previous Instant Winner',
+    description: 'Instant win celebration from shopping receipt uploads!',
+  },
+  {
+    id: 'vid-3',
+    winnerName: 'Elena Rodriguez',
+    gameTitle: 'Zip Date Time (ZDT)',
+    prizeAmount: '$1,000 Cash',
+    videoUrl: 'https://api.receiptstoriches.net/images/game-guide/video-folder/IMG_0.MOV',
+    tag: 'Previous Daily Winner',
+    description: 'Daily cash winner turning everyday receipts into real dollars!',
+  },
+];
 
 interface WinnerItem {
   id: string | number;
@@ -78,6 +121,7 @@ export const Winners: React.FC = () => {
   const [winners, setWinners] = useState<WinnerItem[]>([]);
   const [winnersLoading, setWinnersLoading] = useState(false);
   const [winnersError, setWinnersError] = useState<string | null>(null);
+  const [activeVideoModal, setActiveVideoModal] = useState<WinnerVideoItem | null>(null);
 
   // Results state
   const [selectedGameSlug, setSelectedGameSlug] = useState<string>('pick-5');
@@ -526,21 +570,322 @@ export const Winners: React.FC = () => {
 
       {/* 3. Tab Content */}
       {activeTab === 'winner' ? (
-        /* Winner List */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {winnersLoading && winners.length === 0 && (
-            <div className="card" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              {t('winners.loadingWinners', 'Loading winners...')}
-            </div>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Previous Winners' Video Showcase (Client 5th Point) */}
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              borderRadius: '24px',
+              padding: '20px 16px',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--shadow-sm)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}
+          >
+            {/* Section Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '12px',
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#F59E0B',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Video size={19} />
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: '16.5px',
+                      fontWeight: 800,
+                      color: 'var(--text-main)',
+                      margin: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>Previous Winners' Videos</span>
+                    <Sparkles size={14} color="#F59E0B" />
+                  </h3>
+                  <p
+                    style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: '12px',
+                      color: 'var(--text-muted)',
+                      margin: '2px 0 0 0',
+                    }}
+                  >
+                    Watch real winner celebrations & previous winner stories
+                  </p>
+                </div>
+              </div>
 
-          {!winnersLoading && winners.length === 0 && (
-            <div className="card" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              {winnersError || t('winners.noWinnersYet', 'No winners found.')}
+              <span
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  background: 'rgba(0, 208, 102, 0.12)',
+                  border: '1px solid rgba(0, 208, 102, 0.3)',
+                  color: '#00D066',
+                  borderRadius: '20px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                }}
+              >
+                3 Featured Videos
+              </span>
             </div>
-          )}
 
-          {winners.map((winner) => (
+            {/* Video Cards Grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '14px',
+                width: '100%',
+              }}
+            >
+              {PREVIOUS_WINNERS_VIDEOS.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setActiveVideoModal(item)}
+                  style={{
+                    background: 'var(--bg-card-secondary, #F8FAFC)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '18px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: 'var(--shadow-sm)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.boxShadow = '0 8px 22px rgba(0,0,0,0.12)';
+                    e.currentTarget.style.borderColor = '#F59E0B';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                  }}
+                >
+                  {/* Video Thumbnail Box with Glowing Play Button */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '62%',
+                      background: '#0B0F19',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <video
+                      src={item.videoUrl}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        opacity: 0.72,
+                      }}
+                    />
+                    {/* Gradient Overlay */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%)',
+                      }}
+                    />
+
+                    {/* Tag badge on top */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        backdropFilter: 'blur(4px)',
+                        borderRadius: '8px',
+                        padding: '2px 8px',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: '#FBBF24',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Trophy size={10} color="#FBBF24" />
+                      <span>{item.tag}</span>
+                    </div>
+
+                    {/* Big Center Glowing Play Button */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #00D066 0%, #009944 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#FFFFFF',
+                        boxShadow: '0 4px 16px rgba(0, 208, 102, 0.55)',
+                      }}
+                    >
+                      <Play size={18} fill="#FFFFFF" style={{ marginLeft: '2px' }} />
+                    </div>
+                  </div>
+
+                  {/* Card Content with Previous Winner Name */}
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      flex: 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                      <span
+                        style={{
+                          fontFamily: "'Plus Jakarta Sans', sans-serif",
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#F59E0B',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.4px',
+                        }}
+                      >
+                        Previous Winner
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "'Plus Jakarta Sans', sans-serif",
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          color: '#00D066',
+                        }}
+                      >
+                        {item.prizeAmount}
+                      </span>
+                    </div>
+
+                    <h4
+                      style={{
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        fontSize: '15px',
+                        fontWeight: 800,
+                        color: 'var(--text-main)',
+                        margin: '2px 0 0 0',
+                      }}
+                    >
+                      {item.winnerName}
+                    </h4>
+
+                    <p
+                      style={{
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                        margin: '0 0 8px 0',
+                      }}
+                    >
+                      {item.gameTitle}
+                    </p>
+
+                    <button
+                      type="button"
+                      style={{
+                        marginTop: 'auto',
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '10px',
+                        background: 'rgba(0, 208, 102, 0.1)',
+                        border: '1px solid rgba(0, 208, 102, 0.25)',
+                        color: '#00D066',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <Play size={12} fill="currentColor" />
+                      <span>Watch Winner Video</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Subheader: Recent Daily Winners */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+            <Trophy size={17} color="#F59E0B" />
+            <h3
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '16px',
+                fontWeight: 800,
+                color: 'var(--text-main)',
+                margin: 0,
+              }}
+            >
+              Recent Daily Winners
+            </h3>
+          </div>
+
+          {/* Winner List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {winnersLoading && winners.length === 0 && (
+              <div className="card" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                {t('winners.loadingWinners', 'Loading winners...')}
+              </div>
+            )}
+
+            {!winnersLoading && winners.length === 0 && (
+              <div className="card" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                {winnersError || t('winners.noWinnersYet', 'No winners found.')}
+              </div>
+            )}
+
+            {winners.map((winner) => (
             <div
               key={winner.id}
               className="card"
@@ -671,6 +1016,7 @@ export const Winners: React.FC = () => {
               </div>
             </div>
           ))}
+          </div>
         </div>
       ) : (
         /* Results Table View (Screenshot 1 & 2) */
@@ -1072,6 +1418,176 @@ export const Winners: React.FC = () => {
                   </span>
                 </div>
               ))}
+          </div>
+        </div>
+      )}
+
+      {/* Video Modal Player matching modern sleek dark theme */}
+      {activeVideoModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+          onClick={() => setActiveVideoModal(null)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '620px',
+              background: '#16181D',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              display: 'flex',
+              flexDirection: 'column',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '16px 20px',
+                background: '#1F2228',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#F59E0B',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Trophy size={18} />
+                </div>
+                <div>
+                  <h4
+                    style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: '16px',
+                      fontWeight: 800,
+                      color: '#FFFFFF',
+                      margin: 0,
+                    }}
+                  >
+                    {activeVideoModal.winnerName}
+                  </h4>
+                  <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '2px 0 0 0' }}>
+                    {activeVideoModal.gameTitle} • <strong style={{ color: '#00D066' }}>{activeVideoModal.prizeAmount}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveVideoModal(null)}
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#9CA3AF',
+                  transition: 'background 0.2s ease, color 0.2s ease',
+                }}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Video Container */}
+            <div
+              style={{
+                background: '#000000',
+                padding: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '340px',
+              }}
+            >
+              <video
+                key={activeVideoModal.videoUrl}
+                controls
+                autoPlay
+                playsInline
+                style={{
+                  width: '100%',
+                  maxHeight: '65vh',
+                  borderRadius: '14px',
+                  background: '#000',
+                  outline: 'none',
+                }}
+              >
+                <source src={activeVideoModal.videoUrl} type="video/mp4" />
+                <source src={activeVideoModal.videoUrl} type="video/quicktime" />
+                Your browser does not support HTML5 video.
+              </video>
+            </div>
+
+            {/* Modal Footer with Video Details */}
+            <div
+              style={{
+                padding: '14px 20px',
+                background: '#1F2228',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={15} color="#F59E0B" />
+                <span style={{ fontSize: '12px', color: '#CBD5E1' }}>
+                  {activeVideoModal.description || 'Verified Winner Story'}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveVideoModal(null)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#FFFFFF',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
