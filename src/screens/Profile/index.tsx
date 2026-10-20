@@ -23,6 +23,7 @@ import { RootState, AppDispatch } from '../../redux/Store';
 import { logout } from '../../redux/Slices/authSlice';
 import { deleteUser, fetchUser } from '../../redux/Slices/userSlice';
 import { showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import {
   getUserAvatarUrl,
   getUserCoverUrl,
@@ -79,7 +80,7 @@ export const Profile: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('profile.accountNotDeletedTitle', 'Account not deleted'),
-        text2: error?.message || String(error || t('profile.genericTryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(error, t('profile.genericTryAgain', 'Please try again.')),
       });
     }
   };

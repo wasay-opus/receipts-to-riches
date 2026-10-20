@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import userServices from '../../services/userServices';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 interface UserState {
   userData: any | null;
@@ -21,29 +22,7 @@ interface UserState {
 }
 
 const extractMessage = (payload: any, fallback: string): string => {
-  const userFriendlyMessage = payload?.user_friendly_message;
-  if (
-    typeof userFriendlyMessage === 'string' &&
-    userFriendlyMessage.trim().length > 0
-  ) {
-    return userFriendlyMessage;
-  }
-
-  const message = payload?.message;
-  if (Array.isArray(message) && typeof message[0] === 'string') {
-    return message[0];
-  }
-  if (typeof message === 'string' && message.trim().length > 0) {
-    return message;
-  }
-  const nestedError = payload?.error;
-  if (Array.isArray(nestedError) && typeof nestedError[0] === 'string') {
-    return nestedError[0];
-  }
-  if (typeof nestedError === 'string' && nestedError.trim().length > 0) {
-    return nestedError;
-  }
-  return fallback;
+  return getUserFriendlyErrorMessage(payload, fallback);
 };
 
 const extractWallet = (payload: any) => {

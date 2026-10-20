@@ -165,6 +165,8 @@ function App() {
         <Route path="/feed/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
         <Route path="/social-profile" element={<ProtectedRoute><SocialProfile /></ProtectedRoute>} />
         <Route path="/social-profile/:userId" element={<ProtectedRoute><SocialProfile /></ProtectedRoute>} />
+        <Route path="/post/:postId" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
+        <Route path="/posts/:postId" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
 
         {/* Campaigns */}
         <Route path="/campaigns" element={<ProtectedRoute><ManageCampaigns /></ProtectedRoute>} />

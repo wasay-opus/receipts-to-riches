@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, HelpCircle, ArrowLeft, RotateCw, RotateCcw, Megaphone } from 'lucide-react';
 import { Button, Container, CustomModal, showToast, triggerCoinCelebration } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
+import { isDeviceInUSTimezone, UNSUPPORTED_TIMEZONE_MESSAGE } from '../../utils/usTime';
 import { WebSound, soundAssets } from '../../utils/soundLoader';
 import images from '../../constants/images';
 
@@ -151,6 +153,15 @@ export const SpinWheel: React.FC = () => {
   const spin = async () => {
     if (isSpinning) return;
 
+    if (!isDeviceInUSTimezone()) {
+      showToast({
+        type: 'error',
+        text1: 'Play Blocked',
+        text2: UNSUPPORTED_TIMEZONE_MESSAGE,
+      });
+      return;
+    }
+
     if (unlockedMiniGamesFetched && playableSlots === 0) {
       showToast({
         type: 'warning',
@@ -179,10 +190,10 @@ export const SpinWheel: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('spinWheel.errors.spinNotAvailableTitle', 'Spin not available'),
-        text2:
-          error?.response?.data?.message ||
-          error?.message ||
+        text2: getUserFriendlyErrorMessage(
+          error,
           t('spinWheel.errors.spinNotAllowedFallback', 'Backend did not allow this spin right now.'),
+        ),
       });
       dispatch(invalidateUnlockedMiniGamesCache());
       dispatch(fetchUnlockedMiniGames());
@@ -218,7 +229,17 @@ export const SpinWheel: React.FC = () => {
         spinSoundRef.current?.stop();
         if (wonPoints > 0) {
           winSoundRef.current?.play();
-          triggerCoinCelebration();
+          try {
+            sessionStorage.setItem(
+              'pending_home_reward',
+              JSON.stringify({
+                type: 'game',
+                points: wonPoints,
+                title: `+${wonPoints} Points Won!`,
+                subtitle: 'Spin the Wheel Rewards added to your wallet',
+              })
+            );
+          } catch {}
         }
         setResultModal({
           ...winningSegment,
@@ -258,9 +279,26 @@ export const SpinWheel: React.FC = () => {
         <button
           type="button"
           onClick={() => setRulesModalVisible(true)}
-          className="game-nav-btn"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '24px',
+            background: 'var(--bg-card)',
+            border: '1.5px solid rgba(0, 208, 102, 0.4)',
+            color: 'var(--text-main)',
+            fontSize: '13px',
+            fontWeight: 750,
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s ease',
+            whiteSpace: 'nowrap',
+          }}
+          aria-label="How to play"
         >
-          <HelpCircle size={20} />
+          <HelpCircle size={18} color="#00D066" />
+          <span>{t('common.howToPlay', 'How to play')}</span>
         </button>
       </div>
 
@@ -487,8 +525,18 @@ export const SpinWheel: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
+                    const points = resultModal?.points || 0;
                     setResultModal(null);
-                    navigate('/home');
+                    navigate('/home', {
+                      state: points > 0 ? {
+                        rewardCelebration: {
+                          type: 'game',
+                          points,
+                          title: `+${points} Points Won!`,
+                          subtitle: 'Spin the Wheel Rewards added to your wallet',
+                        },
+                      } : undefined,
+                    });
                   }}
                   style={{
                     background: 'none',

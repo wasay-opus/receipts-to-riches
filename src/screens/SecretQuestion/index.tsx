@@ -6,6 +6,7 @@ import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { KeyRound, CheckCircle, Calendar, MapPin } from 'lucide-react';
 import { Button, FormInput, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 import { AppDispatch } from '../../redux/Store';
 import { completeProfile } from '../../redux/Slices/authSlice';
@@ -71,10 +72,10 @@ export const SecretQuestion: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('secretQuestion.saveFailed', 'Could not save profile'),
-        text2:
-          typeof error === 'string'
-            ? error
-            : error?.message || t('secretQuestion.checkDetailsTryAgain', 'Please check your details and try again.'),
+        text2: getUserFriendlyErrorMessage(
+          error,
+          t('secretQuestion.checkDetailsTryAgain', 'Please check your details and try again.'),
+        ),
       });
     }
   };

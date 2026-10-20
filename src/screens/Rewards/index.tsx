@@ -7,6 +7,7 @@ import { RootState, AppDispatch } from '../../redux/Store';
 import { fetchAllRewards, claimReward } from '../../redux/Slices/rewardsSlice';
 import { fetchUser } from '../../redux/Slices/userSlice';
 import { Button, Container, CustomModal, triggerCoinCelebration } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 import { getUserRewardPoints } from '../../utils/userDisplay';
 
@@ -266,9 +267,10 @@ export const Rewards: React.FC = () => {
         visible: true,
         variant: 'error',
         title: t('rewards.claimFailed', 'Claim Failed'),
-        description:
-          error?.message ||
+        description: getUserFriendlyErrorMessage(
+          error,
           t('rewards.failedDesc', 'Could not process redemption. Please try again later.'),
+        ),
       });
     }
   };

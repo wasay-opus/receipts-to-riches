@@ -7,6 +7,7 @@ import { RootState, AppDispatch } from '../../redux/Store';
 import { validatePasswordCode } from '../../redux/Slices/authSlice';
 import authServices from '../../services/authServices';
 import { Button, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 export const OtpVerification: React.FC = () => {
   const { t } = useTranslation();
@@ -111,7 +112,10 @@ export const OtpVerification: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('auth.verificationFailed', 'Verification Failed'),
-        text2: error?.message || t('auth.wrongCode', 'Invalid code or code expired.'),
+        text2: getUserFriendlyErrorMessage(
+          error,
+          t('auth.wrongCode', 'Invalid code or code expired.'),
+        ),
       });
     } finally {
       setSubmitting(false);
@@ -142,7 +146,7 @@ export const OtpVerification: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('auth.resendFailed', 'Failed to resend code'),
-        text2: error?.message || '',
+        text2: getUserFriendlyErrorMessage(error, t('auth.tryAgain', 'Please try again.')),
       });
     }
   };

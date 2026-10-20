@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Tv,
   Sparkles,
+  Crown,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
@@ -155,11 +156,6 @@ export const Home: React.FC = () => {
     if (pendingReward) {
       sessionStorage.removeItem('pending_home_reward');
       window.history.replaceState({}, document.title);
-
-      // If coming from a game, coins already rained inside the game - do not rain on Home!
-      if (pendingReward.type === 'game') {
-        return;
-      }
 
       const pointsWon = Number(pendingReward.points) || 0;
 
@@ -437,48 +433,72 @@ export const Home: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => navigate('/notifications')}
-          style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '50%',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            position: 'relative',
-            color: 'var(--text-main)',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-          }}
-          aria-label={t('notifications.title', 'Notifications')}
-        >
-          <Bell size={20} />
-          {unreadCount > 0 && (
-            <span
-              style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                background: '#EF4444',
-                color: '#FFFFFF',
-                fontSize: '10px',
-                fontWeight: 700,
-                borderRadius: '10px',
-                minWidth: '18px',
-                height: '18px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid var(--bg-main)',
-              }}
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => navigate('/rankings')}
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.25))',
+              border: '1.5px solid rgba(245, 158, 11, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#F59E0B',
+              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.25)',
+              transition: 'transform 0.15s ease',
+            }}
+            aria-label={t('rankingsScreen.leaderboard', 'Leaderboard')}
+            title={t('rankingsScreen.leaderboard', 'Leaderboard')}
+          >
+            <Crown size={21} />
+          </button>
+
+          <button
+            onClick={() => navigate('/notifications')}
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              position: 'relative',
+              color: 'var(--text-main)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+            }}
+            aria-label={t('notifications.title', 'Notifications')}
+          >
+            <Bell size={20} />
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  background: '#EF4444',
+                  color: '#FFFFFF',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  minWidth: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid var(--bg-main)',
+                }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* 2. My Balance Card (Rich Luxury Theme) */}

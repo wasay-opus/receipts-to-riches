@@ -18,6 +18,7 @@ import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchMyCampaigns, renewCampaign } from '../../redux/Slices/campaignsSlice';
 import { addFunds, fetchAllFunds } from '../../redux/Slices/fundsSlice';
 import { promptAppInput } from '../../utils/sweetAlert';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 type CampaignTab = 'active' | 'expired' | 'pending' | 'rejected';
 
@@ -124,7 +125,7 @@ export const ManageCampaigns: React.FC = () => {
       showToast({
         type: 'error',
         text1: 'Funds Not Added',
-        text2: fundError?.message || String(fundError || 'Please try again.'),
+        text2: getUserFriendlyErrorMessage(fundError, 'Please try again.'),
       });
     }
   };
@@ -162,7 +163,7 @@ export const ManageCampaigns: React.FC = () => {
       showToast({
         type: 'error',
         text1: 'Campaign Not Renewed',
-        text2: renewError?.message || String(renewError || 'Please try again.'),
+        text2: getUserFriendlyErrorMessage(renewError, 'Please try again.'),
       });
     }
   };

@@ -3,6 +3,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import authServices from '../../services/authServices';
 import localStoreUtil, { saveAccessToken } from '../../utils/localStoreUtil';
 import { showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { fetchAllGames, fetchUnlockedMiniGames, resetGamesState } from './gamesSlice';
 import { fetchUser } from './userSlice';
 
@@ -126,43 +127,7 @@ const extractErrorMessage = (
   responseData: any,
   fallbackMessage: string,
 ): string => {
-  const message = responseData?.message;
-
-  const userFriendlyMessage = responseData?.user_friendly_message;
-  if (
-    typeof userFriendlyMessage === 'string' &&
-    userFriendlyMessage.trim().length > 0
-  ) {
-    return userFriendlyMessage;
-  }
-
-  if (Array.isArray(message) && typeof message[0] === 'string') {
-    return message[0];
-  }
-
-  if (typeof message === 'string' && message.trim().length > 0) {
-    return message;
-  }
-
-  const nestedError = responseData?.data?.error;
-  if (Array.isArray(nestedError) && typeof nestedError[0] === 'string') {
-    return nestedError[0];
-  }
-
-  if (typeof nestedError === 'string' && nestedError.trim().length > 0) {
-    return nestedError;
-  }
-
-  const rootError = responseData?.error;
-  if (Array.isArray(rootError) && typeof rootError[0] === 'string') {
-    return rootError[0];
-  }
-
-  if (typeof rootError === 'string' && rootError.trim().length > 0) {
-    return rootError;
-  }
-
-  return fallbackMessage;
+  return getUserFriendlyErrorMessage(responseData, fallbackMessage);
 };
 
 const extractErrorDetails = (
@@ -345,7 +310,16 @@ export const forgotPassword = createAsyncThunk(
       const response = await authServices.forgotPassword({
         email,
       });
-      if (response && response.success !== false) {
+      const data = response?.data ?? response;
+      const isSuccess =
+        response &&
+        response.success !== false &&
+        data?.success !== false &&
+        response.status !== 422 &&
+        !response.errors &&
+        !data?.errors;
+
+      if (isSuccess) {
         return response;
       }
 
@@ -358,7 +332,9 @@ export const forgotPassword = createAsyncThunk(
           extractErrorMessage(error.response.data, 'Password reset failed'),
         );
       }
-      return rejectWithValue(error.message || 'Password reset failed');
+      return rejectWithValue(
+        extractErrorMessage(error, error.message || 'Password reset failed'),
+      );
     }
   },
 );
@@ -375,7 +351,9 @@ export const validatePasswordCode = createAsyncThunk(
           extractErrorMessage(error.response.data, 'Code validation failed'),
         );
       }
-      return rejectWithValue(error.message || 'Code validation failed');
+      return rejectWithValue(
+        extractErrorMessage(error, error.message || 'Code validation failed'),
+      );
     }
   },
 );
@@ -395,7 +373,9 @@ export const resetPassword = createAsyncThunk(
           extractErrorMessage(error.response.data, 'Password reset failed'),
         );
       }
-      return rejectWithValue(error.message || 'Password reset failed');
+      return rejectWithValue(
+        extractErrorMessage(error, error.message || 'Password reset failed'),
+      );
     }
   },
 );

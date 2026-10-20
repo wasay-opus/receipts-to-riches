@@ -7,11 +7,12 @@ import { Button, Container, CustomModal, GameHelpMenu, showToast, triggerCoinCel
 import images from '../../constants/images';
 import gameServices from '../../services/gameServices';
 import locationServices from '../../services/locationServices';
-import { getUSDateYYYYMMDD, getUSTimeHHMM, getUSTimeWithOffset } from '../../utils/usTime';
+import { getLocalTimeWithOffset, getUSDateYYYYMMDD, getUSTimeHHMM, isDeviceInUSTimezone, UNSUPPORTED_TIMEZONE_MESSAGE } from '../../utils/usTime';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
 import { getUserRewardPoints } from '../../utils/userDisplay';
 import { getScannedReceipt, clearScannedReceipt } from '../../utils/scannedReceiptStore';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 const extractMessage = (payload: any, fallback: string) => {
   const message = payload?.message ?? payload?.data?.message ?? payload?.user_friendly_message;
@@ -52,6 +53,7 @@ export const PicPickGame: React.FC = () => {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [receiptTotal, setReceiptTotal] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [statesList, setStatesList] = useState<string[]>(US_STATES);
   const [loading, setLoading] = useState(false);
@@ -66,6 +68,7 @@ export const PicPickGame: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!isStatePick) return;
     locationServices
       .getAllStates()
       .then((res) => {
@@ -82,7 +85,7 @@ export const PicPickGame: React.FC = () => {
       .catch(() => {
         // Fallback to US_STATES list
       });
-  }, []);
+  }, [isStatePick]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -159,6 +162,19 @@ export const PicPickGame: React.FC = () => {
       showToast({ type: 'error', text1: 'State required', text2: 'Please select a state from the dropdown.' });
       return;
     }
+    if (!zipCode.trim()) {
+      showToast({ type: 'error', text1: 'Zip code required', text2: 'Please enter the receipt vendor zip code.' });
+      return;
+    }
+
+    if (!isDeviceInUSTimezone()) {
+      showToast({
+        type: 'error',
+        text1: 'Submission Failed',
+        text2: UNSUPPORTED_TIMEZONE_MESSAGE,
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -167,10 +183,11 @@ export const PicPickGame: React.FC = () => {
         type: gameType,
         game_slug: gameSlug,
         total: receiptTotal.trim(),
+        zip_code: zipCode.trim(),
         state: isStatePick ? selectedState.trim() : undefined,
         date: getUSDateYYYYMMDD(),
         time: getUSTimeHHMM(),
-        played_at: getUSTimeWithOffset(),
+        played_at: getLocalTimeWithOffset(),
         receipt: {
           uri: receiptFile.name,
           type: receiptFile.type,
@@ -198,13 +215,11 @@ export const PicPickGame: React.FC = () => {
       setReceiptFile(null);
       setReceiptPreview(null);
       setReceiptTotal('');
+      setZipCode('');
       setSelectedState('');
       clearScannedReceipt();
     } catch (error: any) {
-      const parsedError =
-        error?.response?.data?.errors
-          ? Object.values(error.response.data.errors).flat().join(' ')
-          : error?.response?.data?.message || error?.message || 'Submission failed. Please try again.';
+      const parsedError = getUserFriendlyErrorMessage(error, 'Submission failed. Please try again.');
 
       showToast({
         type: 'error',
@@ -310,6 +325,27 @@ export const PicPickGame: React.FC = () => {
                 placeholder={amountConfig.placeholder || t('picPick.amountPlaceholder', 'Enter Amount')}
                 value={receiptTotal}
                 onChange={(e) => handleAmountChange(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px 20px',
+                  borderRadius: '28px',
+                  background: 'rgba(0, 0, 0, 0.35)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#FFFFFF',
+                  fontSize: '15px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  textAlign: 'center',
+                }}
+              />
+
+              {/* Vendor Zip Code Pill Input */}
+              <input
+                type="text"
+                maxLength={10}
+                placeholder={t('cashGames.placeholders.enterZip', 'Enter Zip Code')}
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '14px 20px',

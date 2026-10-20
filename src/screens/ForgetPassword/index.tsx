@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { forgotPassword } from '../../redux/Slices/authSlice';
 import { Button, FormInput, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 
 export const ForgetPassword: React.FC = () => {
@@ -32,10 +33,14 @@ export const ForgetPassword: React.FC = () => {
       });
       navigate('/otp', { state: { email: values.email.trim().toLowerCase(), isForgot: true } });
     } catch (error: any) {
+      const errorMsg = getUserFriendlyErrorMessage(
+        error,
+        t('auth.tryAgain', 'Please try again.'),
+      );
       showToast({
         type: 'error',
         text1: t('auth.requestFailed', 'Request Failed'),
-        text2: error?.message || t('auth.tryAgain', 'Please try again.'),
+        text2: errorMsg,
       });
     }
   };

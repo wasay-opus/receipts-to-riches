@@ -12,6 +12,7 @@ import {
 } from '../../redux/Slices/notificationsSlice';
 import notificationCenterServices from '../../services/notificationServices';
 import { confirmAppAction } from '../../utils/sweetAlert';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 const formatNotificationDate = (value?: string) => {
   if (!value) return '';
@@ -59,7 +60,7 @@ export const Notification: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('notification.markAllReadFailed', 'Could not mark all read'),
-        text2: markError?.message || String(markError || t('notification.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(markError, t('notification.tryAgain', 'Please try again.')),
       });
     }
   };
@@ -72,7 +73,7 @@ export const Notification: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('notification.markOneReadFailed', 'Could not mark notification read'),
-        text2: markError?.message || String(markError || t('notification.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(markError, t('notification.tryAgain', 'Please try again.')),
       });
     }
   };
@@ -86,7 +87,7 @@ export const Notification: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('notification.deleteFailed', 'Could not delete notification'),
-        text2: deleteError?.message || String(deleteError || t('notification.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(deleteError, t('notification.tryAgain', 'Please try again.')),
       });
     }
   };
@@ -108,7 +109,7 @@ export const Notification: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('notification.clearAllFailed', 'Could not clear notifications'),
-        text2: clearError?.message || String(clearError || t('notification.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(clearError, t('notification.tryAgain', 'Please try again.')),
       });
     }
   };

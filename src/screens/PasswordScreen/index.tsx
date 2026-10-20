@@ -6,6 +6,7 @@ import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { ArrowLeft, Lock, CheckCircle } from 'lucide-react';
 import { Button, Container, FormInput, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { changePasswordWithUpdateProfile } from '../../redux/Slices/userSlice';
 
@@ -44,7 +45,7 @@ export const PasswordScreen: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('passwordScreen.updateErrorTitle', 'Password not changed'),
-        text2: error?.message || String(error || t('auth.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(error, t('auth.tryAgain', 'Please try again.')),
       });
     }
   };

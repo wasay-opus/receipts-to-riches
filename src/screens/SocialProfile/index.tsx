@@ -8,31 +8,25 @@ import {
   MapPin,
   Heart,
   MessageCircle,
-  Trash2,
   UserCheck,
   UserPlus,
   Flag,
   Camera,
-  LayoutGrid,
-  List,
   Video,
 } from 'lucide-react';
-import { Button, CustomModal, ReportModal, showToast } from '../../components';
+import { Button, ReportModal, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { AppDispatch, RootState } from '../../redux/Store';
 import {
-  deletePost,
   fetchFeed,
   fetchFeedUserProfile,
-  likePost,
-  dislikePost,
   reportUser,
   toggleFollowUser,
   toggleFollowUserOptimistic,
-  togglePostLikeOptimistic,
 } from '../../redux/Slices/feedSlice';
 import feedServices from '../../services/feedServices';
 import { fetchUser } from '../../redux/Slices/userSlice';
-import { promptAppInput, confirmAppAction } from '../../utils/sweetAlert';
+import { promptAppInput } from '../../utils/sweetAlert';
 import {
   getUserAvatarUrl,
   getUserCoverUrl,
@@ -101,8 +95,6 @@ export const SocialProfile: React.FC = () => {
 
   const [avatarError, setAvatarError] = useState(false);
   const [coverError, setCoverError] = useState(false);
-  const [selectedPostModal, setSelectedPostModal] = useState<any | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'feed'>('grid');
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
   useEffect(() => {
@@ -209,7 +201,7 @@ export const SocialProfile: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('socialProfile.followNotSaved', 'Follow not saved'),
-        text2: error?.message || String(error || t('socialProfile.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(error, t('socialProfile.tryAgain', 'Please try again.')),
       });
     }
   };
@@ -231,47 +223,8 @@ export const SocialProfile: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('socialProfile.reportFailed', 'User report not sent'),
-        text2: error?.message || String(error || t('socialProfile.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(error, t('socialProfile.tryAgain', 'Please try again.')),
       });
-    }
-  };
-
-  const handleDeletePost = async (postId: string | number) => {
-    const confirmed = await confirmAppAction({
-      title: t('feed.deletePostTitle', 'Delete post?'),
-      text: t('feed.deletePostPrompt', 'Are you sure you want to permanently delete this post?'),
-      confirmButtonText: t('common.delete', 'Delete'),
-    });
-    if (!confirmed) return;
-
-    try {
-      await dispatch(deletePost(postId)).unwrap();
-      showToast({ type: 'success', text1: t('feed.postDeleted', 'Post deleted') });
-      if (targetUserId) {
-        dispatch(fetchFeedUserProfile({ userId: targetUserId, params: { per_page: 20, page: 1 } }));
-      }
-      dispatch(fetchFeed({ params: { per_page: 30, page: 1 }, isRefresh: true }));
-    } catch (error: any) {
-      showToast({
-        type: 'error',
-        text1: t('feed.postNotDeleted', 'Post not deleted'),
-        text2: error?.message || String(error || t('common.tryAgain', 'Please try again.')),
-      });
-    }
-  };
-
-  const handleLikePost = async (post: any) => {
-    const postId = post.id;
-    const isLiked = Boolean(post.is_liked || post.liked);
-    dispatch(togglePostLikeOptimistic({ postId, liked: !isLiked }));
-    try {
-      if (isLiked) {
-        await dispatch(dislikePost(postId)).unwrap();
-      } else {
-        await dispatch(likePost(postId)).unwrap();
-      }
-    } catch {
-      dispatch(togglePostLikeOptimistic({ postId, liked: isLiked }));
     }
   };
 
@@ -460,30 +413,8 @@ export const SocialProfile: React.FC = () => {
             </div>
           )}
 
-          {/* View Mode Switcher */}
+          {/* 3-Column Posts Grid (Post Click Redirects to Dedicated Post Page) */}
           {!userProfileLoading && userPosts.length > 0 && (
-            <div className="social-profile-view-toggle">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`social-profile-view-btn ${viewMode === 'grid' ? 'social-profile-view-btn--active' : ''}`}
-              >
-                <LayoutGrid size={16} />
-                <span>Grid</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('feed')}
-                className={`social-profile-view-btn ${viewMode === 'feed' ? 'social-profile-view-btn--active' : ''}`}
-              >
-                <List size={16} />
-                <span>Feed</span>
-              </button>
-            </div>
-          )}
-
-          {/* Grid View (Matching Screenshot 2 Mobile 3-column Grid) */}
-          {!userProfileLoading && userPosts.length > 0 && viewMode === 'grid' && (
             <div className="social-profile-post-grid">
               {userPosts.map((post: any) => {
                 const postId = post.id;
@@ -504,7 +435,7 @@ export const SocialProfile: React.FC = () => {
                   <div
                     key={postId}
                     className="social-profile-grid-item"
-                    onClick={() => setSelectedPostModal(post)}
+                    onClick={() => navigate(`/post/${postId}`, { state: { targetPost: post } })}
                   >
                     {postMedia ? (
                       isVideo ? (
@@ -566,239 +497,8 @@ export const SocialProfile: React.FC = () => {
             </div>
           )}
 
-          {/* Feed View (Single Post Vertical List) */}
-          {!userProfileLoading && userPosts.length > 0 && viewMode === 'feed' && (
-            <div className="social-profile-posts-list">
-              {userPosts.map((post: any) => {
-                const postId = post.id;
-                const postMedia = post?.media_url ?? post?.mediaUrl ?? post?.image_url ?? post?.media ?? post?.image ?? post?.file_url;
-                const postMediaType = post?.media_type;
-                const isVideo = isVideoUrl(postMedia, postMediaType);
-                const postDesc = post?.description || post?.content || post?.body;
-                const isLiked = Boolean(post?.is_liked || post?.liked);
-                const likesCount = post?.likes_count ?? post?.likes ?? 0;
-                const commentsCount = post?.comments_count ?? post?.comments?.length ?? 0;
-                const createdAt = formatTime(post?.created_at);
-
-                return (
-                  <div
-                    key={postId}
-                    className="card social-profile-post-card"
-                  >
-                    {/* Post Header */}
-                    <div className="social-profile-post-header">
-                      <div className="social-profile-post-author">
-                        <img
-                          src={avatarUrl}
-                          alt={displayName}
-                          className="social-profile-post-author-avatar"
-                        />
-                        <div>
-                          <strong className="social-profile-post-author-name">
-                            {displayName}
-                          </strong>
-                          <span className="social-profile-post-date">
-                            {createdAt}
-                          </span>
-                        </div>
-                      </div>
-
-                      {isOwnProfile && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePost(postId)}
-                          className="social-profile-post-del-btn"
-                          title={t('common.delete', 'Delete')}
-                        >
-                          <Trash2 size={17} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Post Description */}
-                    {postDesc && (
-                      <p className="social-profile-post-desc">
-                        {postDesc}
-                      </p>
-                    )}
-
-                    {/* Post Media (Image or Video) */}
-                    {postMedia && (
-                      <div
-                        className="social-profile-post-image-wrap"
-                        style={isVideo ? { position: 'relative', borderRadius: '14px', overflow: 'hidden', background: '#000', maxHeight: '480px' } : undefined}
-                      >
-                        {isVideo ? (
-                          <video
-                            src={postMedia}
-                            controls
-                            playsInline
-                            preload="metadata"
-                            style={{
-                              width: '100%',
-                              maxHeight: '480px',
-                              objectFit: 'contain',
-                              display: 'block',
-                              backgroundColor: '#000'
-                            }}
-                          />
-                        ) : (
-                          <img
-                            src={postMedia}
-                            alt="Post media"
-                            className="social-profile-post-image"
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    {/* Post Actions */}
-                    <div className="social-profile-post-actions">
-                      <button
-                        type="button"
-                        onClick={() => handleLikePost(post)}
-                        className={`social-profile-post-action-btn ${
-                          isLiked ? 'social-profile-post-action-btn--liked' : ''
-                        }`}
-                      >
-                        <Heart size={18} fill={isLiked ? '#FF2A54' : 'none'} />
-                        <span>{likesCount}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => navigate('/feed')}
-                        className="social-profile-post-action-btn"
-                      >
-                        <MessageCircle size={18} />
-                        <span>{commentsCount}</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Post Detail Modal (Clicking any post tile opens full post) */}
-      <CustomModal
-        visible={Boolean(selectedPostModal)}
-        onClose={() => setSelectedPostModal(null)}
-        maxWidth="600px"
-        title={t('feed.postDetails', 'Post Details')}
-      >
-        {selectedPostModal && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Author header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-                <div>
-                  <strong style={{ fontSize: '15px', color: 'var(--text-main)', display: 'block' }}>
-                    {displayName}
-                  </strong>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {formatTime(selectedPostModal?.created_at)}
-                  </span>
-                </div>
-              </div>
-              {isOwnProfile && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleDeletePost(selectedPostModal.id);
-                    setSelectedPostModal(null);
-                  }}
-                  className="social-profile-post-del-btn"
-                  title={t('common.delete', 'Delete')}
-                >
-                  <Trash2 size={17} />
-                </button>
-              )}
-            </div>
-
-            {/* Post Description */}
-            {(selectedPostModal?.description || selectedPostModal?.content) && (
-              <p style={{ fontSize: '15px', color: 'var(--text-main)', margin: 0, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-                {selectedPostModal?.description || selectedPostModal?.content}
-              </p>
-            )}
-
-            {/* Media */}
-            {(() => {
-              const modalMedia =
-                selectedPostModal?.media_url ??
-                selectedPostModal?.mediaUrl ??
-                selectedPostModal?.image_url ??
-                selectedPostModal?.media ??
-                selectedPostModal?.image ??
-                selectedPostModal?.file_url;
-              const modalType = selectedPostModal?.media_type;
-              if (!modalMedia) return null;
-              const isVid = isVideoUrl(modalMedia, modalType);
-              return (
-                <div style={{ borderRadius: '16px', overflow: 'hidden', background: '#000', maxHeight: '460px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {isVid ? (
-                    <video src={modalMedia} controls autoPlay playsInline style={{ width: '100%', maxHeight: '460px', objectFit: 'contain' }} />
-                  ) : (
-                    <img src={modalMedia} alt="Post media" style={{ width: '100%', maxHeight: '460px', objectFit: 'contain' }} />
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
-              <button
-                type="button"
-                onClick={() => handleLikePost(selectedPostModal)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  color: selectedPostModal?.is_liked || selectedPostModal?.liked ? '#FF2A54' : 'var(--text-muted)',
-                  fontSize: '14.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                <Heart size={20} fill={selectedPostModal?.is_liked || selectedPostModal?.liked ? '#FF2A54' : 'none'} />
-                <span>{selectedPostModal?.likes_count ?? selectedPostModal?.likes ?? 0}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedPostModal(null);
-                  navigate('/feed');
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  color: 'var(--text-muted)',
-                  fontSize: '14.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                <MessageCircle size={20} />
-                <span>{selectedPostModal?.comments_count ?? selectedPostModal?.comments?.length ?? 0} Comments</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </CustomModal>
 
       {/* Reusable Report Modal Bottom Sheet matching mobile design */}
       <ReportModal

@@ -1,6 +1,6 @@
 import endPoints from '../../redux/constants/endPoints';
 import { fetchApi } from '../../utils/helper';
-import { getUSDateYYYYMMDD, getUSTimeHHMM, getUSTimeWithOffset } from '../../utils/usTime';
+import { getLocalTimeWithOffset, getUSDateYYYYMMDD, getUSTimeHHMM } from '../../utils/usTime';
 
 interface IApiResponse {
   [key: string]: any;
@@ -151,6 +151,8 @@ class GameServices {
         {
           type: payload.type,
           game_slug: payload.game_slug,
+          zip_code: payload.zip_code,
+          total: payload.total,
         },
       );
 
@@ -160,7 +162,7 @@ class GameServices {
 
       const resolvedDate = payload.date || getUSDateYYYYMMDD();
       const resolvedTime = payload.time || getUSTimeHHMM();
-      const resolvedPlayedAt = payload.played_at || getUSTimeWithOffset();
+      const resolvedPlayedAt = payload.played_at || getLocalTimeWithOffset();
 
       formData.append('date', resolvedDate);
       formData.append('time', resolvedTime);

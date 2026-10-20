@@ -22,21 +22,49 @@ const isRawStatusMessage = (message: string): boolean =>
   /^request failed$/i.test(message.trim()) ||
   /^\d{3}$/.test(message.trim());
 
-const extractMessageFromPayload = (payload: unknown): string => {
-  if (!payload || typeof payload !== 'object') {
+export const extractMessageFromPayload = (payload: unknown): string => {
+  if (!payload) {
+    return '';
+  }
+
+  if (typeof payload === 'string' && isMeaningfulString(payload)) {
+    return payload.trim();
+  }
+
+  if (typeof payload !== 'object') {
     return '';
   }
 
   const data = payload as Record<string, unknown>;
-  const message = data.message;
+
+  // Check validation errors first (e.g. { errors: { email: ["The selected email is invalid."] } })
+  const errors = data.errors || (data.data as any)?.errors;
+  if (errors && typeof errors === 'object') {
+    const errorEntries = Object.values(errors);
+    const flattened = errorEntries.flat().filter(isMeaningfulString);
+    if (flattened.length > 0) {
+      return flattened.join(' ');
+    }
+  }
+
+  const friendly =
+    data.user_friendly_message || (data.data as any)?.user_friendly_message;
+  if (isMeaningfulString(friendly)) {
+    return friendly.trim();
+  }
+
+  const message = data.message || (data.data as any)?.message;
   if (Array.isArray(message) && isMeaningfulString(message[0])) {
     return message[0].trim();
   }
-  if (isMeaningfulString(message)) {
+  if (
+    isMeaningfulString(message) &&
+    !/^the given data was invalid\.?$/i.test(message.trim())
+  ) {
     return message.trim();
   }
 
-  const nestedError = data.error;
+  const nestedError = data.error || (data.data as any)?.error;
   if (Array.isArray(nestedError) && isMeaningfulString(nestedError[0])) {
     return nestedError[0].trim();
   }
@@ -44,9 +72,8 @@ const extractMessageFromPayload = (payload: unknown): string => {
     return nestedError.trim();
   }
 
-  const friendly = data.user_friendly_message;
-  if (isMeaningfulString(friendly)) {
-    return friendly.trim();
+  if (isMeaningfulString(message)) {
+    return message.trim();
   }
 
   return '';
@@ -63,10 +90,17 @@ export const getUserFriendlyErrorMessage = (
   error: unknown,
   fallback = 'Something went wrong. Please try again.',
 ): string => {
+  if (!error) {
+    return fallback;
+  }
+
   if (isMeaningfulString(error)) {
     const errMessage = error.trim();
     if (!isRawStatusMessage(errMessage)) {
-      if (errMessage.toLowerCase().includes('network request failed') || errMessage.toLowerCase().includes('network error')) {
+      if (
+        errMessage.toLowerCase().includes('network request failed') ||
+        errMessage.toLowerCase().includes('network error')
+      ) {
         return 'Network request failed. Please check your connection.';
       }
       return errMessage;
@@ -80,22 +114,24 @@ export const getUserFriendlyErrorMessage = (
     status?: number;
     userMessage?: string;
     error?: string;
+    errors?: Record<string, unknown>;
   };
 
   if (isMeaningfulString(axiosLikeError?.userMessage)) {
     return axiosLikeError.userMessage.trim();
   }
 
-  const status = axiosLikeError?.response?.status ?? axiosLikeError?.status;
-  const statusMessage = getStatusFriendlyMessage(status);
-
-  const responseMessage = extractMessageFromPayload(
-    axiosLikeError?.response?.data ?? axiosLikeError?.data,
-  );
+  // 1. Try extracting from response.data, data, or error object itself
+  const payloadToInspect =
+    axiosLikeError?.response?.data ??
+    axiosLikeError?.data ??
+    axiosLikeError;
+  const responseMessage = extractMessageFromPayload(payloadToInspect);
   if (isMeaningfulString(responseMessage) && !isRawStatusMessage(responseMessage)) {
     return responseMessage;
   }
 
+  // 2. Check direct message if not raw status code
   if (isMeaningfulString(axiosLikeError?.message)) {
     const message = axiosLikeError.message.trim();
     if (!isRawStatusMessage(message)) {
@@ -103,16 +139,19 @@ export const getUserFriendlyErrorMessage = (
     }
   }
 
+  // 3. Check error field
   if (isMeaningfulString(axiosLikeError?.error)) {
     const errMessage = axiosLikeError.error.trim();
     if (!isRawStatusMessage(errMessage)) {
-      // Sometimes it returns "TypeError: Network request failed"
       if (errMessage.toLowerCase().includes('network request failed')) {
         return 'Network request failed. Please check your connection.';
       }
       return errMessage;
     }
   }
+
+  const status = axiosLikeError?.response?.status ?? axiosLikeError?.status;
+  const statusMessage = getStatusFriendlyMessage(status);
 
   return statusMessage || fallback;
 };

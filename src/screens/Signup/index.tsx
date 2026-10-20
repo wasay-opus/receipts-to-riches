@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { registerUser, socialLogin } from '../../redux/Slices/authSlice';
 import { Button, FormInput, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 
 const GOOGLE_IDENTITY_SCRIPT = 'https://accounts.google.com/gsi/client';
@@ -120,7 +121,10 @@ export const SignUp: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
-        text2: error?.message || t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+        text2: getUserFriendlyErrorMessage(
+          error,
+          t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+        ),
       });
     } finally {
       setSocialLoadingProvider(null);
@@ -184,7 +188,10 @@ export const SignUp: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
-        text2: error?.message || t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+        text2: getUserFriendlyErrorMessage(
+          error,
+          t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+        ),
       });
       setSocialLoadingProvider(null);
     }
@@ -246,41 +253,25 @@ export const SignUp: React.FC = () => {
       }
 
       const res = await dispatch(registerUser(payload)).unwrap();
-      const resData = res?.data || res;
-      const isUnverifiedPhone =
-        resData?.is_phone_verified === false ||
-        res?.is_phone_verified === false ||
-        (typeof res?.message === 'string' &&
-          res.message.toLowerCase().includes('verify your phone'));
-
-      if (isUnverifiedPhone) {
-        showToast({
-          type: 'info',
-          text1: t('auth.verifyPhone', 'Verify Phone Number'),
-          text2: res?.message || t('auth.otpSentToPhone', 'Please verify the code sent to your phone.'),
-        });
-        navigate('/otp-verification', {
-          state: {
-            email: payload.email,
-            phone: payload.phone,
-            isPhoneVerification: true,
-          },
-        });
-        return;
-      }
 
       showToast({
         type: 'success',
         text1: t('auth.accountCreated', 'Account Created!'),
-        text2: t('auth.welcome', 'Welcome to Receipts To Riches!'),
+        text2: res?.message || t('auth.otpSentToPhone', 'Please verify the code sent to your phone.'),
       });
 
-      navigate('/secret-question');
+      navigate('/otp-verification', {
+        state: {
+          email: payload.email,
+          phone: payload.phone,
+          isPhoneVerification: true,
+        },
+      });
     } catch (error: any) {
-      const errorMsg =
-        typeof error === 'string'
-          ? error
-          : error?.message || t('auth.tryAgain', 'Please check your information and try again.');
+      const errorMsg = getUserFriendlyErrorMessage(
+        error,
+        t('auth.tryAgain', 'Please check your information and try again.'),
+      );
 
       showToast({
         type: 'error',

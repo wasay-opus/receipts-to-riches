@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import walletServices from '../../services/walletServices';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 export interface ApiWallet {
   id?: number;
@@ -19,21 +20,7 @@ interface WalletState {
 }
 
 const extractMessage = (payload: any, fallback: string): string => {
-  const message = payload?.message;
-  if (Array.isArray(message) && typeof message[0] === 'string') {
-    return message[0];
-  }
-  if (typeof message === 'string' && message.trim().length > 0) {
-    return message;
-  }
-  const nestedError = payload?.error;
-  if (Array.isArray(nestedError) && typeof nestedError[0] === 'string') {
-    return nestedError[0];
-  }
-  if (typeof nestedError === 'string' && nestedError.trim().length > 0) {
-    return nestedError;
-  }
-  return fallback;
+  return getUserFriendlyErrorMessage(payload, fallback);
 };
 
 const initialState: WalletState = {

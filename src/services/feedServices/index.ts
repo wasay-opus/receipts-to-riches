@@ -62,6 +62,22 @@ class FeedServices {
     }
   };
 
+  getPost = async (postId: number | string): Promise<IApiResponse> => {
+    try {
+      const response = await this.getFeed({ per_page: 50, page: 1 });
+      const posts = Array.isArray(response?.data?.data)
+        ? response.data.data
+        : Array.isArray(response?.data)
+        ? response.data
+        : [];
+      const found = posts.find((p: any) => String(p?.id) === String(postId));
+      return { data: { data: found || null, post: found || null } };
+    } catch (error) {
+      console.error(`[FeedAPI] Error -> getPost (${postId})`, error);
+      throw error;
+    }
+  };
+
   createPost = async (formData: FormData): Promise<IApiResponse> => {
     try {
       if (__DEV__) {

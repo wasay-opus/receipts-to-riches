@@ -12,6 +12,7 @@ import { fetchUser } from '../../redux/Slices/userSlice';
 import { fetchUnlockedMiniGames, invalidateUnlockedMiniGamesCache } from '../../redux/Slices/gamesSlice';
 import gameServices from '../../services/gameServices';
 import { extractPlayableSlots, getNextUnlockText, parseWonPoints } from '../../utils/miniGamesUtil';
+import { isDeviceInUSTimezone, UNSUPPORTED_TIMEZONE_MESSAGE } from '../../utils/usTime';
 
 export const Scratch2Win: React.FC = () => {
   const { t } = useTranslation();
@@ -121,6 +122,16 @@ export const Scratch2Win: React.FC = () => {
   const scratch = (x: number, y: number) => {
     const canvas = canvasRef.current;
     if (!canvas || isRevealed || cardLoading) return;
+
+    if (!isDeviceInUSTimezone()) {
+      showToast({
+        type: 'error',
+        text1: 'Play Blocked',
+        text2: UNSUPPORTED_TIMEZONE_MESSAGE,
+      });
+      return;
+    }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -160,7 +171,17 @@ export const Scratch2Win: React.FC = () => {
         // prizePoints was already fetched from the backend when this card loaded.
         if (prizePoints > 0) {
           winSoundRef.current?.play();
-          triggerCoinCelebration();
+          try {
+            sessionStorage.setItem(
+              'pending_home_reward',
+              JSON.stringify({
+                type: 'game',
+                points: prizePoints,
+                title: `+${prizePoints} Points Won!`,
+                subtitle: 'Scratch 2 Win Rewards added to your wallet',
+              })
+            );
+          } catch {}
         }
         // Clear all canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -207,10 +228,27 @@ export const Scratch2Win: React.FC = () => {
 
         <button
           type="button"
-          className="game-nav-btn"
           onClick={() => setRulesModalVisible(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '24px',
+            background: 'var(--bg-card)',
+            border: '1.5px solid rgba(0, 208, 102, 0.4)',
+            color: 'var(--text-main)',
+            fontSize: '13px',
+            fontWeight: 750,
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s ease',
+            whiteSpace: 'nowrap',
+          }}
+          aria-label="How to play"
         >
-          <HelpCircle size={20} />
+          <HelpCircle size={18} color="#00D066" />
+          <span>{t('common.howToPlay', 'How to play')}</span>
         </button>
       </div>
 
@@ -498,8 +536,18 @@ export const Scratch2Win: React.FC = () => {
             <button
               type="button"
               onClick={() => {
+                const points = resultModal?.won ? resultModal.points : prizePoints;
                 setResultModal(null);
-                navigate('/home');
+                navigate('/home', {
+                  state: points > 0 ? {
+                    rewardCelebration: {
+                      type: 'game',
+                      points,
+                      title: `+${points} Points Won!`,
+                      subtitle: 'Scratch 2 Win Rewards added to your wallet',
+                    },
+                  } : undefined,
+                });
               }}
               style={{
                 background: 'none',

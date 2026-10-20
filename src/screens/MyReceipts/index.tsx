@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Container, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import gameServices from '../../services/gameServices';
 
 // Filter game options matching mobile screenshots
@@ -221,7 +222,7 @@ export const MyReceipts: React.FC = () => {
           showToast({
             type: 'error',
             text1: t('myReceipts.notLoadedTitle', 'Receipts not loaded'),
-            text2: error?.message || t('myReceipts.tryAgain', 'Please try again.'),
+            text2: getUserFriendlyErrorMessage(error, t('myReceipts.tryAgain', 'Please try again.')),
           });
         }
       } finally {

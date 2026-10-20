@@ -7,6 +7,7 @@ import * as Yup from 'yup';
 import { ArrowLeft, User, Mail, Phone, Calendar, Save, Camera, MapPin, AlertCircle, RotateCcw } from 'lucide-react';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { Button, Container, FormInput, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { editProfile, fetchUser, updateUserDataLocally } from '../../redux/Slices/userSlice';
 import {
   getUserAvatarUrl,
@@ -225,7 +226,7 @@ export const PersonalInfo: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('personalInfo.profileNotSaved', 'Profile not saved'),
-        text2: error?.message || t('personalInfo.tryAgain', 'Please try again.'),
+        text2: getUserFriendlyErrorMessage(error, t('personalInfo.tryAgain', 'Please try again.')),
       });
     }
   };

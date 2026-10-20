@@ -18,6 +18,7 @@ import {
   RECEIPT_MAX_FILE_SIZE_BYTES,
 } from '../../utils/imageUpload';
 import { setScannedReceipt, clearScannedReceipt } from '../../utils/scannedReceiptStore';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 
 export const Scan: React.FC = () => {
@@ -99,7 +100,10 @@ export const Scan: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('scanScreen.uploadFailed', 'Scan Failed'),
-        text2: error?.message || t('scanScreen.tryAgain', 'Please try again with a clearer receipt image.'),
+        text2: getUserFriendlyErrorMessage(
+          error,
+          t('scanScreen.tryAgain', 'Please try again with a clearer receipt image.'),
+        ),
       });
     } finally {
       setIsUploading(false);

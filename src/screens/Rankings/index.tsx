@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Flame, ArrowLeft, User as UserIcon, Info, Trophy, Gift } from 'lucide-react';
+import { Flame, ArrowLeft, User as UserIcon, Info, Trophy, Receipt, Scale, X } from 'lucide-react';
 import { Container, CustomModal, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import gameServices from '../../services/gameServices';
 import { mapApiStreakLeaderboardToDataset } from './rankingsMapper';
 import { LeaderboardDataset, PodiumUserData } from './types';
@@ -152,17 +153,20 @@ const UserAvatar: React.FC<{
   );
 };
 
-const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
+const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user, isSolo }) => {
   const isFirst = user.rank === 1;
   const isSecond = user.rank === 2;
-  const cardHeight = isFirst ? 230 : isSecond ? 190 : 170;
-  const avatarSize = isFirst ? 74 : isSecond ? 64 : 60;
+  const cardHeight = isSolo ? 275 : isFirst ? 255 : isSecond ? 215 : 195;
+  const avatarSize = isFirst ? 76 : isSecond ? 66 : 62;
   const overlapOffset = Math.round(avatarSize / 2);
 
-  // Status title matching Screenshot 4: 1st Dominating, 2nd Active Chaser, 3rd Rising Star
+  // Status title matching Screenshot: 1st Dominating, 2nd Active Chaser, 3rd Rising Star
   const tierTitle =
     user.title ||
     (user.rank === 1 ? 'Dominating' : user.rank === 2 ? 'Active Chaser' : 'Rising Star');
+
+  // Cash reward based on podium rank
+  const cashReward = user.rank === 1 ? '$100' : user.rank === 2 ? '$50' : '$25';
 
   return (
     <div
@@ -171,9 +175,10 @@ const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
         flexDirection: 'column',
         alignItems: 'center',
         flex: 1,
-        maxWidth: '175px',
-        minWidth: '110px',
+        maxWidth: isSolo ? '220px' : '180px',
+        minWidth: isSolo ? '170px' : '110px',
         position: 'relative',
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}
     >
       {/* Overlapping Avatar Container */}
@@ -197,23 +202,25 @@ const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
         <RankBadge rank={user.rank} />
       </div>
 
-      {/* Styled Golden/Cream Podium Card matching Screenshot 4 */}
+      {/* Styled Golden/Cream Podium Card matching Screenshot */}
       <div
         style={{
           width: '100%',
-          height: `${cardHeight}px`,
-          background: '#FFF8E7',
-          border: isFirst ? '2px solid #FCD34D' : '1.5px solid #FEE5A5',
-          borderRadius: '22px',
+          minHeight: `${cardHeight}px`,
+          background: isFirst
+            ? 'linear-gradient(180deg, #FFFDF7 0%, #FFF8E7 100%)'
+            : '#FFF8E7',
+          border: isFirst ? '2px solid #F59E0B' : '1.5px solid #FEE5A5',
+          borderRadius: '24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          paddingTop: `${overlapOffset + 12}px`,
-          paddingBottom: '14px',
-          paddingLeft: '6px',
-          paddingRight: '6px',
+          paddingTop: `${overlapOffset + 14}px`,
+          paddingBottom: '16px',
+          paddingLeft: '10px',
+          paddingRight: '10px',
           boxShadow: isFirst
-            ? '0 10px 24px rgba(251, 191, 36, 0.22)'
+            ? '0 12px 28px rgba(245, 158, 11, 0.22)'
             : '0 6px 16px rgba(0, 0, 0, 0.05)',
           boxSizing: 'border-box',
         }}
@@ -221,7 +228,8 @@ const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
         {/* Full Name */}
         <strong
           style={{
-            fontSize: isFirst ? '15px' : '13.5px',
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontSize: isFirst ? '16px' : '14px',
             fontWeight: 800,
             color: '#111827',
             textAlign: 'center',
@@ -240,11 +248,12 @@ const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
         {/* Tier Title: Dominating, Active Chaser, Rising Star */}
         <span
           style={{
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: isFirst ? '13px' : '12px',
             fontWeight: 600,
-            color: '#374151',
+            color: '#4B5563',
             textAlign: 'center',
-            marginTop: '4px',
+            marginTop: '3px',
             maxWidth: '100%',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -254,21 +263,67 @@ const PodiumSlot: React.FC<{ user: PodiumUserData }> = ({ user }) => {
           {tierTitle}
         </span>
 
-        {/* Streak with Fire Flame Icon matching Screenshot 4 */}
+        {/* Prominent, Beautiful Cash Prize Badge */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            background: isFirst
+              ? 'linear-gradient(135deg, #FFB800 0%, #F59E0B 50%, #D97706 100%)'
+              : isSecond
+              ? 'linear-gradient(135deg, #94A3B8 0%, #64748B 100%)'
+              : 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
+            color: '#FFFFFF',
+            borderRadius: '24px',
+            padding: isFirst ? '7px 18px' : '5px 14px',
+            marginTop: '10px',
+            boxShadow: isFirst
+              ? '0 6px 18px rgba(245, 158, 11, 0.42), inset 0 1px 1px rgba(255, 255, 255, 0.4)'
+              : isSecond
+              ? '0 4px 12px rgba(100, 116, 139, 0.3)'
+              : '0 4px 12px rgba(180, 83, 9, 0.3)',
+            border: isFirst
+              ? '1.5px solid rgba(255, 255, 255, 0.45)'
+              : '1px solid rgba(255, 255, 255, 0.3)',
+          }}
+        >
+          <span style={{ fontSize: isFirst ? '15px' : '13px', lineHeight: 1 }}>
+            {isFirst ? '🏆' : isSecond ? '🥈' : '🥉'}
+          </span>
+          <span
+            style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: isFirst ? '20px' : '16px',
+              fontWeight: 900,
+              letterSpacing: '-0.5px',
+              color: '#FFFFFF',
+              lineHeight: 1,
+              textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            {cashReward}
+          </span>
+        </div>
+
+        {/* Streak with Fire Flame Icon */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '5px',
-            marginTop: isFirst ? '12px' : '8px',
+            gap: '6px',
+            marginTop: 'auto',
+            paddingTop: '12px',
           }}
         >
-          <span style={{ fontSize: '15px', lineHeight: 1 }}>🔥</span>
+          <span style={{ fontSize: '16px', lineHeight: 1 }}>🔥</span>
           <span
             style={{
-              fontSize: isFirst ? '14px' : '13px',
-              fontWeight: 700,
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: isFirst ? '14.5px' : '13px',
+              fontWeight: 800,
               color: '#111827',
               whiteSpace: 'nowrap',
             }}
@@ -286,7 +341,7 @@ export const Rankings: React.FC = () => {
   const navigate = useNavigate();
   const [dataset, setDataset] = useState<LeaderboardDataset>(emptyDataset);
   const [loading, setLoading] = useState(false);
-  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [infoModalOpen, setInfoModalOpen] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -304,7 +359,7 @@ export const Rankings: React.FC = () => {
           showToast({
             type: 'error',
             text1: t('rankingsScreen.leaderboardNotLoaded', 'Leaderboard not loaded'),
-            text2: error?.message || t('rankingsScreen.tryAgain', 'Please try again.'),
+            text2: getUserFriendlyErrorMessage(error, t('rankingsScreen.tryAgain', 'Please try again.')),
           });
         }
       } finally {
@@ -338,7 +393,14 @@ export const Rankings: React.FC = () => {
   }, [dataset.topThree]);
 
   return (
-    <Container maxWidth="640px" style={{ gap: '22px', paddingBottom: '40px' }}>
+    <Container
+      maxWidth="640px"
+      style={{
+        gap: '22px',
+        paddingBottom: '40px',
+        fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      }}
+    >
       {/* Top Header Bar matching Screenshot 2 & 3 */}
       <div
         style={{
@@ -373,12 +435,13 @@ export const Rankings: React.FC = () => {
 
         <h1
           style={{
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: '22px',
             fontWeight: 800,
             color: 'var(--text-main)',
             margin: 0,
             textAlign: 'center',
-            letterSpacing: '-0.02em',
+            letterSpacing: '-0.025em',
           }}
         >
           {t('rankingsScreen.leaderboard', 'Leaderboard')}
@@ -409,7 +472,15 @@ export const Rankings: React.FC = () => {
 
       {/* Subtitle / Description */}
       <div style={{ textAlign: 'center', marginTop: '-10px' }}>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+        <p
+          style={{
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontSize: '13px',
+            fontWeight: 500,
+            color: 'var(--text-muted)',
+            margin: 0,
+          }}
+        >
           {t('rankingsScreen.subtitle', 'Top weekly earners receive bonus cash and mega multiplier passes!')}
         </p>
       </div>
@@ -456,7 +527,7 @@ export const Rankings: React.FC = () => {
           }}
         >
           {orderedPodium.map((user) => (
-            <PodiumSlot key={user.id} user={user} />
+            <PodiumSlot key={user.id} user={user} isSolo={orderedPodium.length === 1} />
           ))}
         </div>
       )}
@@ -553,195 +624,435 @@ export const Rankings: React.FC = () => {
         </div>
       )}
 
-      {/* Streak Leaderboard Info Modal */}
+      {/* Streak Leaderboard Info Modal matching Image 1 */}
       <CustomModal
         visible={infoModalOpen}
         onClose={() => setInfoModalOpen(false)}
-        maxWidth="560px"
+        maxWidth="480px"
+        contentPadding="0px"
+        showCloseButton={false}
       >
         <div
           style={{
+            fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            background: '#16181D',
+            color: '#FFFFFF',
+            borderRadius: '26px',
+            padding: '28px 20px 24px 20px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            textAlign: 'center',
-            gap: '20px',
-            padding: '10px 12px 14px 12px',
+            gap: '16px',
+            position: 'relative',
+            boxSizing: 'border-box',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
           }}
         >
-          {/* Circular Green Info Icon Badge */}
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'rgba(0, 208, 102, 0.14)',
-              border: '1.5px solid rgba(0, 208, 102, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#00D066',
-              boxShadow: '0 0 20px rgba(0, 208, 102, 0.15)',
-            }}
-          >
-            <Info size={32} strokeWidth={2.4} />
-          </div>
-
-          <div>
-            <h3 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: 0, letterSpacing: '-0.2px' }}>
-              {t('rankingsScreen.infoTitle', 'Streak Leaderboard')}
-            </h3>
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
-              {t('rankingsScreen.infoSubtitle', 'How the leaderboard works')}
-            </p>
-          </div>
-
-          {/* 3 Info Cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', textAlign: 'left' }}>
-            {/* Card 1: Daily Streaks */}
-            <div
-              style={{
-                padding: '16px 18px',
-                borderRadius: '20px',
-                background: 'var(--bg-card-secondary)',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                gap: '16px',
-                alignItems: 'flex-start',
-                transition: 'border-color 0.2s ease',
-              }}
-            >
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: 'rgba(249, 115, 22, 0.15)',
-                  border: '1px solid rgba(249, 115, 22, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#F97316',
-                  flexShrink: 0,
-                  marginTop: '2px',
-                }}
-              >
-                <Flame size={22} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '15.5px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
-                  {t('rankingsScreen.dailyStreaksTitle', 'Daily Streaks')}
-                </h4>
-                <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
-                  {t('rankingsScreen.dailyStreaksDesc', 'Log in and play every day to increase your daily streak. The longer your active streak, the higher your ranking!')}
-                </p>
-              </div>
-            </div>
-
-            {/* Card 2: Top 3 Podium */}
-            <div
-              style={{
-                padding: '16px 18px',
-                borderRadius: '20px',
-                background: 'var(--bg-card-secondary)',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                gap: '16px',
-                alignItems: 'flex-start',
-                transition: 'border-color 0.2s ease',
-              }}
-            >
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  border: '1px solid rgba(245, 158, 11, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#F59E0B',
-                  flexShrink: 0,
-                  marginTop: '2px',
-                }}
-              >
-                <Trophy size={21} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '15.5px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
-                  {t('rankingsScreen.topThreeTitle', 'Top 3 Podium')}
-                </h4>
-                <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
-                  {t('rankingsScreen.topThreeDesc', 'The players with the highest active streaks earn a featured spot on the Top 3 Podium.')}
-                </p>
-              </div>
-            </div>
-
-            {/* Card 3: Bonus Rewards */}
-            <div
-              style={{
-                padding: '16px 18px',
-                borderRadius: '20px',
-                background: 'var(--bg-card-secondary)',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                gap: '16px',
-                alignItems: 'flex-start',
-                transition: 'border-color 0.2s ease',
-              }}
-            >
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: 'rgba(0, 208, 102, 0.15)',
-                  border: '1px solid rgba(0, 208, 102, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#00D066',
-                  flexShrink: 0,
-                  marginTop: '2px',
-                }}
-              >
-                <Gift size={21} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '15.5px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
-                  {t('rankingsScreen.bonusRewardsTitle', 'Bonus Rewards')}
-                </h4>
-                <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
-                  {t('rankingsScreen.bonusRewardsDesc', 'Maintain your streak to earn exclusive multipliers, unlock locked games faster, and gain recognition on the leaderboard.')}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Green Got It Button */}
+          {/* Integrated Sleek Dark Close Button */}
           <button
             type="button"
             onClick={() => setInfoModalOpen(false)}
             style={{
-              width: '100%',
-              padding: '16px',
-              borderRadius: '26px',
-              background: '#00D066',
-              color: '#052E16',
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.08)',
               border: 'none',
-              fontSize: '16px',
-              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(0, 208, 102, 0.35)',
-              marginTop: '4px',
-              transition: 'transform 0.15s ease',
+              color: '#9CA3AF',
+              transition: 'all 0.2s ease',
+              zIndex: 10,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            aria-label="Close"
           >
-            {t('common.gotIt', 'Got It!')}
+            <X size={18} />
           </button>
+
+          {/* Trophy in Golden Ring */}
+          <div
+            style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: 'rgba(245, 158, 11, 0.12)',
+              border: '1.5px solid rgba(245, 158, 11, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#F59E0B',
+              boxShadow: '0 0 20px rgba(245, 158, 11, 0.15)',
+              marginTop: '2px',
+            }}
+          >
+            <Trophy size={25} color="#F59E0B" />
+          </div>
+
+          {/* Heading and Subtitle */}
+          <div style={{ textAlign: 'center', padding: '0 8px' }}>
+            <h3
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '22px',
+                fontWeight: 800,
+                color: '#FFFFFF',
+                margin: 0,
+                letterSpacing: '-0.025em',
+              }}
+            >
+              Streak Leaderboard
+            </h3>
+            <p
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#9CA3AF',
+                margin: '6px 0 0 0',
+                lineHeight: 1.45,
+              }}
+            >
+              Play daily games, upload receipts & win cash rewards!
+            </p>
+          </div>
+
+          {/* Section: TOP 3 CASH REWARDS */}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#F59E0B',
+                fontSize: '11px',
+                fontWeight: 800,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+              }}
+            >
+              <Trophy size={13} color="#F59E0B" />
+              <span>TOP 3 CASH REWARDS</span>
+            </div>
+
+            {/* 3 Pods: 2nd, 1st, 3rd matching Screenshot 1 */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1.15fr 1fr',
+                gap: '10px',
+                width: '100%',
+                alignItems: 'center',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* 2nd Place */}
+              <div
+                style={{
+                  background: '#1F2228',
+                  border: '1px solid #2D313A',
+                  borderRadius: '16px',
+                  padding: '14px 6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: '10px',
+                    padding: '2px 8px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#E2E8F0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                >
+                  <span>🥈</span>
+                  <span>2nd</span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    color: '#FFFFFF',
+                    letterSpacing: '-0.5px',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  $50
+                </span>
+                <span
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#94A3B8',
+                  }}
+                >
+                  2nd Place
+                </span>
+              </div>
+
+              {/* 1st Place (Prominent with Golden Border & Glow) */}
+              <div
+                style={{
+                  background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.16) 0%, rgba(31, 34, 40, 0.95) 100%)',
+                  border: '1.5px solid #F59E0B',
+                  borderRadius: '18px',
+                  padding: '16px 6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 20px rgba(245, 158, 11, 0.2)',
+                }}
+              >
+                <div
+                  style={{
+                    background: '#F59E0B',
+                    borderRadius: '10px',
+                    padding: '3px 10px',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: '#451A03',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                >
+                  <span>🏆</span>
+                  <span>1st</span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: '26px',
+                    fontWeight: 900,
+                    color: '#FBBF24',
+                    letterSpacing: '-0.5px',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  $100
+                </span>
+                <span
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    color: '#F59E0B',
+                  }}
+                >
+                  1st Place
+                </span>
+              </div>
+
+              {/* 3rd Place */}
+              <div
+                style={{
+                  background: '#1F2228',
+                  border: '1px solid #2D313A',
+                  borderRadius: '16px',
+                  padding: '14px 6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <div
+                  style={{
+                    background: 'rgba(217, 119, 6, 0.15)',
+                    borderRadius: '10px',
+                    padding: '2px 8px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#F59E0B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                >
+                  <span>🥉</span>
+                  <span>3rd</span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    color: '#FFFFFF',
+                    letterSpacing: '-0.5px',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  $25
+                </span>
+                <span
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#94A3B8',
+                  }}
+                >
+                  3rd Place
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 1: Daily Games & Receipts matching Screenshot 1 */}
+          <div
+            style={{
+              width: '100%',
+              background: '#1F2228',
+              border: '1px solid #2D313A',
+              borderRadius: '18px',
+              padding: '16px',
+              display: 'flex',
+              gap: '14px',
+              alignItems: 'flex-start',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: 'rgba(0, 208, 102, 0.12)',
+                border: '1px solid rgba(0, 208, 102, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#00D066',
+                flexShrink: 0,
+                marginTop: '2px',
+              }}
+            >
+              <Receipt size={21} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h4
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '14.5px',
+                  fontWeight: 800,
+                  color: '#FFFFFF',
+                  margin: '0 0 6px 0',
+                }}
+              >
+                Daily Games & Receipts
+              </h4>
+              <p
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '12px',
+                  fontWeight: 450,
+                  color: '#9CA3AF',
+                  lineHeight: 1.5,
+                  margin: '0 0 10px 0',
+                }}
+              >
+                Play daily games requiring receipt uploads — Cash Games, Pic-Pick, and State Pick. Upload a valid receipt each day to build and maintain your streak.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {['Cash Games', 'Pic-Pick', 'State Pick'].map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      display: 'inline-block',
+                      padding: '3px 9px',
+                      background: 'rgba(0, 208, 102, 0.12)',
+                      border: '1px solid rgba(0, 208, 102, 0.25)',
+                      borderRadius: '8px',
+                      color: '#00D066',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: 30-Day Tie-Breaker Rule matching Screenshot 1 */}
+          <div
+            style={{
+              width: '100%',
+              background: '#1F2228',
+              border: '1px solid #2D313A',
+              borderRadius: '18px',
+              padding: '16px',
+              display: 'flex',
+              gap: '14px',
+              alignItems: 'flex-start',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: 'rgba(249, 115, 22, 0.12)',
+                border: '1px solid rgba(249, 115, 22, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#F97316',
+                flexShrink: 0,
+                marginTop: '2px',
+              }}
+            >
+              <Scale size={21} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h4
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '14.5px',
+                  fontWeight: 800,
+                  color: '#FFFFFF',
+                  margin: '0 0 6px 0',
+                }}
+              >
+                30-Day Tie-Breaker Rule
+              </h4>
+              <p
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '12px',
+                  fontWeight: 450,
+                  color: '#9CA3AF',
+                  lineHeight: 1.5,
+                  margin: 0,
+                }}
+              >
+                If two or more players maintain the same daily streak (e.g. 30 days), the winner is decided by who played more games and uploaded more receipts overall.
+              </p>
+            </div>
+          </div>
         </div>
       </CustomModal>
     </Container>

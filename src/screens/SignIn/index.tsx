@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { login, socialLogin } from '../../redux/Slices/authSlice';
 import { Button, FormInput, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 import {
   getRememberedSignIn,
@@ -159,7 +160,10 @@ export const SignIn: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
-        text2: error?.message || t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+        text2: getUserFriendlyErrorMessage(
+          error,
+          t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+        ),
       });
     } finally {
       setSocialLoadingProvider(null);
@@ -241,10 +245,10 @@ export const SignIn: React.FC = () => {
 
       navigate('/');
     } catch (error: any) {
-      const errorMessage =
-        typeof error === 'string'
-          ? error
-          : error?.message || t('auth.checkCredentials', 'Please check your credentials and try again.');
+      const errorMessage = getUserFriendlyErrorMessage(
+        error,
+        t('auth.checkCredentials', 'Please check your credentials and try again.'),
+      );
 
       showToast({
         type: 'error',
@@ -293,7 +297,10 @@ export const SignIn: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
-        text2: error?.message || t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+        text2: getUserFriendlyErrorMessage(
+          error,
+          t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+        ),
       });
       setSocialLoadingProvider(null);
     }

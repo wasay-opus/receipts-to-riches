@@ -102,17 +102,21 @@ export const PicPick: React.FC = () => {
           style={{
             background: 'var(--bg-card)',
             border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            width: '40px',
-            height: '40px',
+            borderRadius: '24px',
+            padding: '8px 14px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            gap: '6px',
             cursor: 'pointer',
-            color: 'var(--green)',
+            color: 'var(--text-main)',
+            fontSize: '13px',
+            fontWeight: 750,
+            whiteSpace: 'nowrap',
           }}
+          aria-label="How to play"
         >
-          <HelpCircle size={20} />
+          <HelpCircle size={18} color="var(--green)" />
+          <span>{t('common.howToPlay', 'How to play')}</span>
         </button>
       </div>
 

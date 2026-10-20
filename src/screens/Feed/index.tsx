@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -12,6 +12,7 @@ import {
   Plus,
   Reply,
   Send,
+  Share2,
   ThumbsDown,
   Trash2,
   UserCheck,
@@ -42,6 +43,7 @@ import { Container, CustomModal, ReportModal, showToast } from '../../components
 import feedServices from '../../services/feedServices';
 import pollServices from '../../services/pollServices';
 import { confirmAppAction, promptAppInput } from '../../utils/sweetAlert';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 type FeedComment = {
   id: string | number;
@@ -234,6 +236,9 @@ export const Feed: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { postId } = useParams<{ postId?: string }>();
+  const location = useLocation();
+  const targetPostFromState = (location.state as any)?.targetPost;
 
   const currentUser = useSelector((state: RootState) => state.user?.userData);
   const currentUserId = currentUser?.id ?? currentUser?._id;
@@ -248,7 +253,7 @@ export const Feed: React.FC = () => {
     toggleFollowLoadingMap,
   } = useSelector((state: RootState) => state.feed);
 
-  const [activeCommentPostId, setActiveCommentPostId] = useState<string | number | null>(null);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | number | null>(postId || null);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: string | number; user: string } | null>(null);
   const [commentReactions, setCommentReactions] = useState<
@@ -296,7 +301,7 @@ export const Feed: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    dispatch(fetchFeed({ params: { per_page: 15, page: 1 } }));
+    dispatch(fetchFeed({ params: { per_page: 30, page: 1 } }));
   }, [dispatch]);
 
   useEffect(() => {
@@ -315,7 +320,7 @@ export const Feed: React.FC = () => {
           showToast({
             type: 'error',
             text1: t('feedScreen.toast.pollsUnavailableTitle', 'Polls unavailable'),
-            text2: error?.message || t('feedScreen.toast.pollsUnavailableMessage', 'Could not load daily poll.'),
+            text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.pollsUnavailableMessage', 'Could not load daily poll.')),
           });
         }
       } finally {
@@ -331,11 +336,31 @@ export const Feed: React.FC = () => {
     };
   }, []);
 
-  const posts = useMemo(() => feedList.map((post) => normalizePost(post, t)), [feedList, t]);
+  const posts = useMemo(() => {
+    let list = [...feedList];
+    if (targetPostFromState && !list.some((item) => String(item?.id) === String(targetPostFromState?.id))) {
+      list = [targetPostFromState, ...list];
+    }
+    return list.map((post) => normalizePost(post, t));
+  }, [feedList, targetPostFromState, t]);
+
   const selectedPost = posts.find((post) => String(post.id) === String(activeCommentPostId));
 
+  // Auto-scroll to target post when postId is in URL
+  useEffect(() => {
+    if (postId && posts.length > 0) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`feed-post-${postId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [postId, posts.length]);
+
   const refreshFeed = useCallback(() => {
-    dispatch(fetchFeed({ params: { per_page: 15, page: 1 }, isRefresh: true }));
+    dispatch(fetchFeed({ params: { per_page: 30, page: 1 }, isRefresh: true }));
   }, [dispatch]);
 
   const getReportReason = (target: string) =>
@@ -361,7 +386,7 @@ export const Feed: React.FC = () => {
         showToast({
           type: 'error',
           text1: t('feedScreen.toast.likeNotSavedTitle', 'Like not saved'),
-          text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
+          text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.tryAgain', 'Please try again.')),
         });
       }
     },
@@ -384,7 +409,7 @@ export const Feed: React.FC = () => {
         showToast({
           type: 'error',
           text1: t('socialProfile.followNotSaved', 'Follow not saved'),
-          text2: error?.message || String(error || t('socialProfile.tryAgain', 'Please try again.')),
+          text2: getUserFriendlyErrorMessage(error, t('socialProfile.tryAgain', 'Please try again.')),
         });
       }
     },
@@ -480,7 +505,7 @@ export const Feed: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('feedScreen.toast.postNotUpdatedTitle', 'Post not updated'),
-        text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.tryAgain', 'Please try again.')),
       });
     }
   }, [
@@ -515,7 +540,7 @@ export const Feed: React.FC = () => {
         showToast({
           type: 'error',
           text1: t('feedScreen.toast.postNotDeletedTitle', 'Post not deleted'),
-          text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
+          text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.tryAgain', 'Please try again.')),
         });
       }
     },
@@ -553,7 +578,7 @@ export const Feed: React.FC = () => {
         showToast({
           type: 'error',
           text1: t('feedScreen.toast.commentNotUpdatedTitle', 'Comment not updated'),
-          text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
+          text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.tryAgain', 'Please try again.')),
         });
       }
     },
@@ -581,7 +606,7 @@ export const Feed: React.FC = () => {
         showToast({
           type: 'error',
           text1: t('feedScreen.toast.commentNotDeletedTitle', 'Comment not deleted'),
-          text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
+          text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.tryAgain', 'Please try again.')),
         });
       }
     },
@@ -658,7 +683,7 @@ export const Feed: React.FC = () => {
         showToast({
           type: 'error',
           text1: t('feedScreen.toast.commentReactionNotSavedTitle', 'Comment reaction not saved'),
-          text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
+          text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.tryAgain', 'Please try again.')),
         });
       }
     },
@@ -696,7 +721,7 @@ export const Feed: React.FC = () => {
         showToast({
           type: 'error',
           text1: t('feedScreen.toast.voteNotSavedTitle', 'Vote not saved'),
-          text2: error?.message || t('feedScreen.toast.tryAgain', 'Please try again.'),
+          text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.tryAgain', 'Please try again.')),
         });
       }
     },
@@ -733,7 +758,7 @@ export const Feed: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('feedScreen.toast.commentNotSavedTitle', 'Comment not saved'),
-        text2: error?.message || String(error || t('feedScreen.toast.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(error, t('feedScreen.toast.tryAgain', 'Please try again.')),
       });
       dispatch(fetchFeed({ params: { per_page: 15, page: 1 }, isRefresh: true }));
     }
@@ -872,16 +897,21 @@ export const Feed: React.FC = () => {
           const isOwnPost = Boolean(
             currentUserId && post.userId && String(currentUserId) === String(post.userId),
           );
+          const isTargetPost = Boolean(postId && String(post.id) === String(postId));
 
           return (
             <div
               key={post.id}
+              id={`feed-post-${post.id}`}
               className="card"
               style={{
                 padding: '20px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '14px',
+                border: isTargetPost ? '2px solid var(--green)' : '1px solid var(--border-color)',
+                boxShadow: isTargetPost ? '0 0 24px rgba(0, 230, 118, 0.22)' : undefined,
+                transition: 'all 0.3s ease',
               }}
             >
               <div
@@ -919,19 +949,39 @@ export const Feed: React.FC = () => {
                     }}
                   />
                   <div style={{ minWidth: 0 }}>
-                    <h4
-                      style={{
-                        fontSize: '15px',
-                        fontWeight: 700,
-                        color: 'var(--text-main)',
-                        margin: 0,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {post.author}
-                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h4
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 700,
+                          color: 'var(--text-main)',
+                          margin: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {post.author}
+                      </h4>
+                      {isTargetPost && (
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '8px',
+                            background: 'rgba(0, 230, 118, 0.12)',
+                            color: 'var(--green)',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            border: '1px solid rgba(0, 230, 118, 0.25)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          ★ Linked Post
+                        </span>
+                      )}
+                    </div>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       {post.time}
                     </span>
@@ -1134,6 +1184,42 @@ export const Feed: React.FC = () => {
                 >
                   <MessageCircle size={20} />
                   <span>{post.comments.length}</span>
+                </button>
+
+                {/* Share Button (copies link to /post/:id) */}
+                <button
+                  onClick={() => {
+                    const shareUrl = `${window.location.origin}/post/${post.id}`;
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(shareUrl);
+                      showToast({
+                        type: 'success',
+                        text1: t('feedScreen.shareCopied', 'Link Copied!'),
+                        text2: t('feedScreen.shareCopiedDesc', 'Post link copied to clipboard.'),
+                      });
+                    } else {
+                      window.prompt('Copy post URL:', shareUrl);
+                    }
+                  }}
+                  title={t('common.share', 'Share post link')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '2px',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <Share2 size={20} />
+                  <span>Share</span>
                 </button>
 
                 {/* Report button for other users' posts only (replaces Share button) */}

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowLeft, Image as ImageIcon, Sparkles, Send, X, Video } from 'lucide-react';
 import { Button, Container, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { createPost, fetchFeed } from '../../redux/Slices/feedSlice';
 
@@ -65,7 +66,7 @@ export const CreatePost: React.FC = () => {
       showToast({
         type: 'error',
         text1: t('createPost.postNotSaved', 'Post not saved'),
-        text2: error?.message || String(error || t('createPost.tryAgain', 'Please try again.')),
+        text2: getUserFriendlyErrorMessage(error, t('createPost.tryAgain', 'Please try again.')),
       });
     }
   };

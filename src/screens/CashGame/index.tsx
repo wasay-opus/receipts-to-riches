@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, DollarSign, Sparkles, MapPin, Calendar, Clock, Image, Layers, HelpCircle, Megaphone, Lock, CheckCircle2, Circle } from 'lucide-react';
 import { Button, Container, CustomModal, GameHelpMenu, showToast, triggerCoinCelebration } from '../../components';
 import gameServices from '../../services/gameServices';
-import { getLocalTimeWithOffset, getUSDateYYYYMMDD, getUSTimeHHMM, getUSTimeWithOffset, isMiddayOpenInUSTime } from '../../utils/usTime';
+import { getLocalTimeWithOffset, getUSDateYYYYMMDD, getUSTimeHHMM, isDeviceInUSTimezone, isMiddayOpenInUSTime, UNSUPPORTED_TIMEZONE_MESSAGE } from '../../utils/usTime';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
 import { getUserRewardPoints } from '../../utils/userDisplay';
 import { getScannedReceipt, clearScannedReceipt } from '../../utils/scannedReceiptStore';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 
 const extractMessage = (payload: any, fallback: string) => {
@@ -310,6 +311,15 @@ export const CashGame: React.FC = () => {
       }
     }
 
+    if (!isDeviceInUSTimezone()) {
+      showToast({
+        type: 'error',
+        text1: 'Submission Failed',
+        text2: UNSUPPORTED_TIMEZONE_MESSAGE,
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const pointsBefore = getUserRewardPoints(userData);
@@ -318,7 +328,7 @@ export const CashGame: React.FC = () => {
         game_slug: selectedGameSlug,
         date: receiptDate || getUSDateYYYYMMDD(),
         time: receiptTime || getUSTimeHHMM(),
-        played_at: getUSTimeWithOffset(),
+        played_at: getLocalTimeWithOffset(),
       };
 
       if (receiptFile) {
@@ -379,10 +389,7 @@ export const CashGame: React.FC = () => {
 
       clearScannedReceipt();
     } catch (error: any) {
-      const parsedError =
-        error?.response?.data?.errors
-          ? Object.values(error.response.data.errors).flat().join(' ')
-          : error?.response?.data?.message || error?.message || t('cashGames.errors.tryAgain', 'Please try again.');
+      const parsedError = getUserFriendlyErrorMessage(error, t('cashGames.errors.tryAgain', 'Please try again.'));
 
       showToast({
         type: 'error',

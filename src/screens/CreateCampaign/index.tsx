@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button, Container, showToast } from '../../components';
+import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { AppDispatch, RootState } from '../../redux/Store';
 import { fetchMyCampaigns, storeCampaign } from '../../redux/Slices/campaignsSlice';
 import { useLocationsDispatch, useLocationsState } from '../../redux/Hooks/useLocationsHooks';
@@ -112,7 +113,7 @@ export const CreateCampaign: React.FC = () => {
       showToast({
         type: 'error',
         text1: 'Failed to Create Campaign',
-        text2: error?.message || String(error || 'Please try again.'),
+        text2: getUserFriendlyErrorMessage(error, 'Please try again.'),
       });
     }
   };
