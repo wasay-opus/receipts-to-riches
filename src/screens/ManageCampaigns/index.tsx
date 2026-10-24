@@ -12,12 +12,20 @@ import {
   Sparkles,
   ExternalLink,
   Clock,
+  RefreshCw,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { Button, Container, CustomModal, FormInput, showToast } from '../../components';
 import { AppDispatch, RootState } from '../../redux/Store';
-import { fetchMyCampaigns, renewCampaign } from '../../redux/Slices/campaignsSlice';
+import {
+  deleteCampaign,
+  fetchMyCampaigns,
+  renewCampaign,
+  syncCampaignStatus,
+} from '../../redux/Slices/campaignsSlice';
 import { addFunds, fetchAllFunds } from '../../redux/Slices/fundsSlice';
-import { promptAppInput } from '../../utils/sweetAlert';
+import { confirmAppAction, promptAppInput } from '../../utils/sweetAlert';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 type CampaignTab = 'active' | 'expired' | 'pending' | 'rejected';
@@ -37,6 +45,8 @@ export const ManageCampaigns: React.FC = () => {
   const [activeTab, setActiveTab] = useState<CampaignTab>('active');
   const [fundAmount, setFundAmount] = useState('');
   const [showFundsModal, setShowFundsModal] = useState(false);
+  const [syncingId, setSyncingId] = useState<number | string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | string | null>(null);
 
   useEffect(() => {
     dispatch(fetchMyCampaigns());
@@ -165,6 +175,57 @@ export const ManageCampaigns: React.FC = () => {
         text1: 'Campaign Not Renewed',
         text2: getUserFriendlyErrorMessage(renewError, 'Please try again.'),
       });
+    }
+  };
+
+  const handleSyncStatus = async (campaignId: number | string) => {
+    try {
+      setSyncingId(campaignId);
+      const res = await dispatch(syncCampaignStatus(campaignId)).unwrap();
+      showToast({
+        type: 'success',
+        text1: 'Status Synchronized',
+        text2: res?.data?.message || 'Campaign status has been updated.',
+      });
+      dispatch(fetchMyCampaigns());
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        text1: 'Failed to Sync Status',
+        text2: getUserFriendlyErrorMessage(err, 'Could not sync status with server.'),
+      });
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
+  const handleDeleteCampaign = async (campaignId: number | string, campaignName?: string) => {
+    const confirmed = await confirmAppAction({
+      title: 'Delete Campaign?',
+      text: `Are you sure you want to delete "${campaignName || 'this campaign'}"? This action cannot be undone.`,
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+      icon: 'warning',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(campaignId);
+      await dispatch(deleteCampaign(campaignId)).unwrap();
+      showToast({
+        type: 'success',
+        text1: 'Campaign Deleted',
+        text2: 'The campaign has been successfully deleted.',
+      });
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        text1: 'Failed to Delete Campaign',
+        text2: getUserFriendlyErrorMessage(err, 'Could not delete campaign.'),
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -457,7 +518,67 @@ export const ManageCampaigns: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                  paddingTop: '6px',
+                  borderTop: '1px solid var(--border-color)',
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={syncingId === c.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSyncStatus(c.id);
+                  }}
+                  title="Synchronize live campaign approval & expiration status"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    borderRadius: '10px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: syncingId === c.id ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <RefreshCw
+                    size={12}
+                    style={{
+                      animation: syncingId === c.id ? 'spin 1s linear infinite' : 'none',
+                    }}
+                  />
+                  Sync Status
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/campaigns/edit/${c.id}`);
+                  }}
+                  title="Edit campaign details"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    borderRadius: '10px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Edit2 size={12} />
+                  Edit
+                </button>
+
                 <button
                   type="button"
                   className="btn-secondary"
@@ -465,9 +586,34 @@ export const ManageCampaigns: React.FC = () => {
                     e.stopPropagation();
                     handleRenewCampaign(c.id);
                   }}
-                  style={{ padding: '6px 14px', fontSize: '12px', borderRadius: '10px' }}
+                  style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '10px' }}
                 >
                   Renew
+                </button>
+
+                <button
+                  type="button"
+                  disabled={deletingId === c.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCampaign(c.id, c.sponsor);
+                  }}
+                  title="Delete campaign"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    borderRadius: '10px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: '#EF4444',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    cursor: deletingId === c.id ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <Trash2 size={12} />
+                  {deletingId === c.id ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>

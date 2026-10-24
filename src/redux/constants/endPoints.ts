@@ -57,6 +57,10 @@ const endPoints = {
   MY_CAMPAIGNS: 'campaigns/my-campaigns',
   GET_CAMPAIGNS: 'campaigns',
   STORE_CAMPAIGN: 'campaigns',
+  EDIT_CAMPAIGN: (campaignId: number | string) => `campaigns/edit/${campaignId}`,
+  SYNC_CAMPAIGN_STATUS: (campaignId: number | string) =>
+    `campaigns/${campaignId}/sync-status`,
+  DELETE_CAMPAIGN: (campaignId: number | string) => `campaigns/${campaignId}`,
   INCREMENT_VIEWS: 'campaigns/increment-views',
   INCREMENT_CLICKS: 'campaigns/increment-clicks',
   RENEW_CAMPAIGN: 'campaigns/renew',

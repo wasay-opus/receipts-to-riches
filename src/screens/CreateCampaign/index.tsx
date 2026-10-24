@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -14,18 +14,21 @@ import {
 import { Button, Container, showToast } from '../../components';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { AppDispatch, RootState } from '../../redux/Store';
-import { fetchMyCampaigns, storeCampaign } from '../../redux/Slices/campaignsSlice';
+import { editCampaign, fetchMyCampaigns, storeCampaign } from '../../redux/Slices/campaignsSlice';
 import { useLocationsDispatch, useLocationsState } from '../../redux/Hooks/useLocationsHooks';
 import { getUSDateYYYYMMDD } from '../../utils/usTime';
 
 export const CreateCampaign: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const dispatch = useDispatch<AppDispatch>();
 
-  const isSubmitting = useSelector(
-    (state: RootState) => state.campaigns.storeCampaignLoading,
+  const { storeCampaignLoading, editCampaignLoading, myCampaigns, allCampaigns } = useSelector(
+    (state: RootState) => state.campaigns,
   );
+  const isSubmitting = isEdit ? editCampaignLoading : storeCampaignLoading;
 
   const { fetchAllStates } = useLocationsDispatch();
   const { states, statesLoading } = useLocationsState();
@@ -37,8 +40,38 @@ export const CreateCampaign: React.FC = () => {
   const [startDate, setStartDate] = useState(getUSDateYYYYMMDD());
   const [endDate, setEndDate] = useState('');
   const [selectedState, setSelectedState] = useState('');
+  const [city, setCity] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [campaignFile, setCampaignFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+
+  // Pre-populate fields in edit mode
+  useEffect(() => {
+    if (isEdit && id) {
+      const all = [...(myCampaigns ?? []), ...(allCampaigns ?? [])];
+      const existing = all.find((item) => String(item.id) === String(id));
+      if (existing) {
+        if (existing.sponsor) setSponsor(existing.sponsor);
+        if (existing.url) setUrl(existing.url);
+        if (existing.start_date) setStartDate(String(existing.start_date).slice(0, 10));
+        if (existing.end_date) setEndDate(String(existing.end_date).slice(0, 10));
+        if (existing.type === 'video') {
+          setAdType('video');
+        } else {
+          setAdType('image');
+        }
+        if (existing.state || existing.city || existing.zip_code) {
+          setTargetingOption('targeted');
+          if (existing.state) setSelectedState(String(existing.state));
+          if (existing.city) setCity(String(existing.city));
+          if (existing.zip_code) setZipCode(String(existing.zip_code));
+        }
+        if (existing.file_url) {
+          setFilePreview(existing.file_url);
+        }
+      }
+    }
+  }, [isEdit, id, myCampaigns, allCampaigns]);
 
   useEffect(() => {
     if (targetingOption === 'targeted' && states.length === 0) {
@@ -75,44 +108,69 @@ export const CreateCampaign: React.FC = () => {
       showToast({ type: 'error', text1: 'End date is required' });
       return;
     }
-    if (!campaignFile) {
+    if (!campaignFile && !filePreview) {
       showToast({ type: 'error', text1: 'Campaign media file is required' });
       return;
     }
-    if (targetingOption === 'targeted' && !selectedState) {
-      showToast({ type: 'error', text1: 'Please select a state for targeting' });
+    if (targetingOption === 'targeted' && !selectedState && !city && !zipCode) {
+      showToast({ type: 'error', text1: 'Please provide at least a state or zip code for targeting' });
       return;
     }
 
     const formData = new FormData();
-    formData.append('file', campaignFile, campaignFile.name);
+    if (campaignFile) {
+      formData.append('file', campaignFile, campaignFile.name);
+    }
     formData.append('type', adType);
     formData.append('sponsor', sponsor.trim());
     formData.append('url', url.trim());
     formData.append('start_date', startDate);
     formData.append('end_date', endDate);
 
-    if (targetingOption === 'targeted' && selectedState) {
+    if (targetingOption === 'targeted') {
       formData.append('is_global', '0');
-      formData.append('locations[0][type]', 'state');
-      formData.append('locations[0][value]', selectedState);
+      let locIndex = 0;
+      if (selectedState) {
+        formData.append(`locations[${locIndex}][type]`, 'state');
+        formData.append(`locations[${locIndex}][value]`, selectedState);
+        locIndex++;
+      }
+      if (city.trim()) {
+        formData.append(`locations[${locIndex}][type]`, 'city');
+        formData.append(`locations[${locIndex}][value]`, city.trim());
+        locIndex++;
+      }
+      if (zipCode.trim()) {
+        formData.append(`locations[${locIndex}][type]`, 'zip');
+        formData.append(`locations[${locIndex}][value]`, zipCode.trim());
+        locIndex++;
+      }
     } else {
       formData.append('is_global', '1');
     }
 
     try {
-      await dispatch(storeCampaign(formData)).unwrap();
-      showToast({
-        type: 'success',
-        text1: 'Campaign Created Successfully',
-        text2: 'Your ad has been submitted for review.',
-      });
+      if (isEdit && id) {
+        await dispatch(editCampaign({ id, formData })).unwrap();
+        showToast({
+          type: 'success',
+          text1: 'Campaign Updated Successfully',
+          text2: 'Changes have been saved.',
+        });
+      } else {
+        await dispatch(storeCampaign(formData)).unwrap();
+        showToast({
+          type: 'success',
+          text1: 'Campaign Created Successfully',
+          text2: 'Your ad has been submitted for review.',
+        });
+      }
       dispatch(fetchMyCampaigns());
       navigate('/campaigns');
     } catch (error: any) {
       showToast({
         type: 'error',
-        text1: 'Failed to Create Campaign',
+        text1: isEdit ? 'Failed to Update Campaign' : 'Failed to Create Campaign',
         text2: getUserFriendlyErrorMessage(error, 'Please try again.'),
       });
     }
@@ -120,7 +178,7 @@ export const CreateCampaign: React.FC = () => {
 
   return (
     <Container maxWidth="560px" style={{ gap: '20px', paddingBottom: '40px' }}>
-      {/* 1. Header (Screenshot 4) */}
+      {/* 1. Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '4px' }}>
         <button
           onClick={() => navigate(-1)}
@@ -141,7 +199,7 @@ export const CreateCampaign: React.FC = () => {
           <ArrowLeft size={20} />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-          Request New Ad
+          {isEdit ? 'Edit Campaign' : 'Request New Ad'}
         </h1>
       </div>
 
@@ -298,6 +356,7 @@ export const CreateCampaign: React.FC = () => {
 
         {/* State Dropdown (Conditional on Targeted option) */}
         {targetingOption === 'targeted' && (
+          <>
           <div style={{ position: 'relative' }}>
             <select
               value={selectedState}
@@ -336,6 +395,34 @@ export const CreateCampaign: React.FC = () => {
               }}
             />
           </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <input
+              className="form-input"
+              type="text"
+              placeholder="Target City (optional)"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              style={{
+                borderRadius: '24px',
+                padding: '14px 18px',
+                fontSize: '14px',
+              }}
+            />
+            <input
+              className="form-input"
+              type="text"
+              placeholder="Target Zip (optional)"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value)}
+              style={{
+                borderRadius: '24px',
+                padding: '14px 18px',
+                fontSize: '14px',
+              }}
+            />
+          </div>
+          </>
         )}
 
         {/* Upload Campaign Media Dashed Box (Screenshot 4) */}
@@ -426,7 +513,7 @@ export const CreateCampaign: React.FC = () => {
           </div>
         )}
 
-        {/* Create Button (Screenshot 4) */}
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={isSubmitting}
@@ -446,7 +533,13 @@ export const CreateCampaign: React.FC = () => {
             transition: 'all 0.2s ease',
           }}
         >
-          {isSubmitting ? 'Creating...' : 'Create'}
+          {isSubmitting
+            ? isEdit
+              ? 'Updating...'
+              : 'Creating...'
+            : isEdit
+            ? 'Update Campaign'
+            : 'Create'}
         </button>
       </form>
     </Container>

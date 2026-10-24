@@ -200,6 +200,102 @@ class CampaignServices {
       throw error;
     }
   };
+
+  editCampaign = async (
+    campaignId: number | string,
+    formData: FormData,
+  ): Promise<IApiResponse> => {
+    try {
+      if (__DEV__) {
+        console.log(
+          '[CampaignAPI] Request -> POST',
+          endPoints.EDIT_CAMPAIGN(campaignId),
+          '(multipart/form-data)',
+        );
+      }
+      const response = await fetchApi({
+        method: 'POST',
+        endPoint: endPoints.EDIT_CAMPAIGN(campaignId),
+        data: formData,
+        params: undefined,
+        formData: true,
+        token: true,
+      });
+      if (__DEV__) {
+        console.log('[CampaignAPI] Success -> POST campaigns/edit', {
+          status: response?.status,
+          success: response?.data?.success,
+          message: response?.data?.message,
+        });
+      }
+      return response;
+    } catch (error) {
+      console.error('[CampaignAPI] Error -> POST campaigns/edit', error);
+      throw error;
+    }
+  };
+
+  syncCampaignStatus = async (
+    campaignId: number | string,
+  ): Promise<IApiResponse> => {
+    try {
+      if (__DEV__) {
+        console.log(
+          '[CampaignAPI] Request -> POST',
+          endPoints.SYNC_CAMPAIGN_STATUS(campaignId),
+        );
+      }
+      const response = await fetchApi({
+        method: 'POST',
+        endPoint: endPoints.SYNC_CAMPAIGN_STATUS(campaignId),
+        data: undefined,
+        params: undefined,
+        token: true,
+      });
+      if (__DEV__) {
+        console.log('[CampaignAPI] Success -> POST campaigns/sync-status', {
+          status: response?.status,
+          success: response?.data?.success,
+          message: response?.data?.message,
+        });
+      }
+      return response;
+    } catch (error) {
+      console.error('[CampaignAPI] Error -> POST campaigns/sync-status', error);
+      throw error;
+    }
+  };
+
+  deleteCampaign = async (
+    campaignId: number | string,
+  ): Promise<IApiResponse> => {
+    try {
+      if (__DEV__) {
+        console.log(
+          '[CampaignAPI] Request -> DELETE',
+          endPoints.DELETE_CAMPAIGN(campaignId),
+        );
+      }
+      const response = await fetchApi({
+        method: 'DELETE',
+        endPoint: endPoints.DELETE_CAMPAIGN(campaignId),
+        data: undefined,
+        params: undefined,
+        token: true,
+      });
+      if (__DEV__) {
+        console.log('[CampaignAPI] Success -> DELETE campaigns', {
+          status: response?.status,
+          success: response?.data?.success,
+          message: response?.data?.message,
+        });
+      }
+      return response;
+    } catch (error) {
+      console.error('[CampaignAPI] Error -> DELETE campaigns', error);
+      throw error;
+    }
+  };
 }
 
 const campaignServices = new CampaignServices();

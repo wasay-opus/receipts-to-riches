@@ -172,6 +172,7 @@ function App() {
         <Route path="/campaigns" element={<ProtectedRoute><ManageCampaigns /></ProtectedRoute>} />
         <Route path="/manage-campaigns" element={<ProtectedRoute><ManageCampaigns /></ProtectedRoute>} />
         <Route path="/campaigns/create" element={<ProtectedRoute><CreateCampaign /></ProtectedRoute>} />
+        <Route path="/campaigns/edit/:id" element={<ProtectedRoute><CreateCampaign /></ProtectedRoute>} />
         <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetail /></ProtectedRoute>} />
 
         {/* PayPal Callback */}

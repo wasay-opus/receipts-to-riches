@@ -46,6 +46,12 @@ interface CampaignsState {
   renewCampaignError: string | null;
   storeCampaignLoading: boolean;
   storeCampaignError: string | null;
+  editCampaignLoading: boolean;
+  editCampaignError: string | null;
+  syncStatusLoading: boolean;
+  syncStatusError: string | null;
+  deleteCampaignLoading: boolean;
+  deleteCampaignError: string | null;
 }
 
 const CAMPAIGNS_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -232,6 +238,12 @@ const initialState: CampaignsState = {
   renewCampaignError: null,
   storeCampaignLoading: false,
   storeCampaignError: null,
+  editCampaignLoading: false,
+  editCampaignError: null,
+  syncStatusLoading: false,
+  syncStatusError: null,
+  deleteCampaignLoading: false,
+  deleteCampaignError: null,
 };
 
 export const fetchAllCampaigns = createAsyncThunk(
@@ -402,6 +414,92 @@ export const storeCampaign = createAsyncThunk(
   },
 );
 
+export interface EditCampaignPayload {
+  id: number | string;
+  formData: FormData;
+}
+
+export const editCampaign = createAsyncThunk(
+  'campaigns/editCampaign',
+  async (payload: EditCampaignPayload, { rejectWithValue }) => {
+    try {
+      if (__DEV__) {
+        console.log('[CampaignsSlice] editCampaign started', { id: payload.id });
+      }
+      const response = await campaignServices.editCampaign(payload.id, payload.formData);
+      const data = response?.data;
+
+      if ((response?.status === 200 || response?.status === 201) && data?.success !== false) {
+        return { id: payload.id, data };
+      }
+
+      return rejectWithValue(extractMessage(data, 'Failed to update campaign'));
+    } catch (error: any) {
+      console.error('[CampaignsSlice] editCampaign failed', error);
+      if (axios.isAxiosError(error) && error.response) {
+        return rejectWithValue(
+          extractMessage(error.response.data, 'Failed to update campaign'),
+        );
+      }
+      return rejectWithValue(error.message || 'Failed to update campaign');
+    }
+  },
+);
+
+export const syncCampaignStatus = createAsyncThunk(
+  'campaigns/syncCampaignStatus',
+  async (campaignId: number | string, { rejectWithValue }) => {
+    try {
+      if (__DEV__) {
+        console.log('[CampaignsSlice] syncCampaignStatus started', { campaignId });
+      }
+      const response = await campaignServices.syncCampaignStatus(campaignId);
+      const data = response?.data;
+
+      if ((response?.status === 200 || response?.status === 201) && data?.success !== false) {
+        return { id: campaignId, data };
+      }
+
+      return rejectWithValue(extractMessage(data, 'Failed to sync campaign status'));
+    } catch (error: any) {
+      console.error('[CampaignsSlice] syncCampaignStatus failed', error);
+      if (axios.isAxiosError(error) && error.response) {
+        return rejectWithValue(
+          extractMessage(error.response.data, 'Failed to sync campaign status'),
+        );
+      }
+      return rejectWithValue(error.message || 'Failed to sync campaign status');
+    }
+  },
+);
+
+export const deleteCampaign = createAsyncThunk(
+  'campaigns/deleteCampaign',
+  async (campaignId: number | string, { rejectWithValue }) => {
+    try {
+      if (__DEV__) {
+        console.log('[CampaignsSlice] deleteCampaign started', { campaignId });
+      }
+      const response = await campaignServices.deleteCampaign(campaignId);
+      const data = response?.data;
+
+      if ((response?.status === 200 || response?.status === 204 || response?.status === 201) && data?.success !== false) {
+        return { id: campaignId, message: data?.message || 'Campaign deleted successfully' };
+      }
+
+      return rejectWithValue(extractMessage(data, 'Failed to delete campaign'));
+    } catch (error: any) {
+      console.error('[CampaignsSlice] deleteCampaign failed', error);
+      if (axios.isAxiosError(error) && error.response) {
+        return rejectWithValue(
+          extractMessage(error.response.data, 'Failed to delete campaign'),
+        );
+      }
+      return rejectWithValue(error.message || 'Failed to delete campaign');
+    }
+  },
+);
+
 const campaignsSlice = createSlice({
   name: 'campaigns',
   initialState,
@@ -421,6 +519,15 @@ const campaignsSlice = createSlice({
     clearStoreCampaignError(state) {
       state.storeCampaignError = null;
     },
+    clearEditCampaignError(state) {
+      state.editCampaignError = null;
+    },
+    clearSyncStatusError(state) {
+      state.syncStatusError = null;
+    },
+    clearDeleteCampaignError(state) {
+      state.deleteCampaignError = null;
+    },
     resetCampaignsState(state) {
       state.campaigns = [];
       state.allCampaigns = [];
@@ -439,6 +546,12 @@ const campaignsSlice = createSlice({
       state.renewCampaignError = null;
       state.storeCampaignLoading = false;
       state.storeCampaignError = null;
+      state.editCampaignLoading = false;
+      state.editCampaignError = null;
+      state.syncStatusLoading = false;
+      state.syncStatusError = null;
+      state.deleteCampaignLoading = false;
+      state.deleteCampaignError = null;
     },
   },
   extraReducers: builder => {
@@ -528,6 +641,51 @@ const campaignsSlice = createSlice({
       .addCase(storeCampaign.rejected, (state, action) => {
         state.storeCampaignLoading = false;
         state.storeCampaignError = action.payload as string;
+      })
+      .addCase(editCampaign.pending, state => {
+        state.editCampaignLoading = true;
+        state.editCampaignError = null;
+      })
+      .addCase(editCampaign.fulfilled, state => {
+        state.editCampaignLoading = false;
+        state.editCampaignError = null;
+        state.lastFetchedAt = 0;
+      })
+      .addCase(editCampaign.rejected, (state, action) => {
+        state.editCampaignLoading = false;
+        state.editCampaignError = action.payload as string;
+      })
+      .addCase(syncCampaignStatus.pending, state => {
+        state.syncStatusLoading = true;
+        state.syncStatusError = null;
+      })
+      .addCase(syncCampaignStatus.fulfilled, state => {
+        state.syncStatusLoading = false;
+        state.syncStatusError = null;
+        state.lastFetchedAt = 0;
+      })
+      .addCase(syncCampaignStatus.rejected, (state, action) => {
+        state.syncStatusLoading = false;
+        state.syncStatusError = action.payload as string;
+      })
+      .addCase(deleteCampaign.pending, state => {
+        state.deleteCampaignLoading = true;
+        state.deleteCampaignError = null;
+      })
+      .addCase(deleteCampaign.fulfilled, (state, action) => {
+        state.deleteCampaignLoading = false;
+        state.deleteCampaignError = null;
+        state.lastFetchedAt = 0;
+        const targetId = String(action.payload.id);
+        state.myCampaigns = state.myCampaigns.filter(c => String(c.id) !== targetId);
+        state.allCampaigns = state.allCampaigns.filter(c => String(c.id) !== targetId);
+        state.campaigns = state.campaigns.filter(c => String(c.id) !== targetId);
+        state.imageCampaigns = state.imageCampaigns.filter(c => String(c.id) !== targetId);
+        state.videoCampaigns = state.videoCampaigns.filter(c => String(c.id) !== targetId);
+      })
+      .addCase(deleteCampaign.rejected, (state, action) => {
+        state.deleteCampaignLoading = false;
+        state.deleteCampaignError = action.payload as string;
       });
   },
 });
@@ -538,6 +696,9 @@ export const {
   clearIncrementClicksError,
   clearRenewCampaignError,
   clearStoreCampaignError,
+  clearEditCampaignError,
+  clearSyncStatusError,
+  clearDeleteCampaignError,
   resetCampaignsState,
 } = campaignsSlice.actions;
 export default campaignsSlice.reducer;
