@@ -326,11 +326,11 @@ export const SignIn: React.FC = () => {
       }}
     >
       <div
-        className="card"
+        className="card auth-card"
         style={{
           width: '100%',
-          maxWidth: '440px',
-          padding: '36px 28px',
+          maxWidth: '700px',
+          padding: '36px 32px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',

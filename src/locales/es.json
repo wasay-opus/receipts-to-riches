@@ -337,6 +337,7 @@
     "enterCompleteOtp": "Por favor ingresa el código de verificación completo.",
     "passwordMin": "La contraseña debe tener al menos 6 caracteres",
     "nameTooShort": "El nombre es demasiado corto",
+    "lastNameTooShort": "El apellido es demasiado corto",
     "acceptTerms": "Debes aceptar los términos y condiciones"
   },
   "manageCampaigns": {

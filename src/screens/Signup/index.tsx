@@ -210,7 +210,7 @@ export const SignUp: React.FC = () => {
       .min(2, t('validation.nameTooShort', 'First name is too short'))
       .required(t('validation.required', 'First name is required')),
     last_name: Yup.string()
-      .min(2, t('validation.nameTooShort', 'Last name is too short'))
+      .min(2, t('validation.lastNameTooShort', 'Last name is too short'))
       .required(t('validation.required', 'Last name is required')),
     email: Yup.string()
       .email(t('validation.invalidEmail', 'Invalid email address'))
@@ -309,11 +309,11 @@ export const SignUp: React.FC = () => {
       }}
     >
       <div
-        className="card"
+        className="card auth-card"
         style={{
           width: '100%',
-          maxWidth: '480px',
-          padding: '36px 28px',
+          maxWidth: '700px',
+          padding: '36px 32px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -352,7 +352,7 @@ export const SignUp: React.FC = () => {
         >
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched, setFieldValue }) => (
             <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="auth-grid-2col">
                 <FormInput
                   label={t('auth.firstName', 'First Name')}
                   placeholder="John"
@@ -378,29 +378,31 @@ export const SignUp: React.FC = () => {
                 />
               </div>
 
-              <FormInput
-                label={t('auth.email', 'Email Address')}
-                placeholder="name@example.com"
-                type="email"
-                name="email"
-                value={values.email}
-                onChange={handleChange('email')}
-                onBlur={handleBlur('email')}
-                error={touched.email && errors.email ? errors.email : undefined}
-                leftIcon={<Mail size={18} />}
-              />
+              <div className="auth-grid-2col">
+                <FormInput
+                  label={t('auth.email', 'Email Address')}
+                  placeholder="name@example.com"
+                  type="email"
+                  name="email"
+                  value={values.email}
+                  onChange={handleChange('email')}
+                  onBlur={handleBlur('email')}
+                  error={touched.email && errors.email ? errors.email : undefined}
+                  leftIcon={<Mail size={18} />}
+                />
 
-              <FormInput
-                label={t('auth.phoneNumber', 'Phone Number')}
-                placeholder="+1 555 123 4567"
-                type="tel"
-                name="phone"
-                value={values.phone}
-                onChange={handleChange('phone')}
-                onBlur={handleBlur('phone')}
-                error={touched.phone && errors.phone ? errors.phone : undefined}
-                leftIcon={<Phone size={18} />}
-              />
+                <FormInput
+                  label={t('auth.phoneNumber', 'Phone Number')}
+                  placeholder="+1 555 123 4567"
+                  type="tel"
+                  name="phone"
+                  value={values.phone}
+                  onChange={handleChange('phone')}
+                  onBlur={handleBlur('phone')}
+                  error={touched.phone && errors.phone ? errors.phone : undefined}
+                  leftIcon={<Phone size={18} />}
+                />
+              </div>
 
               <FormInput
                 label={t('auth.password', 'Password')}
