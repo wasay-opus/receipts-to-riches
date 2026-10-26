@@ -36,17 +36,33 @@ const getLeaderboardList = (payload: any): any[] => {
   return [];
 };
 
+const useIsMobile = (breakpoint = 640) => {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= breakpoint);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [breakpoint]);
+
+  return isMobile;
+};
+
 // Crown for 1st place matching Screenshot 4
-const GoldenCrown: React.FC = () => (
+const GoldenCrown: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => (
   <svg
-    width="42"
-    height="32"
+    width={isMobile ? "30" : "42"}
+    height={isMobile ? "22" : "32"}
     viewBox="0 0 38 28"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     style={{
       position: 'absolute',
-      top: '-22px',
+      top: isMobile ? '-16px' : '-22px',
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 6,
@@ -68,11 +84,11 @@ const GoldenCrown: React.FC = () => (
 );
 
 // Rank Badge (1st, 2nd, 3rd) overlapping bottom-left of avatar matching Screenshot 4
-const RankBadge: React.FC<{ rank: 1 | 2 | 3 }> = ({ rank }) => {
+const RankBadge: React.FC<{ rank: 1 | 2 | 3; isMobile?: boolean }> = ({ rank, isMobile }) => {
   const configs: Record<1 | 2 | 3, { text: string; bg: string; size: number; fontSize: string }> = {
-    1: { text: '1st', bg: '#D97706', size: 26, fontSize: '11px' },
-    2: { text: '2nd', bg: '#1E293B', size: 24, fontSize: '10.5px' },
-    3: { text: '3rd', bg: '#78350F', size: 24, fontSize: '10.5px' },
+    1: { text: '1st', bg: '#D97706', size: isMobile ? 20 : 26, fontSize: isMobile ? '9px' : '11px' },
+    2: { text: '2nd', bg: '#1E293B', size: isMobile ? 18 : 24, fontSize: isMobile ? '8.5px' : '10.5px' },
+    3: { text: '3rd', bg: '#78350F', size: isMobile ? 18 : 24, fontSize: isMobile ? '8.5px' : '10.5px' },
   };
   const config = configs[rank];
 
@@ -81,7 +97,7 @@ const RankBadge: React.FC<{ rank: 1 | 2 | 3 }> = ({ rank }) => {
       style={{
         position: 'absolute',
         bottom: '-2px',
-        left: '-4px',
+        left: isMobile ? '-2px' : '-4px',
         width: `${config.size}px`,
         height: `${config.size}px`,
         borderRadius: '50%',
@@ -153,11 +169,21 @@ const UserAvatar: React.FC<{
   );
 };
 
-const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user, isSolo }) => {
+const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: boolean }> = ({
+  user,
+  isSolo,
+  isMobile,
+}) => {
   const isFirst = user.rank === 1;
   const isSecond = user.rank === 2;
-  const cardHeight = isSolo ? 275 : isFirst ? 255 : isSecond ? 215 : 195;
-  const avatarSize = isFirst ? 76 : isSecond ? 66 : 62;
+  const cardHeight = isSolo
+    ? (isMobile ? 240 : 275)
+    : isMobile
+    ? (isFirst ? 210 : isSecond ? 180 : 165)
+    : (isFirst ? 255 : isSecond ? 215 : 195);
+  const avatarSize = isMobile
+    ? (isFirst ? 56 : isSecond ? 48 : 44)
+    : (isFirst ? 76 : isSecond ? 66 : 62);
   const overlapOffset = Math.round(avatarSize / 2);
 
   // Status title matching Screenshot: 1st Dominating, 2nd Active Chaser, 3rd Rising Star
@@ -175,8 +201,8 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
         flexDirection: 'column',
         alignItems: 'center',
         flex: 1,
-        maxWidth: isSolo ? '220px' : '180px',
-        minWidth: isSolo ? '170px' : '110px',
+        maxWidth: isSolo ? '220px' : isMobile ? '118px' : '180px',
+        minWidth: 0,
         position: 'relative',
         fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}
@@ -192,14 +218,14 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
           justifyContent: 'center',
         }}
       >
-        {isFirst && <GoldenCrown />}
+        {isFirst && <GoldenCrown isMobile={isMobile} />}
         <UserAvatar
           src={user.avatar}
           name={user.name}
           size={avatarSize}
           borderColor="#FFFFFF"
         />
-        <RankBadge rank={user.rank} />
+        <RankBadge rank={user.rank} isMobile={isMobile} />
       </div>
 
       {/* Styled Golden/Cream Podium Card matching Screenshot */}
@@ -211,17 +237,17 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
             ? 'linear-gradient(180deg, #FFFDF7 0%, #FFF8E7 100%)'
             : '#FFF8E7',
           border: isFirst ? '2px solid #F59E0B' : '1.5px solid #FEE5A5',
-          borderRadius: '24px',
+          borderRadius: isMobile ? '18px' : '24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          paddingTop: `${overlapOffset + 14}px`,
-          paddingBottom: '16px',
-          paddingLeft: '10px',
-          paddingRight: '10px',
+          paddingTop: `${overlapOffset + (isMobile ? 8 : 14)}px`,
+          paddingBottom: isMobile ? '10px' : '16px',
+          paddingLeft: isMobile ? '4px' : '10px',
+          paddingRight: isMobile ? '4px' : '10px',
           boxShadow: isFirst
-            ? '0 12px 28px rgba(245, 158, 11, 0.22)'
-            : '0 6px 16px rgba(0, 0, 0, 0.05)',
+            ? '0 10px 24px rgba(245, 158, 11, 0.2)'
+            : '0 4px 14px rgba(0, 0, 0, 0.05)',
           boxSizing: 'border-box',
         }}
       >
@@ -229,7 +255,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
         <strong
           style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isFirst ? '16px' : '14px',
+            fontSize: isMobile ? (isFirst ? '12px' : '11px') : isFirst ? '16px' : '14px',
             fontWeight: 800,
             color: '#111827',
             textAlign: 'center',
@@ -249,11 +275,11 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
         <span
           style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isFirst ? '13px' : '12px',
+            fontSize: isMobile ? (isFirst ? '10px' : '9px') : isFirst ? '13px' : '12px',
             fontWeight: 600,
             color: '#4B5563',
             textAlign: 'center',
-            marginTop: '3px',
+            marginTop: isMobile ? '1px' : '3px',
             maxWidth: '100%',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -269,7 +295,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
+            gap: isMobile ? '4px' : '6px',
             background: isFirst
               ? 'linear-gradient(135deg, #FFB800 0%, #F59E0B 50%, #D97706 100%)'
               : isSecond
@@ -277,8 +303,10 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
               : 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
             color: '#FFFFFF',
             borderRadius: '24px',
-            padding: isFirst ? '7px 18px' : '5px 14px',
-            marginTop: '10px',
+            padding: isMobile
+              ? isFirst ? '4px 10px' : '3px 8px'
+              : isFirst ? '7px 18px' : '5px 14px',
+            marginTop: isMobile ? '6px' : '10px',
             boxShadow: isFirst
               ? '0 6px 18px rgba(245, 158, 11, 0.42), inset 0 1px 1px rgba(255, 255, 255, 0.4)'
               : isSecond
@@ -289,13 +317,13 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
               : '1px solid rgba(255, 255, 255, 0.3)',
           }}
         >
-          <span style={{ fontSize: isFirst ? '15px' : '13px', lineHeight: 1 }}>
+          <span style={{ fontSize: isMobile ? (isFirst ? '12px' : '11px') : isFirst ? '15px' : '13px', lineHeight: 1 }}>
             {isFirst ? '🏆' : isSecond ? '🥈' : '🥉'}
           </span>
           <span
             style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isFirst ? '20px' : '16px',
+              fontSize: isMobile ? (isFirst ? '14px' : '12px') : isFirst ? '20px' : '16px',
               fontWeight: 900,
               letterSpacing: '-0.5px',
               color: '#FFFFFF',
@@ -313,22 +341,22 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
+            gap: isMobile ? '4px' : '6px',
             marginTop: 'auto',
-            paddingTop: '12px',
+            paddingTop: isMobile ? '8px' : '12px',
           }}
         >
-          <span style={{ fontSize: '16px', lineHeight: 1 }}>🔥</span>
+          <span style={{ fontSize: isMobile ? '13px' : '16px', lineHeight: 1 }}>🔥</span>
           <span
             style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isFirst ? '14.5px' : '13px',
+              fontSize: isMobile ? (isFirst ? '11.5px' : '11px') : isFirst ? '14.5px' : '13px',
               fontWeight: 800,
               color: '#111827',
               whiteSpace: 'nowrap',
             }}
           >
-            {user.streak}
+            {user.streak} {isMobile ? 'd' : 'Days'}
           </span>
         </div>
       </div>
@@ -339,6 +367,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean }> = ({ user
 export const Rankings: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile(640);
   const [dataset, setDataset] = useState<LeaderboardDataset>(emptyDataset);
   const [loading, setLoading] = useState(false);
   const [infoModalOpen, setInfoModalOpen] = useState(true);
@@ -396,8 +425,8 @@ export const Rankings: React.FC = () => {
     <Container
       maxWidth="640px"
       style={{
-        gap: '22px',
-        paddingBottom: '40px',
+        gap: isMobile ? '16px' : '22px',
+        paddingBottom: isMobile ? '95px' : '40px',
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       }}
     >
@@ -520,14 +549,19 @@ export const Rankings: React.FC = () => {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'flex-end',
-            gap: '14px',
-            paddingTop: '32px',
+            gap: isMobile ? '8px' : '14px',
+            paddingTop: isMobile ? '24px' : '32px',
             paddingBottom: '8px',
             width: '100%',
           }}
         >
           {orderedPodium.map((user) => (
-            <PodiumSlot key={user.id} user={user} isSolo={orderedPodium.length === 1} />
+            <PodiumSlot
+              key={user.id}
+              user={user}
+              isSolo={orderedPodium.length === 1}
+              isMobile={isMobile}
+            />
           ))}
         </div>
       )}

@@ -276,7 +276,7 @@ export const Rewards: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="760px" style={{ gap: '20px', paddingBottom: '40px' }}>
+    <Container maxWidth="760px" style={{ gap: '20px', paddingBottom: '90px' }}>
       {/* 1. Header matching Screenshot 1 */}
       <div
         style={{
@@ -382,14 +382,7 @@ export const Rewards: React.FC = () => {
           {t('rewards.popularRewards', 'Popular Rewards')}
         </h3>
 
-        <div
-          className="rewards-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '14px',
-          }}
-        >
+        <div className="rewards-grid">
           {displayRewards.map((item) => (
             <div
               key={item.id}
