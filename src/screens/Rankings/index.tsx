@@ -679,24 +679,41 @@ export const Rankings: React.FC = () => {
           {/* Trophy in Golden Ring */}
           <div
             style={{
-              width: '52px',
-              height: '52px',
+              width: '56px',
+              height: '56px',
+              minWidth: '56px',
+              minHeight: '56px',
+              maxWidth: '56px',
+              maxHeight: '56px',
+              flexShrink: 0,
               borderRadius: '50%',
-              background: 'rgba(245, 158, 11, 0.12)',
-              border: '1.5px solid rgba(245, 158, 11, 0.45)',
+              background: 'radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(245, 158, 11, 0.08) 70%)',
+              border: '2px solid rgba(245, 158, 11, 0.65)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#F59E0B',
-              boxShadow: '0 0 20px rgba(245, 158, 11, 0.15)',
+              boxShadow: '0 0 24px rgba(245, 158, 11, 0.25)',
               marginTop: '2px',
             }}
           >
-            <Trophy size={25} color="#F59E0B" />
+            <Trophy
+              size={28}
+              color="#F59E0B"
+              strokeWidth={2.2}
+              style={{
+                width: '28px',
+                height: '28px',
+                minWidth: '28px',
+                minHeight: '28px',
+                flexShrink: 0,
+                display: 'block',
+              }}
+            />
           </div>
 
           {/* Heading and Subtitle */}
-          <div style={{ textAlign: 'center', padding: '0 8px' }}>
+          <div style={{ textAlign: 'center', padding: '0 8px', flexShrink: 0 }}>
             <h3
               style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -724,7 +741,7 @@ export const Rankings: React.FC = () => {
           </div>
 
           {/* Section: TOP 3 CASH REWARDS */}
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
             <div
               style={{
                 display: 'flex',
@@ -930,6 +947,7 @@ export const Rankings: React.FC = () => {
               gap: '14px',
               alignItems: 'flex-start',
               boxSizing: 'border-box',
+              flexShrink: 0,
             }}
           >
             <div
@@ -1008,6 +1026,7 @@ export const Rankings: React.FC = () => {
               gap: '14px',
               alignItems: 'flex-start',
               boxSizing: 'border-box',
+              flexShrink: 0,
             }}
           >
             <div
