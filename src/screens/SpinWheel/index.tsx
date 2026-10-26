@@ -279,26 +279,17 @@ export const SpinWheel: React.FC = () => {
         <button
           type="button"
           onClick={() => setRulesModalVisible(true)}
+          className="game-how-to-play-btn"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '24px',
             background: 'var(--bg-card)',
             border: '1.5px solid rgba(0, 208, 102, 0.4)',
             color: 'var(--text-main)',
-            fontSize: '13px',
-            fontWeight: 750,
-            cursor: 'pointer',
             boxShadow: 'var(--shadow-sm)',
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap',
           }}
           aria-label="How to play"
         >
           <HelpCircle size={18} color="#00D066" />
-          <span>{t('common.howToPlay', 'How to play')}</span>
+          <span className="game-how-to-play-btn__text">{t('common.howToPlay', 'How to play')}</span>
         </button>
       </div>
 

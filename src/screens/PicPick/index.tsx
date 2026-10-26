@@ -99,24 +99,16 @@ export const PicPick: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/profile/rules')}
+          className="game-how-to-play-btn"
           style={{
             background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '24px',
-            padding: '8px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer',
+            border: '1.5px solid rgba(0, 208, 102, 0.4)',
             color: 'var(--text-main)',
-            fontSize: '13px',
-            fontWeight: 750,
-            whiteSpace: 'nowrap',
           }}
           aria-label="How to play"
         >
           <HelpCircle size={18} color="var(--green)" />
-          <span>{t('common.howToPlay', 'How to play')}</span>
+          <span className="game-how-to-play-btn__text">{t('common.howToPlay', 'How to play')}</span>
         </button>
       </div>
 

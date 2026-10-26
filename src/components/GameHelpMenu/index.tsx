@@ -150,26 +150,16 @@ export const GameHelpMenu: React.FC<GameHelpMenuProps> = ({
         onClick={() => setDropdownOpen(!dropdownOpen)}
         title="How to play"
         aria-label="How to play"
+        className="game-how-to-play-btn"
         style={{
           background: 'var(--bg-card)',
           border: '1.5px solid #10B981',
-          borderRadius: '24px',
-          height: '40px',
-          padding: '0 14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '7px',
-          cursor: 'pointer',
           color: '#10B981',
-          fontSize: '13px',
-          fontWeight: 700,
-          whiteSpace: 'nowrap',
-          transition: 'all 0.2s ease',
           boxShadow: dropdownOpen ? '0 0 12px rgba(16, 185, 129, 0.4)' : 'none',
         }}
       >
         <HelpCircle size={19} />
-        <span>{t('common.howToPlay', 'How to play')}</span>
+        <span className="game-how-to-play-btn__text">{t('common.howToPlay', 'How to play')}</span>
       </button>
 
       {/* Dropdown Popover matching Screenshot 3 */}

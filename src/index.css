@@ -2517,3 +2517,49 @@ svg.animate-spin,
   color: #15AE36;
   font-weight: 800;
 }
+
+/* ==========================================================================
+   Responsive Game "How to play" / Help Button
+   - Desktop (> 640px): Pill button with (?) icon + "How to play" text
+   - Mobile (<= 640px): Circular 40x40 icon button showing ONLY the (?) mark
+   ========================================================================== */
+.game-how-to-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.game-how-to-play-btn__text {
+  display: inline;
+}
+
+@media (max-width: 640px) {
+  .game-how-to-play-btn {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    gap: 0 !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  .game-how-to-play-btn__text {
+    display: none !important;
+  }
+}
