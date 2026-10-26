@@ -18,6 +18,7 @@ import {
   Trophy,
   PlayCircle,
   Camera,
+  Megaphone,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { logout } from '../../redux/Slices/authSlice';
@@ -89,6 +90,7 @@ export const Profile: React.FC = () => {
   const profileMenuItems: Array<{ label: string; path?: string; onClick?: () => void; icon: React.ReactNode }> = [
     { label: t('profile.personalInfo', 'Edit Profile'), path: '/profile/personal-info', icon: <User size={19} /> },
     { label: t('profile.myProfile', 'My Profile'), path: '/social-profile', icon: <User size={19} /> },
+    { label: t('profile.campaigns', 'Campaigns'), path: '/campaigns', icon: <Megaphone size={19} /> },
     { label: t('profile.changePassword', 'Change Password'), path: '/profile/change-password', icon: <Lock size={19} /> },
     { label: t('profile.playGames', 'Play Games'), path: '/play', icon: <Gamepad2 size={19} /> },
     { label: t('profile.rankingLeaderboard', 'Ranking Leaderboard'), path: '/rankings', icon: <Trophy size={19} /> },
