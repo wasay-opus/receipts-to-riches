@@ -5,7 +5,7 @@ import localStoreUtil, { saveAccessToken } from '../../utils/localStoreUtil';
 import { showToast } from '../../components';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { fetchAllGames, fetchUnlockedMiniGames, resetGamesState } from './gamesSlice';
-import { fetchUser } from './userSlice';
+import { fetchUser, updateUserDataLocally } from './userSlice';
 
 interface AuthState {
   user: any | null;
@@ -211,7 +211,7 @@ export const registerUser = createAsyncThunk(
 
 export const completeProfile = createAsyncThunk(
   'auth/completeProfile',
-  async (profileData: ProfileCompletionPayload, { rejectWithValue }) => {
+  async (profileData: ProfileCompletionPayload, { rejectWithValue, dispatch }) => {
     try {
       const response = await authServices.completeProfile(profileData);
       const data = response?.data ?? response;
@@ -219,6 +219,15 @@ export const completeProfile = createAsyncThunk(
         const token = extractAuthToken(response) ?? extractAuthToken(data);
         if (token) {
           await saveAccessToken(token);
+        }
+        try {
+          sessionStorage.setItem('profile_completed_just_now', 'true');
+        } catch {}
+        dispatch(updateUserDataLocally({ is_profile_complete: true }));
+        try {
+          await dispatch(fetchUser()).unwrap();
+        } catch (e) {
+          console.warn('[completeProfile] fetchUser warning:', e);
         }
         return response;
       }
@@ -796,12 +805,16 @@ const authSlice = createSlice({
 
         state.loading = false;
         state.error = null;
-        state.user = user ?? state.user;
+        state.user = user
+          ? { ...user, is_profile_complete: true }
+          : state.user
+          ? { ...state.user, is_profile_complete: true }
+          : null;
         state.token = token ?? state.token;
         state.userId = user?.id ?? user?.user_id ?? state.userId;
         state.isAuthenticated = Boolean(token ?? state.token);
         state.isProfile = true;
-        state.needsGuideVideo = true;
+        state.needsGuideVideo = false;
       })
       .addCase(completeProfile.rejected, (state, action) => {
         state.loading = false;

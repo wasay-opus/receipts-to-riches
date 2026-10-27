@@ -101,7 +101,12 @@ export const OtpVerification: React.FC = () => {
             text1: t('auth.verifiedSuccess', 'Phone Verified!'),
             text2: response?.message || t('auth.phoneVerifiedMsg', 'Your phone number has been verified.'),
           });
-          navigate('/signin');
+          if (email) {
+            try {
+              sessionStorage.setItem('last_registered_email', email);
+            } catch {}
+          }
+          navigate('/signin', { state: { email } });
         } else {
           throw new Error(response?.message || 'Verification failed');
         }

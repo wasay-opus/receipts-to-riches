@@ -252,6 +252,10 @@ export const SignUp: React.FC = () => {
         payload.referral_code = values.referralCode.trim();
       }
 
+      try {
+        sessionStorage.setItem('last_registered_email', payload.email);
+      } catch {}
+
       const res = await dispatch(registerUser(payload)).unwrap();
 
       showToast({
@@ -268,6 +272,10 @@ export const SignUp: React.FC = () => {
         },
       });
     } catch (error: any) {
+      try {
+        sessionStorage.setItem('last_registered_email', values.email.trim());
+      } catch {}
+
       const errorMsg = getUserFriendlyErrorMessage(
         error,
         t('auth.tryAgain', 'Please check your information and try again.'),

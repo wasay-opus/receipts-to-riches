@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -129,11 +129,17 @@ const getGoogleCredential = (clientId: string) =>
 export const SignIn: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { loading } = useSelector((state: RootState) => state.auth);
 
+  const passedEmail =
+    (location.state as any)?.email ||
+    (typeof window !== 'undefined' ? sessionStorage.getItem('last_registered_email') : '') ||
+    '';
+
   const [rememberMe, setRememberMe] = useState(false);
-  const [initialEmail, setInitialEmail] = useState('');
+  const [initialEmail, setInitialEmail] = useState(passedEmail);
   const [socialLoadingProvider, setSocialLoadingProvider] = useState<
     'google' | 'apple' | null
   >(null);
@@ -205,13 +211,21 @@ export const SignIn: React.FC = () => {
   }, [dispatch, navigate, t]);
 
   useEffect(() => {
+    if (passedEmail) {
+      setInitialEmail(passedEmail);
+      try {
+        sessionStorage.removeItem('last_registered_email');
+      } catch {}
+      return;
+    }
+
     getRememberedSignIn().then((saved) => {
       if (saved?.enabled && saved?.email) {
         setRememberMe(true);
         setInitialEmail(saved.email);
       }
     });
-  }, []);
+  }, [passedEmail]);
 
   const validationSchema = Yup.object().shape({
     email: Yup.string()
@@ -353,8 +367,8 @@ export const SignIn: React.FC = () => {
           </p>
         </div>
 
-        <Formik
-          initialValues={{ email: initialEmail, password: '' }}
+        <Formik<{ email: string; password: string }>
+          initialValues={{ email: initialEmail || passedEmail, password: '' }}
           enableReinitialize
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
@@ -369,7 +383,7 @@ export const SignIn: React.FC = () => {
                 value={values.email}
                 onChange={handleChange('email')}
                 onBlur={handleBlur('email')}
-                error={touched.email && errors.email ? errors.email : undefined}
+                error={touched.email && errors.email ? String(errors.email) : undefined}
                 leftIcon={<Mail size={18} />}
               />
 
@@ -382,7 +396,7 @@ export const SignIn: React.FC = () => {
                 value={values.password}
                 onChange={handleChange('password')}
                 onBlur={handleBlur('password')}
-                error={touched.password && errors.password ? errors.password : undefined}
+                error={touched.password && errors.password ? String(errors.password) : undefined}
                 leftIcon={<Lock size={18} />}
               />
 

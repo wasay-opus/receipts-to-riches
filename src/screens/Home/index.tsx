@@ -136,7 +136,11 @@ export const Home: React.FC = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (userData?.is_profile_complete === false) {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('profile_completed_just_now') === 'true') {
+      return;
+    }
+    const isComplete = userData?.is_profile_complete;
+    if (userData && (isComplete === false || isComplete === 0 || isComplete === '0')) {
       navigate('/secret-question', { replace: true });
     }
   }, [userData?.is_profile_complete, navigate]);

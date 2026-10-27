@@ -255,9 +255,19 @@ const userSlice = createSlice({
           localStorage.getItem('user_cover') ||
           localStorage.getItem('user_cover_me');
 
+        const isProfileComplete =
+          Boolean(
+            (typeof window !== 'undefined' && sessionStorage.getItem('profile_completed_just_now') === 'true') ||
+            fetched.is_profile_complete === true ||
+            fetched.is_profile_complete === 1 ||
+            fetched.is_profile_complete === '1' ||
+            state.userData?.is_profile_complete === true
+          );
+
         state.userData = {
           ...(state.userData || {}),
           ...fetched,
+          is_profile_complete: isProfileComplete,
           image:
             fetched.image ||
             fetched.image_url ||
@@ -286,6 +296,18 @@ const userSlice = createSlice({
             state.userData?.cover_image ||
             cachedCover ||
             null,
+        };
+      })
+      .addCase('auth/completeProfile/fulfilled', (state: any, action: any) => {
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('profile_completed_just_now', 'true');
+          }
+        } catch {}
+        state.userData = {
+          ...(state.userData || {}),
+          ...(action.payload?.data?.user ?? action.payload?.data ?? {}),
+          is_profile_complete: true,
         };
       })
       .addCase(fetchUser.rejected, (state, action) => {

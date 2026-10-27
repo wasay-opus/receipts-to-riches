@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -8,8 +8,9 @@ import { KeyRound, CheckCircle, Calendar, MapPin } from 'lucide-react';
 import { Button, FormInput, showToast } from '../../components';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
-import { AppDispatch } from '../../redux/Store';
+import { AppDispatch, RootState } from '../../redux/Store';
 import { completeProfile } from '../../redux/Slices/authSlice';
+import { updateUserDataLocally } from '../../redux/Slices/userSlice';
 
 const SECRET_QUESTIONS = [
   { value: 'What was your first pet’s name?', key: 'firstPetName' },
@@ -23,6 +24,21 @@ export const SecretQuestion: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { userData } = useSelector((state: RootState) => state.user);
+  const isProfileComplete = useSelector((state: RootState) => state.auth?.isProfile);
+
+  useEffect(() => {
+    const hasCompleted =
+      sessionStorage.getItem('profile_completed_just_now') === 'true' ||
+      userData?.is_profile_complete === true ||
+      userData?.is_profile_complete === 1 ||
+      userData?.is_profile_complete === '1' ||
+      isProfileComplete === true;
+
+    if (hasCompleted) {
+      navigate('/', { replace: true });
+    }
+  }, [userData, isProfileComplete, navigate]);
 
   const validationSchema = Yup.object().shape({
     title: Yup.string().required(t('validation.required', 'Title is required')),
@@ -62,12 +78,17 @@ export const SecretQuestion: React.FC = () => {
         }),
       ).unwrap();
 
+      try {
+        sessionStorage.setItem('profile_completed_just_now', 'true');
+      } catch {}
+      dispatch(updateUserDataLocally({ is_profile_complete: true }));
+
       showToast({
         type: 'success',
         text1: t('auth.securityUpdated', 'Profile Completed'),
         text2: t('auth.profileSecured', 'Your profile has been saved.'),
       });
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (error: any) {
       showToast({
         type: 'error',
@@ -92,11 +113,11 @@ export const SecretQuestion: React.FC = () => {
       }}
     >
       <div
-        className="card"
+        className="card auth-card"
         style={{
           width: '100%',
-          maxWidth: '520px',
-          padding: '36px 28px',
+          maxWidth: '700px',
+          padding: '36px 32px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
