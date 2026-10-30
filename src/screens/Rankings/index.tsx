@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Flame, ArrowLeft, User as UserIcon, Info, Trophy, Receipt, Scale, X } from 'lucide-react';
@@ -52,7 +52,7 @@ const useIsMobile = (breakpoint = 640) => {
   return isMobile;
 };
 
-// Crown for 1st place matching Screenshot 4
+// Crown for 1st place matching Screenshot 4 with 3D animation
 const GoldenCrown: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => (
   <svg
     width={isMobile ? "30" : "42"}
@@ -66,8 +66,9 @@ const GoldenCrown: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => (
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 6,
-      filter: 'drop-shadow(0 2px 4px rgba(217, 119, 6, 0.45))',
+      filter: 'drop-shadow(0 4px 10px rgba(217, 119, 6, 0.6))',
       pointerEvents: 'none',
+      animation: 'crownChampionFloat 3.2s ease-in-out infinite',
     }}
   >
     <path
@@ -194,8 +195,43 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
   // Cash reward based on podium rank
   const cashReward = user.rank === 1 ? '$100' : user.rank === 2 ? '$50' : '$25';
 
+  // 3D tilt tracking for 1st place champion card
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [tilt, setTilt] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isFirst || isMobile || !cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -9;
+    const rotateY = ((x - centerX) / centerX) * 9;
+    setTilt({ x: rotateX, y: rotateY, active: true });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0, active: false });
+  };
+
+  // Safe streak text formatting: prevents duplicate "Days Days"
+  const formattedStreak = useMemo(() => {
+    if (!user.streak && user.streak !== '0' && (user as any).streak !== 0) {
+      return isMobile ? '0 d' : '0 Days';
+    }
+    const raw = String(user.streak).trim();
+    if (raw.toLowerCase().includes('pts')) {
+      return raw;
+    }
+    const match = raw.match(/\d[\d,]*/);
+    const count = match ? match[0] : raw;
+    return isMobile ? `${count} d` : `${count} ${count === '1' ? 'Day' : 'Days'}`;
+  }, [user.streak, isMobile]);
+
   return (
     <div
+      className={isFirst ? 'podium-champion-float-wrap' : undefined}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -205,6 +241,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
         minWidth: 0,
         position: 'relative',
         fontFamily: "'Plus Jakarta Sans', sans-serif",
+        perspective: isFirst ? '1000px' : undefined,
       }}
     >
       {/* Overlapping Avatar Container */}
@@ -228,8 +265,11 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
         <RankBadge rank={user.rank} isMobile={isMobile} />
       </div>
 
-      {/* Styled Golden/Cream Podium Card matching Screenshot */}
+      {/* Styled Golden/Cream Podium Card matching Screenshot with smooth 3D transition */}
       <div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         style={{
           width: '100%',
           minHeight: `${cardHeight}px`,
@@ -246,11 +286,28 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
           paddingLeft: isMobile ? '4px' : '10px',
           paddingRight: isMobile ? '4px' : '10px',
           boxShadow: isFirst
-            ? '0 10px 24px rgba(245, 158, 11, 0.2)'
+            ? (tilt.active
+                ? '0 24px 48px rgba(245, 158, 11, 0.42), 0 0 32px rgba(251, 191, 36, 0.35)'
+                : '0 12px 28px rgba(245, 158, 11, 0.22), 0 0 20px rgba(251, 191, 36, 0.15)')
             : '0 4px 14px rgba(0, 0, 0, 0.05)',
           boxSizing: 'border-box',
+          position: 'relative',
+          overflow: 'hidden',
+          transform: isFirst
+            ? (tilt.active
+                ? `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-8px) scale(1.025)`
+                : 'perspective(800px) rotateX(0deg) rotateY(0deg) translateY(0px) scale(1)')
+            : undefined,
+          transition: isFirst
+            ? 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s ease'
+            : 'transform 0.25s ease, box-shadow 0.25s ease',
+          transformStyle: 'preserve-3d',
+          willChange: isFirst ? 'transform, box-shadow' : undefined,
         }}
       >
+        {/* Shimmer light sweep for 1st place */}
+        {isFirst && <div className="champion-shimmer-sweep" />}
+
         {/* Full Name */}
         <strong
           style={{
@@ -265,6 +322,8 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
             whiteSpace: 'nowrap',
             lineHeight: 1.25,
             padding: '0 4px',
+            position: 'relative',
+            zIndex: 3,
           }}
           title={user.name}
         >
@@ -284,6 +343,8 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            position: 'relative',
+            zIndex: 3,
           }}
         >
           {tierTitle}
@@ -308,13 +369,18 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
               : isFirst ? '7px 18px' : '5px 14px',
             marginTop: isMobile ? '6px' : '10px',
             boxShadow: isFirst
-              ? '0 6px 18px rgba(245, 158, 11, 0.42), inset 0 1px 1px rgba(255, 255, 255, 0.4)'
+              ? '0 6px 18px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.5)'
               : isSecond
               ? '0 4px 12px rgba(100, 116, 139, 0.3)'
               : '0 4px 12px rgba(180, 83, 9, 0.3)',
             border: isFirst
-              ? '1.5px solid rgba(255, 255, 255, 0.45)'
+              ? '1.5px solid rgba(255, 255, 255, 0.55)'
               : '1px solid rgba(255, 255, 255, 0.3)',
+            animation: isFirst ? 'badgeGlow3D 2.8s ease-in-out infinite' : undefined,
+            position: 'relative',
+            zIndex: 3,
+            transformStyle: 'preserve-3d',
+            transform: isFirst ? 'translateZ(18px)' : undefined,
           }}
         >
           <span style={{ fontSize: isMobile ? (isFirst ? '12px' : '11px') : isFirst ? '15px' : '13px', lineHeight: 1 }}>
@@ -344,6 +410,8 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
             gap: isMobile ? '4px' : '6px',
             marginTop: 'auto',
             paddingTop: isMobile ? '8px' : '12px',
+            position: 'relative',
+            zIndex: 3,
           }}
         >
           <span style={{ fontSize: isMobile ? '13px' : '16px', lineHeight: 1 }}>🔥</span>
@@ -356,7 +424,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
               whiteSpace: 'nowrap',
             }}
           >
-            {user.streak} {isMobile ? 'd' : 'Days'}
+            {formattedStreak}
           </span>
         </div>
       </div>

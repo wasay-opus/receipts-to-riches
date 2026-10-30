@@ -70,6 +70,46 @@ export const confirmAppAction = async ({
   return result.isConfirmed;
 };
 
+export const confirmBlockOrReportAction = async ({
+  title,
+  text,
+  confirmButtonText = 'Block User',
+  denyButtonText = 'Block & Report',
+  cancelButtonText = 'Cancel',
+  icon = 'warning',
+}: {
+  title: string;
+  text?: string;
+  confirmButtonText?: string;
+  denyButtonText?: string;
+  cancelButtonText?: string;
+  icon?: SweetAlertIcon;
+}): Promise<'block' | 'block_and_report' | 'cancel'> => {
+  const result = await Swal.fire({
+    icon,
+    title,
+    text,
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText,
+    denyButtonText,
+    cancelButtonText,
+    reverseButtons: true,
+    background: isDarkTheme() ? '#0E1528' : '#FFFFFF',
+    color: isDarkTheme() ? '#F8FAFC' : '#0F172A',
+    confirmButtonColor: '#00674D',
+    denyButtonColor: '#DC2626',
+    cancelButtonColor: '#64748B',
+    customClass: {
+      popup: getPopupClass(),
+    },
+  });
+
+  if (result.isConfirmed) return 'block';
+  if (result.isDenied) return 'block_and_report';
+  return 'cancel';
+};
+
 export const promptAppInput = async ({
   title,
   inputLabel,

@@ -11,6 +11,7 @@ import {
   UserCheck,
   UserPlus,
   Flag,
+  UserX,
   Camera,
   Video,
 } from 'lucide-react';
@@ -26,7 +27,7 @@ import {
 } from '../../redux/Slices/feedSlice';
 import feedServices from '../../services/feedServices';
 import { fetchUser } from '../../redux/Slices/userSlice';
-import { promptAppInput } from '../../utils/sweetAlert';
+import { confirmAppAction, confirmBlockOrReportAction, promptAppInput } from '../../utils/sweetAlert';
 import {
   getUserAvatarUrl,
   getUserCoverUrl,
@@ -206,6 +207,38 @@ export const SocialProfile: React.FC = () => {
     }
   };
 
+  const handleBlockUser = async () => {
+    if (!profileId) return;
+    const action = await confirmBlockOrReportAction({
+      title: t('socialProfile.blockConfirmTitle', 'Block this user?'),
+      text: t('socialProfile.blockConfirmText', 'You will no longer see posts or comments from this user.'),
+      confirmButtonText: t('socialProfile.blockButton', 'Block User'),
+      denyButtonText: t('feedScreen.blockAndReportButton', 'Block & Report'),
+      cancelButtonText: t('common.cancel', 'Cancel'),
+    });
+    if (action === 'cancel') return;
+
+    try {
+      await feedServices.blockUser(profileId);
+      showToast({
+        type: 'success',
+        text1: t('socialProfile.userBlocked', 'User Blocked'),
+        text2: t('socialProfile.userBlockedDesc', 'This user has been blocked.'),
+      });
+      if (action === 'block_and_report') {
+        setReportModalOpen(true);
+      } else {
+        navigate('/feed');
+      }
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        text1: t('socialProfile.blockFailed', 'Could not block user'),
+        text2: getUserFriendlyErrorMessage(error, t('socialProfile.tryAgain', 'Please try again.')),
+      });
+    }
+  };
+
   const handleReportUser = async () => {
     if (!profileId) return;
     const reason = await promptAppInput({
@@ -285,14 +318,24 @@ export const SocialProfile: React.FC = () => {
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={() => setReportModalOpen(true)}
-                className="social-profile-banner__btn"
-                title={t('socialProfile.report', 'Report')}
-              >
-                <Flag size={18} />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleBlockUser}
+                  className="social-profile-banner__btn"
+                  title={t('socialProfile.blockUser', 'Block User')}
+                >
+                  <UserX size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportModalOpen(true)}
+                  className="social-profile-banner__btn"
+                  title={t('socialProfile.report', 'Report')}
+                >
+                  <Flag size={18} />
+                </button>
+              </>
             )}
           </div>
         </div>

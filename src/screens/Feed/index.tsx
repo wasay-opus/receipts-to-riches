@@ -11,14 +11,17 @@ import {
   Pencil,
   Plus,
   Reply,
+  Search,
   Send,
   Share2,
   ThumbsDown,
   Trash2,
   UserCheck,
   UserPlus,
+  UserX,
   Video,
   X,
+  Maximize2,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import {
@@ -42,7 +45,7 @@ import {
 import { Container, CustomModal, ReportModal, showToast } from '../../components';
 import feedServices from '../../services/feedServices';
 import pollServices from '../../services/pollServices';
-import { confirmAppAction, promptAppInput } from '../../utils/sweetAlert';
+import { confirmAppAction, confirmBlockOrReportAction, promptAppInput } from '../../utils/sweetAlert';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 type FeedComment = {
@@ -283,6 +286,92 @@ export const Feed: React.FC = () => {
     targetType: 'post',
     targetName: '',
   });
+  const [previewModalImage, setPreviewModalImage] = useState<string | null>(null);
+
+  // User Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await feedServices.searchUsers(searchQuery.trim());
+        const data = Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.data?.users)
+          ? res.data.users
+          : [];
+        setSearchResults(data);
+        setSearchOpen(true);
+      } catch (err) {
+        console.error('User search failed:', err);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleBlockPostUser = async (userId: string | number, authorName: string, postId?: string | number) => {
+    if (!userId) return;
+    const action = await confirmBlockOrReportAction({
+      title: t('feedScreen.blockUserTitle', 'Block {{author}}?', { author: authorName }),
+      text: t('feedScreen.blockUserText', 'You will no longer see posts from this user.'),
+      confirmButtonText: t('feedScreen.blockUserButton', 'Block User'),
+      denyButtonText: t('feedScreen.blockAndReportButton', 'Block & Report'),
+      cancelButtonText: t('common.cancel', 'Cancel'),
+    });
+    if (action === 'cancel') return;
+
+    try {
+      await feedServices.blockUser(userId);
+      showToast({
+        type: 'success',
+        text1: t('feedScreen.userBlockedSuccess', 'User Blocked'),
+        text2: action === 'block_and_report'
+          ? t('feedScreen.blockedAndReportDesc', '{{author}} has been blocked. Please provide a reason to report.', { author: authorName })
+          : t('feedScreen.userBlockedSuccessDesc', 'Posts from this user will no longer appear.'),
+      });
+      dispatch(fetchFeed({ params: { per_page: 30, page: 1 } }));
+
+      if (action === 'block_and_report') {
+        setReportModalState({
+          visible: true,
+          targetId: postId || userId,
+          targetType: postId ? 'post' : 'account',
+          targetName: authorName,
+        });
+      }
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        text1: t('feedScreen.blockFailed', 'Could not block user'),
+        text2: getUserFriendlyErrorMessage(error, t('feedScreen.tryAgain', 'Please try again.')),
+      });
+    }
+  };
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -786,6 +875,121 @@ export const Feed: React.FC = () => {
         </button>
       </div>
 
+      {/* Community Users Search Bar */}
+      <div ref={searchContainerRef} style={{ position: 'relative', width: '100%', zIndex: 30 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '16px',
+            padding: '10px 16px',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => {
+              if (searchResults.length > 0) setSearchOpen(true);
+            }}
+            placeholder={t('feedScreen.searchUsersPlaceholder', 'Search community members...')}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              fontSize: '14px',
+              color: 'var(--text-main)',
+            }}
+          />
+          {searchLoading && <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-muted)' }} />}
+          {searchQuery && !searchLoading && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSearchResults([]);
+                setSearchOpen(false);
+              }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {/* Live Search Results Dropdown */}
+        {searchOpen && searchResults.length > 0 && (
+          <div
+            className="card"
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 6px)',
+              left: 0,
+              right: 0,
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '16px',
+              boxShadow: 'var(--shadow-lg)',
+              maxHeight: '280px',
+              overflowY: 'auto',
+              padding: '6px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            {searchResults.map((usr: any) => {
+              const uId = usr.id || usr.user_id;
+              const uName = usr.name || `${usr.first_name || ''} ${usr.last_name || ''}`.trim() || 'Community Member';
+              const uAvatar = usr.image || usr.avatar || usr.image_url || fallbackAvatar;
+              return (
+                <div
+                  key={uId}
+                  onClick={() => {
+                    setSearchOpen(false);
+                    navigate(`/social-profile/${uId}`);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <img
+                    src={uAvatar}
+                    alt={uName}
+                    style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+                    onError={(e) => ((e.target as HTMLImageElement).src = fallbackAvatar)}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
+                      {uName}
+                    </span>
+                    {usr.email && (
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                        {usr.email}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Floating Sticky New Post Button (Only appears when scrolled down; hides when at top) */}
       <button
         onClick={() => navigate('/feed/create')}
@@ -1112,16 +1316,60 @@ export const Feed: React.FC = () => {
                       }}
                     />
                   ) : (
-                    <img
-                      src={post.image}
-                      alt={t('feedScreen.postAttachmentAlt', 'Post attachment')}
+                    <div
                       style={{
+                        position: 'relative',
                         width: '100%',
-                        maxHeight: '380px',
-                        objectFit: 'cover',
-                        display: 'block',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(0, 0, 0, 0.04)',
+                        cursor: 'zoom-in',
+                        overflow: 'hidden',
                       }}
-                    />
+                      onClick={() => setPreviewModalImage(post.image!)}
+                      title={t('feedScreen.viewFullImage', 'Click to view full image')}
+                    >
+                      <img
+                        src={post.image}
+                        alt={t('feedScreen.postAttachmentAlt', 'Post attachment')}
+                        style={{
+                          width: '100%',
+                          maxHeight: '620px',
+                          objectFit: 'contain',
+                          display: 'block',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewModalImage(post.image!);
+                        }}
+                        title={t('feedScreen.viewFullImage', 'View full image')}
+                        style={{
+                          position: 'absolute',
+                          bottom: '10px',
+                          right: '10px',
+                          background: 'rgba(0, 0, 0, 0.72)',
+                          backdropFilter: 'blur(6px)',
+                          color: '#FFFFFF',
+                          border: '1px solid rgba(255, 255, 255, 0.25)',
+                          borderRadius: '8px',
+                          padding: '5px 10px',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+                        }}
+                      >
+                        <Maximize2 size={13} />
+                        <span>{t('feedScreen.fullImage', 'Full Image')}</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -1222,27 +1470,49 @@ export const Feed: React.FC = () => {
                   <span>Share</span>
                 </button>
 
-                {/* Report button for other users' posts only (replaces Share button) */}
+                {/* Report & Block button for other users' posts only */}
                 {!isOwnPost && (
-                  <button
-                    onClick={() => handleReportPost(post.id, post.author)}
-                    title={t('feedScreen.reportPostLabel', 'Report post')}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      cursor: 'pointer',
-                      color: 'var(--text-muted)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      marginLeft: 'auto',
-                    }}
-                  >
-                    <Flag size={18} />
-                    <span>{t('socialProfile.report', 'Report')}</span>
-                  </button>
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {post.userId && (
+                      <button
+                        type="button"
+                        onClick={() => handleBlockPostUser(post.userId!, post.author, post.id)}
+                        title={t('feedScreen.blockUser', 'Block User')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          cursor: 'pointer',
+                          color: 'var(--text-muted)',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <UserX size={17} />
+                        <span>{t('feedScreen.block', 'Block')}</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleReportPost(post.id, post.author)}
+                      title={t('feedScreen.reportPostLabel', 'Report post')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <Flag size={17} />
+                      <span>{t('socialProfile.report', 'Report')}</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1804,6 +2074,72 @@ export const Feed: React.FC = () => {
         targetType={reportModalState.targetType}
         targetName={reportModalState.targetName}
       />
+
+      {/* Fullscreen Image Preview Lightbox */}
+      {previewModalImage && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(0, 0, 0, 0.92)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+          onClick={() => setPreviewModalImage(null)}
+        >
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={() => setPreviewModalImage(null)}
+            title={t('common.close', 'Close')}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'rgba(255, 255, 255, 0.16)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '42px',
+              height: '42px',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+              transition: 'background 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)';
+            }}
+          >
+            <X size={24} />
+          </button>
+
+          {/* Full Image */}
+          <img
+            src={previewModalImage}
+            alt="Full size attachment"
+            style={{
+              maxWidth: '95vw',
+              maxHeight: '92vh',
+              objectFit: 'contain',
+              borderRadius: '10px',
+              boxShadow: '0 16px 48px rgba(0, 0, 0, 0.8)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </Container>
   );
 };

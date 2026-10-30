@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert, X, Check, Loader2 } from 'lucide-react';
 import feedServices from '../../services/feedServices';
@@ -36,6 +36,34 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [selectedReason, setSelectedReason] = useState<string>('Harassment');
   const [customReason, setCustomReason] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(
+    typeof window !== 'undefined' ? window.innerWidth <= 640 : false
+  );
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (selectedReason === 'Other') {
+      setTimeout(() => {
+        if (listContainerRef.current) {
+          listContainerRef.current.scrollTo({
+            top: listContainerRef.current.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+        textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        textareaRef.current?.focus();
+      }, 70);
+    }
+  }, [selectedReason]);
 
   useEffect(() => {
     if (visible) {
@@ -125,9 +153,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: isMobile ? 'flex-end' : 'center',
         justifyContent: 'center',
-        padding: 0,
+        padding: isMobile ? 0 : '20px',
         animation: 'fadeIn 0.2s ease-out',
       }}
       onClick={(e) => {
@@ -136,40 +164,39 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         }
       }}
     >
-      {/* Bottom Sheet Modal Container */}
+      {/* Modal Container */}
       <div
         className="card report-bottom-sheet"
         style={{
           width: '100%',
           maxWidth: '520px',
           background: 'var(--bg-card)',
-          borderTopLeftRadius: '28px',
-          borderTopRightRadius: '28px',
-          borderBottomLeftRadius: '0px',
-          borderBottomRightRadius: '0px',
+          borderRadius: isMobile ? '28px 28px 0 0' : '24px',
           border: '1px solid var(--border-color)',
-          borderBottom: 'none',
-          boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.45)',
-          padding: '12px 20px 28px 20px',
+          borderBottom: isMobile ? 'none' : '1px solid var(--border-color)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.45)',
+          padding: isMobile ? '12px 20px 28px 20px' : '24px',
           boxSizing: 'border-box',
-          maxHeight: '92vh',
+          maxHeight: isMobile ? '92vh' : '88vh',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag handle / pill indicator */}
-        <div
-          style={{
-            width: '44px',
-            height: '4px',
-            borderRadius: '999px',
-            backgroundColor: 'var(--text-muted)',
-            opacity: 0.35,
-            margin: '0 auto 12px auto',
-          }}
-        />
+        {/* Drag handle / pill indicator (mobile only) */}
+        {isMobile && (
+          <div
+            style={{
+              width: '44px',
+              height: '4px',
+              borderRadius: '999px',
+              backgroundColor: 'var(--text-muted)',
+              opacity: 0.35,
+              margin: '0 auto 12px auto',
+            }}
+          />
+        )}
 
         {/* Header matching Screenshot 3 */}
         <div
@@ -248,13 +275,16 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
         {/* Reasons list matching Screenshot 3 */}
         <div
+          ref={listContainerRef}
           style={{
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
             overflowY: 'auto',
-            paddingRight: '2px',
-            marginBottom: '18px',
+            paddingRight: '6px',
+            paddingBottom: '24px',
+            marginBottom: '16px',
+            maxHeight: isMobile ? '64vh' : '58vh',
           }}
         >
           {REPORT_REASONS.map((reason) => {
@@ -315,25 +345,34 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
           {/* If 'Other' selected, display custom explanation textarea */}
           {selectedReason === 'Other' && (
-            <textarea
-              placeholder={t('report.customReasonPlaceholder', 'Please provide specific details for reporting...')}
-              value={customReason}
-              onChange={(e) => setCustomReason(e.target.value)}
-              rows={3}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '12px',
-                background: 'var(--bg-card-secondary)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-main)',
-                fontSize: '13px',
-                resize: 'none',
-                outline: 'none',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+              <textarea
+                ref={textareaRef}
+                className="report-custom-textarea"
+                placeholder={t('report.customReasonPlaceholder', 'Please provide specific details for reporting...')}
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                rows={4}
+                style={{
+                  width: '100%',
+                  minHeight: '100px',
+                  height: '100px',
+                  padding: '12px 14px',
+                  borderRadius: '14px',
+                  background: 'var(--bg-card)',
+                  border: '1.5px solid #EF4444',
+                  color: 'var(--text-main)',
+                  fontSize: '14px',
+                  lineHeight: '1.45',
+                  resize: 'none',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.08)',
+                  flexShrink: 0,
+                }}
+              />
+            </div>
           )}
         </div>
 

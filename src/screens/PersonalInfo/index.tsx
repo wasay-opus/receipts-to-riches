@@ -9,6 +9,7 @@ import { AppDispatch, RootState } from '../../redux/Store';
 import { Button, Container, FormInput, showToast } from '../../components';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { editProfile, fetchUser, updateUserDataLocally } from '../../redux/Slices/userSlice';
+import authServices from '../../services/authServices';
 import {
   getUserAvatarUrl,
   getUserCoverUrl,
@@ -171,6 +172,13 @@ export const PersonalInfo: React.FC = () => {
     }
 
     try {
+      if (values.phone && values.phone.trim() !== (user?.phone || '').trim()) {
+        try {
+          await authServices.changePhone({ phone: values.phone.trim() });
+        } catch (phoneErr) {
+          console.warn('[PersonalInfo] changePhone API fallback:', phoneErr);
+        }
+      }
       await dispatch(editProfile(payload)).unwrap();
       dispatch(
         updateUserDataLocally({

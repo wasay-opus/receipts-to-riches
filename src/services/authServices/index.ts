@@ -157,6 +157,30 @@ class AuthServices {
     });
     return response;
   };
+
+  changePassword = async (data: IAuthData): Promise<IApiResponse> => {
+    const response = await fetchApi({
+      method: 'POST',
+      endPoint: endPoints.CHANGE_PASSWORD,
+      data,
+      params: undefined,
+      formData: undefined,
+      token: true,
+    });
+    return response;
+  };
+
+  changePhone = async (data: IAuthData): Promise<IApiResponse> => {
+    const response = await fetchApi({
+      method: 'POST',
+      endPoint: endPoints.CHANGE_PHONE,
+      data,
+      params: undefined,
+      formData: undefined,
+      token: true,
+    });
+    return response;
+  };
 }
 
 const authServices = new AuthServices();

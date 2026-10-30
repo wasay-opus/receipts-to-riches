@@ -19,11 +19,14 @@ import {
   PlayCircle,
   Camera,
   Megaphone,
+  UserX,
+  Loader2,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { logout } from '../../redux/Slices/authSlice';
 import { deleteUser, fetchUser } from '../../redux/Slices/userSlice';
-import { showToast } from '../../components';
+import { CustomModal, showToast } from '../../components';
+import feedServices from '../../services/feedServices';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import {
   getUserAvatarUrl,
@@ -86,12 +89,84 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const [blockedModalOpen, setBlockedModalOpen] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
+
+  const [unblockingId, setUnblockingId] = useState<string | number | null>(null);
+
+  const loadBlockedUsers = async () => {
+    setBlockedLoading(true);
+    try {
+      const res = await feedServices.getBlockedUsers();
+      const raw = res?.data;
+      const list =
+        Array.isArray(raw?.data?.data)
+          ? raw.data.data
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw?.users)
+          ? raw.users
+          : Array.isArray(raw?.data?.users)
+          ? raw.data.users
+          : Array.isArray(raw?.blocked_users)
+          ? raw.blocked_users
+          : Array.isArray(raw?.data?.blocked_users)
+          ? raw.data.blocked_users
+          : Array.isArray(raw)
+          ? raw
+          : Array.isArray(res?.data?.data?.data)
+          ? res.data.data.data
+          : Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.users)
+          ? res.users
+          : [];
+      setBlockedUsers(list);
+    } catch (err) {
+      console.error('Failed to load blocked users:', err);
+      setBlockedUsers([]);
+    } finally {
+      setBlockedLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (blockedModalOpen) {
+      loadBlockedUsers();
+    }
+  }, [blockedModalOpen]);
+
+  const handleUnblockUser = async (uId: string | number, name: string) => {
+    setUnblockingId(uId);
+    try {
+      await feedServices.blockUser(uId);
+      showToast({
+        type: 'success',
+        text1: t('profile.unblocked', 'User Unblocked'),
+        text2: t('profile.unblockedDesc', '{{name}} has been unblocked.', { name }),
+      });
+      await loadBlockedUsers();
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        text1: t('profile.unblockFailed', 'Failed to unblock'),
+        text2: getUserFriendlyErrorMessage(err, t('auth.tryAgain', 'Please try again.')),
+      });
+    } finally {
+      setUnblockingId(null);
+    }
+  };
+
   // Profile Menu items matching Screenshot 3
   const profileMenuItems: Array<{ label: string; path?: string; onClick?: () => void; icon: React.ReactNode }> = [
     { label: t('profile.personalInfo', 'Edit Profile'), path: '/profile/personal-info', icon: <User size={19} /> },
     { label: t('profile.myProfile', 'My Profile'), path: '/social-profile', icon: <User size={19} /> },
     { label: t('profile.campaigns', 'Campaigns'), path: '/campaigns', icon: <Megaphone size={19} /> },
     { label: t('profile.changePassword', 'Change Password'), path: '/profile/change-password', icon: <Lock size={19} /> },
+    { label: t('profile.blockedUsers', 'Blocked Users'), onClick: () => setBlockedModalOpen(true), icon: <UserX size={19} /> },
     { label: t('profile.playGames', 'Play Games'), path: '/play', icon: <Gamepad2 size={19} /> },
     { label: t('profile.rankingLeaderboard', 'Ranking Leaderboard'), path: '/rankings', icon: <Trophy size={19} /> },
     { label: t('profile.menuMyReceipts', 'My Receipts'), path: '/my-receipts', icon: <Receipt size={19} /> },
@@ -234,6 +309,95 @@ export const Profile: React.FC = () => {
           </span>
         </button>
       </div>
+
+      {/* Blocked Users Modal */}
+      <CustomModal
+        visible={blockedModalOpen}
+        onClose={() => setBlockedModalOpen(false)}
+        title={t('profile.blockedUsers', 'Blocked Users')}
+        maxWidth="480px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '120px', maxHeight: '380px', overflowY: 'auto' }}>
+          {blockedLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+              <Loader2 size={24} className="animate-spin" />
+            </div>
+          ) : blockedUsers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '14px' }}>
+              {t('profile.noBlockedUsers', 'No blocked users.')}
+            </div>
+          ) : (
+            blockedUsers.map((bu: any) => {
+              const buId = bu.id || bu.user_id || bu.blocked_user_id;
+              const buName =
+                `${bu.first_name || ''} ${bu.last_name || ''}`.trim() ||
+                bu.name ||
+                'Blocked User';
+              const buAvatar =
+                bu.image_url ||
+                bu.image ||
+                bu.avatar ||
+                'https://ui-avatars.com/api/?name=User&background=00674D&color=fff';
+              const isProcessing = unblockingId === buId;
+
+              return (
+                <div
+                  key={buId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    background: 'var(--bg-hover)',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <img
+                      src={buAvatar}
+                      alt={buName}
+                      style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://ui-avatars.com/api/?name=User&background=00674D&color=fff';
+                      }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
+                        {buName}
+                      </span>
+                      {bu.email && (
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                          {bu.email}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleUnblockUser(buId, buName)}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: '#EF4444',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '8px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: isProcessing ? 'not-allowed' : 'pointer',
+                      opacity: isProcessing ? 0.6 : 1,
+                    }}
+                  >
+                    {isProcessing ? t('profile.unblocking', 'Unblocking...') : t('profile.unblock', 'Unblock')}
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </CustomModal>
     </div>
   );
 };

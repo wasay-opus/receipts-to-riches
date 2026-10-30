@@ -749,6 +749,62 @@ class FeedServices {
       throw error;
     }
   };
+
+  blockUser = async (userId: number | string): Promise<IApiResponse> => {
+    try {
+      const endpoint = endPoints.BLOCK_USER(userId);
+      if (__DEV__) {
+        console.log('[FeedAPI] Request -> POST', endpoint);
+      }
+      const response = await fetchApi({
+        method: 'POST',
+        endPoint: endpoint,
+        data: undefined,
+        token: true,
+      });
+      return response;
+    } catch (error) {
+      console.error(`[FeedAPI] Error -> block user (${userId})`, error);
+      throw error;
+    }
+  };
+
+  getBlockedUsers = async (params?: Record<string, any>): Promise<IApiResponse> => {
+    try {
+      if (__DEV__) {
+        console.log('[FeedAPI] Request -> GET', endPoints.BLOCKED_USERS, params);
+      }
+      const response = await fetchApi({
+        method: 'GET',
+        endPoint: endPoints.BLOCKED_USERS,
+        params,
+        token: true,
+      });
+      return response;
+    } catch (error) {
+      console.error('[FeedAPI] Error -> get blocked users', error);
+      throw error;
+    }
+  };
+
+  searchUsers = async (query: string): Promise<IApiResponse> => {
+    try {
+      const queryParams = { search: query, q: query };
+      if (__DEV__) {
+        console.log('[FeedAPI] Request -> GET', endPoints.SEARCH_USERS, queryParams);
+      }
+      const response = await fetchApi({
+        method: 'GET',
+        endPoint: endPoints.SEARCH_USERS,
+        params: queryParams,
+        token: true,
+      });
+      return response;
+    } catch (error) {
+      console.error(`[FeedAPI] Error -> search users (${query})`, error);
+      throw error;
+    }
+  };
 }
 
 const feedServices = new FeedServices();

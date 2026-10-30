@@ -60,6 +60,24 @@ export const PREVIOUS_WINNERS_VIDEOS: WinnerVideoItem[] = [
     tag: 'Previous Daily Winner',
     description: 'Daily cash winner turning everyday receipts into real dollars!',
   },
+  {
+    id: 'vid-4',
+    winnerName: 'David Miller',
+    gameTitle: 'Pick 5 Game',
+    prizeAmount: '$5,000 Cash',
+    videoUrl: 'https://api.receiptstoriches.net/images/game-guide/video-folder/Video.MOV',
+    tag: 'Previous Cash Winner',
+    description: 'Celebrating an incredible cash win from everyday shopping!',
+  },
+  {
+    id: 'vid-5',
+    winnerName: 'Ashley Williams',
+    gameTitle: 'State Pick Game',
+    prizeAmount: '$3,500 Cash',
+    videoUrl: 'https://api.receiptstoriches.net/images/game-guide/video-folder/copy_A5624927-EC78-4FB4-A1A7-77F7F131ADA2.mov',
+    tag: 'Previous State Winner',
+    description: 'State winner celebration from shopping receipt uploads!',
+  },
 ];
 
 interface WinnerItem {
@@ -405,13 +423,27 @@ export const Winners: React.FC = () => {
     setWinnersError(null);
     try {
       const res = await winnerServices.getAllWinners();
-      const rawList = Array.isArray(res?.data?.data)
-        ? res.data.data
-        : Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.winners)
-        ? res.winners
-        : [];
+      const raw = res?.data;
+      const rawList =
+        Array.isArray(raw?.data?.data)
+          ? raw.data.data
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw?.winners)
+          ? raw.winners
+          : Array.isArray(raw?.data?.winners)
+          ? raw.data.winners
+          : Array.isArray(raw)
+          ? raw
+          : Array.isArray(res?.data?.data?.data)
+          ? res.data.data.data
+          : Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.winners)
+          ? res.winners
+          : [];
       setWinners(rawList.map(normalizeWinner));
     } catch (err: any) {
       setWinnersError(err?.message || 'Failed to fetch winners.');
@@ -652,19 +684,12 @@ export const Winners: React.FC = () => {
                   fontWeight: 700,
                 }}
               >
-                3 Featured Videos
+                {PREVIOUS_WINNERS_VIDEOS.length} Featured Videos
               </span>
             </div>
 
-            {/* Video Cards Grid */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '14px',
-                width: '100%',
-              }}
-            >
+            {/* Video Cards Grid - 3 cards in row 1, 2 cards in row 2 */}
+            <div className="previous-winners-video-grid">
               {PREVIOUS_WINNERS_VIDEOS.map((item) => (
                 <div
                   key={item.id}
@@ -778,7 +803,15 @@ export const Winners: React.FC = () => {
                       flex: 1,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        flexWrap: 'nowrap',
+                      }}
+                    >
                       <span
                         style={{
                           fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -787,6 +820,8 @@ export const Winners: React.FC = () => {
                           color: '#F59E0B',
                           textTransform: 'uppercase',
                           letterSpacing: '0.4px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
                         }}
                       >
                         Previous Winner
@@ -797,6 +832,8 @@ export const Winners: React.FC = () => {
                           fontSize: '12px',
                           fontWeight: 800,
                           color: '#00D066',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
                         }}
                       >
                         {item.prizeAmount}

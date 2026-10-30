@@ -2,13 +2,15 @@ const endPoints = {
   // Auth
   LOGIN: 'auth/login',
   SIGN_UP: 'auth/register',
+  VERIFY_OTP: 'auth/verify-otp',
+  RESEND_OTP: 'auth/resend-otp',
   FORGOT_PASSWORD: 'password-reset/send-token',
   VALIDATE_PASSWORD_CODE: 'password-reset/verify-token',
   RESET_PASSWORD: 'password-reset/reset',
+  CHANGE_PASSWORD: 'auth/password/change',
+  CHANGE_PHONE: 'auth/change-phone',
   SOCIAL_LOGIN: 'auth/social/login',
   LOGOUT: 'auth/logout',
-  VERIFY_OTP: 'auth/verify-otp',
-  RESEND_OTP: 'auth/resend-otp',
 
   // User
   GET_USER: 'user',
@@ -90,6 +92,9 @@ const endPoints = {
 
   // Feed & Posts
   GET_FEED: 'feed',
+  BLOCK_USER: (userId: number | string) => `feed/users/${userId}/block`,
+  BLOCKED_USERS: 'feed/blocked',
+  SEARCH_USERS: 'feed/users/search',
   CREATE_POST: 'feed/posts',
   FEED_POSTS: 'feed/posts',
   UPDATE_POST: (postId: number | string) => `feed/posts/${postId}`,

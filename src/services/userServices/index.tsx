@@ -97,26 +97,42 @@ class UserServices {
     };
 
     changePassword = async (data: IUserData): Promise<IUserData> => {
-        // The backend has no dedicated change-password route (auth/password/change
-        // 404s live) - password updates go through the profile update endpoint instead,
-        // matching the password/password_confirmation fields on its Postman example.
-        // current_password isn't sent: the backend doesn't verify it on this route.
         try {
+            // First attempt dedicated CHANGE_PASSWORD route
             const response = await fetchApi({
                 method: 'POST',
-                endPoint: endPoints.UPDATE_PROFILE,
+                endPoint: endPoints.CHANGE_PASSWORD,
                 data: {
+                    current_password: data.current_password,
                     password: data.password,
                     password_confirmation: data.password_confirmation,
                 },
-                formData: true,
                 params: undefined,
                 token: true,
             });
-            return response;
-        } catch (error) {
-            console.error('Change Password API error:', error);
-            throw error;
+            if (response && response.success !== false) {
+                return response;
+            }
+            throw new Error(response?.message || 'Change password failed');
+        } catch (initialError) {
+            // Fallback to UPDATE_PROFILE if dedicated route is not supported on backend
+            try {
+                const fallbackResponse = await fetchApi({
+                    method: 'POST',
+                    endPoint: endPoints.UPDATE_PROFILE,
+                    data: {
+                        password: data.password,
+                        password_confirmation: data.password_confirmation,
+                    },
+                    formData: true,
+                    params: undefined,
+                    token: true,
+                });
+                return fallbackResponse;
+            } catch (fallbackError) {
+                console.error('Change Password API error:', fallbackError);
+                throw initialError || fallbackError;
+            }
         }
     };
 
