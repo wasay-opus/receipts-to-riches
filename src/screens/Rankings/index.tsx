@@ -177,6 +177,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
 }) => {
   const isFirst = user.rank === 1;
   const isSecond = user.rank === 2;
+  const isThird = user.rank === 3;
   const cardHeight = isSolo
     ? (isMobile ? 240 : 275)
     : isMobile
@@ -195,19 +196,20 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
   // Cash reward based on podium rank
   const cashReward = user.rank === 1 ? '$100' : user.rank === 2 ? '$50' : '$25';
 
-  // 3D tilt tracking for 1st place champion card
+  // 3D tilt tracking for top 3 podium cards
   const cardRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isFirst || isMobile || !cardRef.current) return;
+    if (isMobile || !cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -9;
-    const rotateY = ((x - centerX) / centerX) * 9;
+    const maxAngle = isFirst ? 9 : 7.5;
+    const rotateX = ((y - centerY) / centerY) * -maxAngle;
+    const rotateY = ((x - centerX) / centerX) * maxAngle;
     setTilt({ x: rotateX, y: rotateY, active: true });
   };
 
@@ -231,7 +233,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
 
   return (
     <div
-      className={isFirst ? 'podium-champion-float-wrap' : undefined}
+      className={`podium-champion-float-wrap-${user.rank || 1}`}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -241,7 +243,7 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
         minWidth: 0,
         position: 'relative',
         fontFamily: "'Plus Jakarta Sans', sans-serif",
-        perspective: isFirst ? '1000px' : undefined,
+        perspective: '1000px',
       }}
     >
       {/* Overlapping Avatar Container */}
@@ -275,8 +277,14 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
           minHeight: `${cardHeight}px`,
           background: isFirst
             ? 'linear-gradient(180deg, #FFFDF7 0%, #FFF8E7 100%)'
-            : '#FFF8E7',
-          border: isFirst ? '2px solid #F59E0B' : '1.5px solid #FEE5A5',
+            : isSecond
+            ? 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)'
+            : 'linear-gradient(180deg, #FFFDF7 0%, #FEF3C7 100%)',
+          border: isFirst
+            ? '2px solid #F59E0B'
+            : isSecond
+            ? '1.5px solid #94A3B8'
+            : '1.5px solid #D97706',
           borderRadius: isMobile ? '18px' : '24px',
           display: 'flex',
           flexDirection: 'column',
@@ -289,24 +297,30 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
             ? (tilt.active
                 ? '0 24px 48px rgba(245, 158, 11, 0.42), 0 0 32px rgba(251, 191, 36, 0.35)'
                 : '0 12px 28px rgba(245, 158, 11, 0.22), 0 0 20px rgba(251, 191, 36, 0.15)')
-            : '0 4px 14px rgba(0, 0, 0, 0.05)',
+            : isSecond
+            ? (tilt.active
+                ? '0 20px 42px rgba(100, 116, 139, 0.35), 0 0 28px rgba(148, 163, 184, 0.3)'
+                : '0 8px 22px rgba(100, 116, 139, 0.16), 0 0 16px rgba(148, 163, 184, 0.12)')
+            : (tilt.active
+                ? '0 20px 42px rgba(217, 119, 6, 0.35), 0 0 28px rgba(245, 158, 11, 0.25)'
+                : '0 8px 22px rgba(217, 119, 6, 0.16), 0 0 16px rgba(245, 158, 11, 0.12)'),
           boxSizing: 'border-box',
           position: 'relative',
           overflow: 'hidden',
-          transform: isFirst
-            ? (tilt.active
-                ? `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-8px) scale(1.025)`
-                : 'perspective(800px) rotateX(0deg) rotateY(0deg) translateY(0px) scale(1)')
-            : undefined,
-          transition: isFirst
-            ? 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s ease'
-            : 'transform 0.25s ease, box-shadow 0.25s ease',
+          transform: tilt.active
+            ? `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-8px) scale(1.025)`
+            : 'perspective(800px) rotateX(0deg) rotateY(0deg) translateY(0px) scale(1)',
+          transition: 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s ease',
           transformStyle: 'preserve-3d',
-          willChange: isFirst ? 'transform, box-shadow' : undefined,
+          willChange: 'transform, box-shadow',
         }}
       >
-        {/* Shimmer light sweep for 1st place */}
-        {isFirst && <div className="champion-shimmer-sweep" />}
+        {/* Shimmer light sweep for top 3 cards */}
+        <div
+          className={`champion-shimmer-sweep ${
+            isSecond ? 'shimmer-silver' : isThird ? 'shimmer-bronze' : ''
+          }`}
+        />
 
         {/* Full Name */}
         <strong
@@ -371,16 +385,20 @@ const PodiumSlot: React.FC<{ user: PodiumUserData; isSolo?: boolean; isMobile?: 
             boxShadow: isFirst
               ? '0 6px 18px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.5)'
               : isSecond
-              ? '0 4px 12px rgba(100, 116, 139, 0.3)'
-              : '0 4px 12px rgba(180, 83, 9, 0.3)',
+              ? '0 4px 14px rgba(100, 116, 139, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5)'
+              : '0 4px 14px rgba(180, 83, 9, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
             border: isFirst
               ? '1.5px solid rgba(255, 255, 255, 0.55)'
-              : '1px solid rgba(255, 255, 255, 0.3)',
-            animation: isFirst ? 'badgeGlow3D 2.8s ease-in-out infinite' : undefined,
+              : '1.5px solid rgba(255, 255, 255, 0.45)',
+            animation: isFirst
+              ? 'badgeGlow3D 2.8s ease-in-out infinite'
+              : isSecond
+              ? 'badgeGlowSilver3D 2.8s ease-in-out 0.8s infinite'
+              : 'badgeGlowBronze3D 2.8s ease-in-out 1.6s infinite',
             position: 'relative',
             zIndex: 3,
             transformStyle: 'preserve-3d',
-            transform: isFirst ? 'translateZ(18px)' : undefined,
+            transform: 'translateZ(18px)',
           }}
         >
           <span style={{ fontSize: isMobile ? (isFirst ? '12px' : '11px') : isFirst ? '15px' : '13px', lineHeight: 1 }}>
