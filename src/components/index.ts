@@ -9,3 +9,4 @@ export { Container } from './Container';
 export { CustomToast, showToast } from './Toast';
 export { GameHelpMenu } from './GameHelpMenu';
 export { ReportModal } from './ReportModal';
+export { PhoneInput, sanitizePhoneNumber } from './PhoneInput';

@@ -769,6 +769,62 @@ class FeedServices {
     }
   };
 
+  unblockUser = async (userId: number | string): Promise<IApiResponse> => {
+    try {
+      const endpoint = endPoints.BLOCK_USER(userId);
+      if (__DEV__) {
+        console.log('[FeedAPI] Request -> DELETE', endpoint);
+      }
+      const response = await fetchApi({
+        method: 'DELETE',
+        endPoint: endpoint,
+        token: true,
+      });
+      return response;
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 404 || status === 405) {
+        try {
+          if (__DEV__) {
+            console.log('[FeedAPI] Fallback Request -> POST', `feed/users/${userId}/unblock`);
+          }
+          return await fetchApi({
+            method: 'POST',
+            endPoint: `feed/users/${userId}/unblock`,
+            token: true,
+          });
+        } catch (error2: any) {
+          const status2 = error2?.response?.status;
+          if (status2 === 404 || status2 === 405) {
+            try {
+              if (__DEV__) {
+                console.log('[FeedAPI] Fallback Request -> DELETE', `feed/blocked/${userId}`);
+              }
+              return await fetchApi({
+                method: 'DELETE',
+                endPoint: `feed/blocked/${userId}`,
+                token: true,
+              });
+            } catch (error3: any) {
+              const status3 = error3?.response?.status;
+              if (status3 === 404 || status3 === 405) {
+                return await fetchApi({
+                  method: 'POST',
+                  endPoint: `feed/blocked/${userId}/unblock`,
+                  token: true,
+                });
+              }
+              throw error3;
+            }
+          }
+          throw error2;
+        }
+      }
+      console.error(`[FeedAPI] Error -> unblock user (${userId})`, error);
+      throw error;
+    }
+  };
+
   getBlockedUsers = async (params?: Record<string, any>): Promise<IApiResponse> => {
     try {
       if (__DEV__) {

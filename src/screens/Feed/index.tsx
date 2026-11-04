@@ -22,6 +22,7 @@ import {
   Video,
   X,
   Maximize2,
+  ChevronRight,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import {
@@ -45,7 +46,18 @@ import {
 import { Container, CustomModal, ReportModal, showToast } from '../../components';
 import feedServices from '../../services/feedServices';
 import pollServices from '../../services/pollServices';
-import { confirmAppAction, confirmBlockOrReportAction, promptAppInput } from '../../utils/sweetAlert';
+import {
+  confirmAppAction,
+  confirmBlockOrReportAction,
+  confirmUnblockAction,
+  showAlreadyReportedAlert,
+  promptAppInput,
+} from '../../utils/sweetAlert';
+import {
+  isUserReported,
+  markUserReported,
+  isPostReported,
+} from '../../utils/userModeration';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 
 type FeedComment = {
@@ -305,12 +317,15 @@ export const Feed: React.FC = () => {
       setSearchLoading(true);
       try {
         const res = await feedServices.searchUsers(searchQuery.trim());
-        const data = Array.isArray(res?.data?.data)
-          ? res.data.data
-          : Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.data?.users)
-          ? res.data.users
+        const raw = res?.data;
+        const data = Array.isArray(raw?.data?.data)
+          ? raw.data.data
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw?.users)
+          ? raw.users
+          : Array.isArray(raw)
+          ? raw
           : [];
         setSearchResults(data);
         setSearchOpen(true);
@@ -334,8 +349,81 @@ export const Feed: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Blocked users set to filter from feed immediately
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
+
+  const fetchBlockedUserIds = useCallback(async () => {
+    try {
+      const res = await feedServices.getBlockedUsers();
+      const list = res?.data?.data?.data ?? res?.data?.data ?? res?.data ?? [];
+      if (Array.isArray(list)) {
+        const ids = new Set<string>(
+          list
+            .map((u: any) => String(u?.id ?? u?.user_id))
+            .filter((id) => id && id !== 'undefined' && id !== 'null')
+        );
+        setBlockedUserIds(ids);
+      }
+    } catch {
+      // Ignore if blocked list cannot be loaded
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBlockedUserIds();
+  }, [fetchBlockedUserIds]);
+
   const handleBlockPostUser = async (userId: string | number, authorName: string, postId?: string | number) => {
     if (!userId) return;
+
+    // If ALREADY blocked
+    if (blockedUserIds.has(String(userId))) {
+      const isReported = isUserReported(userId);
+      const title = isReported
+        ? t('socialProfile.alreadyBlockedAndReportedTitle', 'Already Blocked & Reported')
+        : t('socialProfile.alreadyBlockedTitle', 'Already Blocked');
+      const text = isReported
+        ? t(
+            'socialProfile.alreadyBlockedAndReportedText',
+            'You have already blocked and reported this user. Would you like to unblock them?'
+          )
+        : t(
+            'socialProfile.alreadyBlockedText',
+            'You already blocked this user. Would you like to unblock them?'
+          );
+
+      const wantUnblock = await confirmUnblockAction({
+        title,
+        text,
+        confirmButtonText: t('socialProfile.unblockUser', 'Unblock User'),
+        cancelButtonText: t('common.cancel', 'Cancel'),
+      });
+
+      if (wantUnblock) {
+        try {
+          await feedServices.unblockUser(userId);
+          setBlockedUserIds((prev) => {
+            const next = new Set(prev);
+            next.delete(String(userId));
+            return next;
+          });
+          showToast({
+            type: 'success',
+            text1: t('socialProfile.userUnblocked', 'User Unblocked'),
+            text2: t('socialProfile.userUnblockedDesc', '{{name}} has been unblocked.', { name: authorName }),
+          });
+          dispatch(fetchFeed({ params: { per_page: 30, page: 1 }, isRefresh: true }));
+        } catch (err: any) {
+          showToast({
+            type: 'error',
+            text1: t('socialProfile.unblockFailed', 'Failed to unblock'),
+            text2: getUserFriendlyErrorMessage(err, t('socialProfile.tryAgain', 'Please try again.')),
+          });
+        }
+      }
+      return;
+    }
+
     const action = await confirmBlockOrReportAction({
       title: t('feedScreen.blockUserTitle', 'Block {{author}}?', { author: authorName }),
       text: t('feedScreen.blockUserText', 'You will no longer see posts from this user.'),
@@ -347,6 +435,16 @@ export const Feed: React.FC = () => {
 
     try {
       await feedServices.blockUser(userId);
+      setBlockedUserIds((prev) => {
+        const next = new Set(prev);
+        next.add(String(userId));
+        return next;
+      });
+
+      if (action === 'block_and_report') {
+        markUserReported(userId);
+      }
+
       showToast({
         type: 'success',
         text1: t('feedScreen.userBlockedSuccess', 'User Blocked'),
@@ -430,8 +528,31 @@ export const Feed: React.FC = () => {
     if (targetPostFromState && !list.some((item) => String(item?.id) === String(targetPostFromState?.id))) {
       list = [targetPostFromState, ...list];
     }
+
+    // Filter out posts from blocked users immediately
+    if (blockedUserIds.size > 0) {
+      list = list.filter((post) => {
+        const authorId = String(
+          post?.user?.id ?? post?.user_id ?? post?.userId ?? post?.author?.id ?? post?.author_id ?? ''
+        );
+        return !blockedUserIds.has(authorId);
+      });
+    }
+
+    // Sort newest posts first (latest created_at or highest id) across all accounts
+    list.sort((a: any, b: any) => {
+      const rawA = a?.created_at ?? a?.createdAt ?? a?.date;
+      const rawB = b?.created_at ?? b?.createdAt ?? b?.date;
+      const timeA = rawA ? new Date(rawA).getTime() : 0;
+      const timeB = rawB ? new Date(rawB).getTime() : 0;
+      if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+        return timeB - timeA;
+      }
+      return (Number(b?.id) || 0) - (Number(a?.id) || 0);
+    });
+
     return list.map((post) => normalizePost(post, t));
-  }, [feedList, targetPostFromState, t]);
+  }, [feedList, targetPostFromState, blockedUserIds, t]);
 
   const selectedPost = posts.find((post) => String(post.id) === String(activeCommentPostId));
 
@@ -638,6 +759,13 @@ export const Feed: React.FC = () => {
 
   const handleReportPost = useCallback(
     (postId: string | number, authorName?: string) => {
+      if (isPostReported(postId)) {
+        showAlreadyReportedAlert({
+          title: t('report.alreadyReportedTitle', 'Already Reported'),
+          text: t('report.alreadyReportedPostText', 'You have already submitted a report for this post.'),
+        });
+        return;
+      }
       setReportModalState({
         visible: true,
         targetId: postId,
@@ -645,7 +773,7 @@ export const Feed: React.FC = () => {
         targetName: authorName,
       });
     },
-    [],
+    [t],
   );
 
   const handleEditComment = useCallback(
@@ -923,69 +1051,103 @@ export const Feed: React.FC = () => {
           )}
         </div>
 
-        {/* Live Search Results Dropdown */}
-        {searchOpen && searchResults.length > 0 && (
-          <div
-            className="card"
-            style={{
-              position: 'absolute',
-              top: 'calc(100% + 6px)',
-              left: 0,
-              right: 0,
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '16px',
-              boxShadow: 'var(--shadow-lg)',
-              maxHeight: '280px',
-              overflowY: 'auto',
-              padding: '6px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-            }}
-          >
-            {searchResults.map((usr: any) => {
-              const uId = usr.id || usr.user_id;
-              const uName = usr.name || `${usr.first_name || ''} ${usr.last_name || ''}`.trim() || 'Community Member';
-              const uAvatar = usr.image || usr.avatar || usr.image_url || fallbackAvatar;
-              return (
+        {/* Live Search Results Dropdown (Instagram Style) */}
+        {searchOpen && (
+          <div className="feed-search-results-dropdown">
+            {searchResults.length > 0 ? (
+              <>
                 <div
-                  key={uId}
-                  onClick={() => {
-                    setSearchOpen(false);
-                    navigate(`/social-profile/${uId}`);
-                  }}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
+                    padding: '10px 16px 8px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.6px',
+                    color: 'var(--text-muted)',
+                    borderBottom: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <img
-                    src={uAvatar}
-                    alt={uName}
-                    style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                    onError={(e) => ((e.target as HTMLImageElement).src = fallbackAvatar)}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
-                      {uName}
-                    </span>
-                    {usr.email && (
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        {usr.email}
-                      </span>
-                    )}
-                  </div>
+                  {t('feedScreen.membersFound', 'Community Members')}
                 </div>
-              );
-            })}
+                <div className="feed-search-results-scroll">
+                  {searchResults.map((usr: any) => {
+                    const uId = usr.id || usr.user_id;
+                    const uName =
+                      usr.name ||
+                      `${usr.first_name || ''} ${usr.last_name || ''}`.trim() ||
+                      'Community Member';
+                    const uAvatar =
+                      usr.image_url || usr.avatar || usr.image || fallbackAvatar;
+                    const followers = usr.followers_count;
+                    return (
+                      <div
+                        key={uId}
+                        onClick={() => {
+                          setSearchOpen(false);
+                          navigate(`/social-profile/${uId}`);
+                        }}
+                        className="feed-search-member-item"
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                          <img
+                            src={uAvatar}
+                            alt={uName}
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              border: '1.5px solid var(--border-color)',
+                              flexShrink: 0,
+                            }}
+                            onError={(e) =>
+                              ((e.target as HTMLImageElement).src = fallbackAvatar)
+                            }
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <span
+                              style={{
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                color: 'var(--text-main)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {uName}
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                              {usr.email && (
+                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {usr.email}
+                                </span>
+                              )}
+                              {typeof followers === 'number' && (
+                                <span>• {followers} {followers === 1 ? 'follower' : 'followers'}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: '8px' }} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : !searchLoading && searchQuery.trim().length >= 2 ? (
+              <div
+                style={{
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  color: 'var(--text-muted)',
+                  fontSize: '13px',
+                }}
+              >
+                {t('feedScreen.noUsersFound', 'No community members found')}
+              </div>
+            ) : null}
           </div>
         )}
       </div>

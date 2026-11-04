@@ -2807,3 +2807,87 @@ svg.animate-spin,
   );
   animation-delay: 2.2s;
 }
+
+/* Feed Member Search Dropdown & Sleek Custom Scrollbar */
+.feed-search-results-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  animation: feedDropdownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes feedDropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feed-search-results-scroll {
+  max-height: 330px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.feed-search-results-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.feed-search-results-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+
+.feed-search-results-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+}
+
+.feed-search-results-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+.dark .feed-search-results-scroll {
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+}
+
+.dark .feed-search-results-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+}
+
+.dark .feed-search-results-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.65);
+}
+
+.feed-search-member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.feed-search-member-item:hover {
+  background: var(--bg-card-secondary);
+  transform: translateX(2px);
+}

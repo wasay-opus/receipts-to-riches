@@ -7,7 +7,7 @@ import { User, Mail, Lock, Phone, UserPlus, Gift } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { registerUser, socialLogin } from '../../redux/Slices/authSlice';
-import { Button, FormInput, showToast } from '../../components';
+import { Button, FormInput, PhoneInput, sanitizePhoneNumber, showToast } from '../../components';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 
@@ -216,7 +216,17 @@ export const SignUp: React.FC = () => {
       .email(t('validation.invalidEmail', 'Invalid email address'))
       .required(t('validation.required', 'Email is required')),
     phone: Yup.string()
-      .min(7, t('validation.phoneTooShort', 'Valid phone number is required'))
+      .test(
+        'valid-us-phone',
+        t('validation.invalidUsPhone', 'Please enter a valid 10-digit US phone number (e.g. 415 555 2671)'),
+        (val) => {
+          if (!val) return false;
+          const clean = val.replace(/\D/g, '');
+          if (clean.length === 10) return true;
+          if (clean.length === 11 && clean.startsWith('1')) return true;
+          return false;
+        }
+      )
       .required(t('validation.required', 'Phone number is required')),
     password: Yup.string()
       .min(6, t('validation.passwordMin', 'Password must be at least 6 characters'))
@@ -227,23 +237,26 @@ export const SignUp: React.FC = () => {
     terms: Yup.boolean().oneOf([true], t('validation.acceptTerms', 'You must accept terms & conditions')),
   });
 
-  const handleSubmit = async (values: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-    password: string;
-    password_confirmation: string;
-    terms: boolean;
-    referralCode?: string;
-  }) => {
+  const handleSubmit = async (
+    values: {
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone: string;
+      password: string;
+      password_confirmation: string;
+      terms: boolean;
+      referralCode?: string;
+    },
+    { setFieldError }: { setFieldError: (field: string, message: string | undefined) => void; [key: string]: any }
+  ) => {
     try {
       const payload: any = {
         first_name: values.first_name.trim(),
         last_name: values.last_name.trim(),
         name: `${values.first_name.trim()} ${values.last_name.trim()}`,
         email: values.email.trim().toLowerCase(),
-        phone: values.phone.trim(),
+        phone: sanitizePhoneNumber(values.phone),
         password: values.password,
         password_confirmation: values.password_confirmation,
       };
@@ -276,10 +289,92 @@ export const SignUp: React.FC = () => {
         sessionStorage.setItem('last_registered_email', values.email.trim());
       } catch {}
 
+      const rawMsg =
+        error?.message ||
+        error?.data?.message ||
+        error?.data?.error?.[0] ||
+        error?.error?.[0] ||
+        (typeof error === 'string' ? error : '');
+
       const errorMsg = getUserFriendlyErrorMessage(
         error,
         t('auth.tryAgain', 'Please check your information and try again.'),
       );
+
+      const combinedText = `${rawMsg} ${errorMsg}`.toLowerCase();
+
+      // 1. Phone number delivery / Twilio / Verification code errors
+      if (
+        combinedText.includes('verification code') ||
+        combinedText.includes('could not send') ||
+        combinedText.includes('phone') ||
+        combinedText.includes('sms') ||
+        combinedText.includes('twilio') ||
+        combinedText.includes('carrier') ||
+        combinedText.includes('mobile')
+      ) {
+        const phoneErrorText =
+          error?.errors?.phone?.[0] ||
+          t(
+            'auth.phoneDeliveryError',
+            'Could not send verification code. Please check your phone number and enter a valid 10-digit US mobile number (e.g. 415 555 2671).'
+          );
+        setFieldError('phone', phoneErrorText);
+
+        showToast({
+          type: 'error',
+          text1: t('auth.phoneErrorTitle', 'Phone Verification Failed'),
+          text2: phoneErrorText,
+        });
+        return;
+      }
+
+      // 2. Email errors (already taken, invalid domain, etc.)
+      if (
+        combinedText.includes('email') &&
+        (combinedText.includes('taken') ||
+          combinedText.includes('already') ||
+          combinedText.includes('exists') ||
+          combinedText.includes('duplicate') ||
+          combinedText.includes('registered'))
+      ) {
+        const emailErrorText =
+          error?.errors?.email?.[0] ||
+          t(
+            'auth.emailAlreadyTaken',
+            'This email is already registered. Please sign in or use another email.'
+          );
+        setFieldError('email', emailErrorText);
+
+        showToast({
+          type: 'error',
+          text1: t('auth.emailErrorTitle', 'Email Already Exists'),
+          text2: emailErrorText,
+        });
+        return;
+      }
+
+      // 3. Backend field validation mapping (e.g. { errors: { fieldName: ['...'] } })
+      const backendErrors = error?.errors || error?.data?.errors;
+      if (backendErrors && typeof backendErrors === 'object') {
+        let hasMappedField = false;
+        Object.entries(backendErrors).forEach(([field, msgs]) => {
+          const fieldMsg = Array.isArray(msgs) ? msgs[0] : String(msgs);
+          if (fieldMsg) {
+            setFieldError(field, fieldMsg);
+            hasMappedField = true;
+          }
+        });
+
+        if (hasMappedField) {
+          showToast({
+            type: 'error',
+            text1: t('auth.validationErrorTitle', 'Invalid Information'),
+            text2: errorMsg,
+          });
+          return;
+        }
+      }
 
       showToast({
         type: 'error',
@@ -399,16 +494,13 @@ export const SignUp: React.FC = () => {
                   leftIcon={<Mail size={18} />}
                 />
 
-                <FormInput
+                <PhoneInput
                   label={t('auth.phoneNumber', 'Phone Number')}
-                  placeholder="+1 555 123 4567"
-                  type="tel"
                   name="phone"
                   value={values.phone}
-                  onChange={handleChange('phone')}
+                  onChange={(val) => setFieldValue('phone', val)}
                   onBlur={handleBlur('phone')}
-                  error={touched.phone && errors.phone ? errors.phone : undefined}
-                  leftIcon={<Phone size={18} />}
+                  error={touched.phone && errors.phone ? (errors.phone as string) : undefined}
                 />
               </div>
 

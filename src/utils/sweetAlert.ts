@@ -110,6 +110,59 @@ export const confirmBlockOrReportAction = async ({
   return 'cancel';
 };
 
+export const confirmUnblockAction = async ({
+  title = 'Already Blocked',
+  text = 'You already blocked this user. Would you like to unblock them?',
+  confirmButtonText = 'Unblock User',
+  cancelButtonText = 'Cancel',
+}: {
+  title?: string;
+  text?: string;
+  confirmButtonText?: string;
+  cancelButtonText?: string;
+}): Promise<boolean> => {
+  const result = await Swal.fire({
+    icon: 'info',
+    title,
+    text,
+    showCancelButton: true,
+    confirmButtonText,
+    cancelButtonText,
+    reverseButtons: true,
+    background: isDarkTheme() ? '#0E1528' : '#FFFFFF',
+    color: isDarkTheme() ? '#F8FAFC' : '#0F172A',
+    confirmButtonColor: '#00674D',
+    cancelButtonColor: '#64748B',
+    customClass: {
+      popup: getPopupClass(),
+    },
+  });
+  return result.isConfirmed;
+};
+
+export const showAlreadyReportedAlert = async ({
+  title = 'Already Reported',
+  text = 'You have already submitted a report for this user.',
+  confirmButtonText = 'OK',
+}: {
+  title?: string;
+  text?: string;
+  confirmButtonText?: string;
+}) => {
+  await Swal.fire({
+    icon: 'info',
+    title,
+    text,
+    confirmButtonText,
+    background: isDarkTheme() ? '#0E1528' : '#FFFFFF',
+    color: isDarkTheme() ? '#F8FAFC' : '#0F172A',
+    confirmButtonColor: '#00674D',
+    customClass: {
+      popup: getPopupClass(),
+    },
+  });
+};
+
 export const promptAppInput = async ({
   title,
   inputLabel,

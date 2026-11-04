@@ -142,7 +142,11 @@ export const Profile: React.FC = () => {
   const handleUnblockUser = async (uId: string | number, name: string) => {
     setUnblockingId(uId);
     try {
-      await feedServices.blockUser(uId);
+      await feedServices.unblockUser(uId);
+      // Optimistically remove unblocked user from modal list immediately
+      setBlockedUsers((prev) =>
+        prev.filter((user) => String(user?.id ?? user?.user_id) !== String(uId))
+      );
       showToast({
         type: 'success',
         text1: t('profile.unblocked', 'User Unblocked'),

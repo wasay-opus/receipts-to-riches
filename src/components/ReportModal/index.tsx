@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ShieldAlert, X, Check, Loader2 } from 'lucide-react';
 import feedServices from '../../services/feedServices';
 import { showToast } from '../Toast';
+import { markUserReported, markPostReported } from '../../utils/userModeration';
 
 export type ReportTargetType = 'post' | 'comment' | 'account';
 
@@ -119,10 +120,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     try {
       if (targetType === 'post') {
         await feedServices.reportPost(targetId, finalReason);
+        markPostReported(targetId);
       } else if (targetType === 'comment') {
         await feedServices.reportComment(targetId, finalReason);
       } else if (targetType === 'account') {
         await feedServices.reportUser(targetId, finalReason);
+        markUserReported(targetId);
       }
 
       showToast({

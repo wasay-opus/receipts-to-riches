@@ -6,7 +6,7 @@ import { Formik, FormikProps, useFormikContext } from 'formik';
 import * as Yup from 'yup';
 import { ArrowLeft, User, Mail, Phone, Calendar, Save, Camera, MapPin, AlertCircle, RotateCcw } from 'lucide-react';
 import { AppDispatch, RootState } from '../../redux/Store';
-import { Button, Container, FormInput, showToast } from '../../components';
+import { Button, Container, FormInput, PhoneInput, sanitizePhoneNumber, showToast } from '../../components';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { editProfile, fetchUser, updateUserDataLocally } from '../../redux/Slices/userSlice';
 import authServices from '../../services/authServices';
@@ -120,7 +120,17 @@ export const PersonalInfo: React.FC = () => {
     first_name: Yup.string(),
     last_name: Yup.string(),
     email: Yup.string().email(t('validation.invalidEmail', 'Invalid email')),
-    phone: Yup.string(),
+    phone: Yup.string().test(
+      'valid-us-phone',
+      t('validation.invalidUsPhone', 'Please enter a valid 10-digit US phone number (e.g. 415 555 2671)'),
+      (val) => {
+        if (!val || !val.trim()) return true;
+        const clean = val.replace(/\D/g, '');
+        if (clean.length === 10) return true;
+        if (clean.length === 11 && clean.startsWith('1')) return true;
+        return false;
+      }
+    ),
     bio: Yup.string(),
     dob: Yup.string(),
     address: Yup.string(),
@@ -131,7 +141,7 @@ export const PersonalInfo: React.FC = () => {
     password_confirmation: Yup.string(),
   });
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: any, { setFieldError }: any = {}) => {
     const trimmedBio = values.bio?.trim?.() ?? '';
     const payload = new FormData();
 
@@ -142,7 +152,8 @@ export const PersonalInfo: React.FC = () => {
       payload.append('name', combinedName);
     }
     if (values.email?.trim()) payload.append('email', values.email.trim());
-    if (values.phone?.trim()) payload.append('phone', values.phone.trim());
+    const cleanPhone = values.phone?.trim?.() ? sanitizePhoneNumber(values.phone) : '';
+    if (cleanPhone) payload.append('phone', cleanPhone);
     if (trimmedBio) {
       payload.append('bio', trimmedBio);
       payload.append('description', trimmedBio);
@@ -172,9 +183,9 @@ export const PersonalInfo: React.FC = () => {
     }
 
     try {
-      if (values.phone && values.phone.trim() !== (user?.phone || '').trim()) {
+      if (cleanPhone && cleanPhone !== (user?.phone || '').trim()) {
         try {
-          await authServices.changePhone({ phone: values.phone.trim() });
+          await authServices.changePhone({ phone: cleanPhone });
         } catch (phoneErr) {
           console.warn('[PersonalInfo] changePhone API fallback:', phoneErr);
         }
@@ -185,7 +196,7 @@ export const PersonalInfo: React.FC = () => {
           first_name: values.first_name.trim(),
           last_name: values.last_name.trim(),
           name: `${values.first_name.trim()} ${values.last_name.trim()}`,
-          phone: values.phone?.trim?.() ?? '',
+          phone: cleanPhone || '',
           bio: trimmedBio,
           description: trimmedBio,
           about: trimmedBio,
@@ -231,10 +242,15 @@ export const PersonalInfo: React.FC = () => {
       });
       navigate(-1);
     } catch (error: any) {
+      const errorMsg = getUserFriendlyErrorMessage(error, t('personalInfo.tryAgain', 'Please try again.'));
+      const combined = `${error?.message || ''} ${errorMsg}`.toLowerCase();
+      if (setFieldError && (combined.includes('phone') || combined.includes('verification code') || combined.includes('sms'))) {
+        setFieldError('phone', t('auth.invalidPhoneError', 'Please enter a valid 10-digit US phone number.'));
+      }
       showToast({
         type: 'error',
         text1: t('personalInfo.profileNotSaved', 'Profile not saved'),
-        text2: getUserFriendlyErrorMessage(error, t('personalInfo.tryAgain', 'Please try again.')),
+        text2: errorMsg,
       });
     }
   };
@@ -538,7 +554,7 @@ export const PersonalInfo: React.FC = () => {
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
         >
-          {({ handleChange, handleBlur, handleSubmit, values, errors, touched, dirty }) => (
+          {({ handleChange, handleBlur, handleSubmit, values, errors, touched, dirty, setFieldValue }) => (
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <FormDirtyWatcher avatarChanged={avatarFile !== null} coverChanged={coverFile !== null} onDirtyChange={setHasChanges} />
 
@@ -578,14 +594,14 @@ export const PersonalInfo: React.FC = () => {
                   onBlur={handleBlur('email')}
                   leftIcon={<Mail size={18} />}
                 />
-                <FormInput
+                <PhoneInput
                   label={t('auth.phoneNumber', 'Phone Number')}
                   name="phone"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="415 555 2671"
                   value={values.phone}
-                  onChange={handleChange('phone')}
+                  onChange={(val) => setFieldValue('phone', val)}
                   onBlur={handleBlur('phone')}
-                  leftIcon={<Phone size={18} />}
+                  error={touched.phone && errors.phone ? (errors.phone as string) : undefined}
                 />
               </div>
 

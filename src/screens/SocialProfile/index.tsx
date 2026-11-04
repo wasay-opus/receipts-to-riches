@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ import {
   UserX,
   Camera,
   Video,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button, ReportModal, showToast } from '../../components';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
@@ -27,7 +28,14 @@ import {
 } from '../../redux/Slices/feedSlice';
 import feedServices from '../../services/feedServices';
 import { fetchUser } from '../../redux/Slices/userSlice';
-import { confirmAppAction, confirmBlockOrReportAction, promptAppInput } from '../../utils/sweetAlert';
+import {
+  confirmAppAction,
+  confirmBlockOrReportAction,
+  confirmUnblockAction,
+  showAlreadyReportedAlert,
+  promptAppInput,
+} from '../../utils/sweetAlert';
+import { isUserReported, markUserReported, clearUserReported } from '../../utils/userModeration';
 import {
   getUserAvatarUrl,
   getUserCoverUrl,
@@ -97,6 +105,31 @@ export const SocialProfile: React.FC = () => {
   const [avatarError, setAvatarError] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isReported, setIsReported] = useState(false);
+  const [moderationLoading, setModerationLoading] = useState(false);
+
+  const checkModerationStatus = useCallback(async () => {
+    if (!profileId || isOwnProfile) return;
+    setIsReported(isUserReported(profileId));
+
+    try {
+      const res = await feedServices.getBlockedUsers();
+      const list = res?.data?.data?.data ?? res?.data?.data ?? res?.data ?? [];
+      if (Array.isArray(list)) {
+        const found = list.some(
+          (u: any) => String(u?.id ?? u?.user_id) === String(profileId)
+        );
+        setIsBlocked(found);
+      }
+    } catch (err) {
+      console.error('Failed to check blocked status', err);
+    }
+  }, [profileId, isOwnProfile]);
+
+  useEffect(() => {
+    checkModerationStatus();
+  }, [checkModerationStatus]);
 
   useEffect(() => {
     dispatch(fetchUser());
@@ -207,58 +240,123 @@ export const SocialProfile: React.FC = () => {
     }
   };
 
+  const handleUnblockUser = async () => {
+    if (!profileId) return;
+    setModerationLoading(true);
+    try {
+      await feedServices.unblockUser(profileId);
+      setIsBlocked(false);
+      showToast({
+        type: 'success',
+        text1: t('socialProfile.userUnblocked', 'User Unblocked'),
+        text2: t('socialProfile.userUnblockedDesc', '{{name}} has been unblocked.', {
+          name: displayName || 'User',
+        }),
+      });
+      dispatch(fetchFeed({ params: { per_page: 30, page: 1 }, isRefresh: true }));
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        text1: t('socialProfile.unblockFailed', 'Failed to unblock'),
+        text2: getUserFriendlyErrorMessage(error, t('socialProfile.tryAgain', 'Please try again.')),
+      });
+    } finally {
+      setModerationLoading(false);
+    }
+  };
+
   const handleBlockUser = async () => {
     if (!profileId) return;
+
+    // Case 1: User is ALREADY Blocked (or Blocked & Reported)
+    if (isBlocked) {
+      const title = isReported
+        ? t('socialProfile.alreadyBlockedAndReportedTitle', 'Already Blocked & Reported')
+        : t('socialProfile.alreadyBlockedTitle', 'Already Blocked');
+      const text = isReported
+        ? t(
+            'socialProfile.alreadyBlockedAndReportedText',
+            'You have already blocked and reported this user. Would you like to unblock them?'
+          )
+        : t(
+            'socialProfile.alreadyBlockedText',
+            'You already blocked this user. Would you like to unblock them?'
+          );
+
+      const wantUnblock = await confirmUnblockAction({
+        title,
+        text,
+        confirmButtonText: t('socialProfile.unblockUser', 'Unblock User'),
+        cancelButtonText: t('common.cancel', 'Cancel'),
+      });
+
+      if (wantUnblock) {
+        await handleUnblockUser();
+      }
+      return;
+    }
+
+    // Case 2: User is NOT blocked yet
     const action = await confirmBlockOrReportAction({
       title: t('socialProfile.blockConfirmTitle', 'Block this user?'),
       text: t('socialProfile.blockConfirmText', 'You will no longer see posts or comments from this user.'),
       confirmButtonText: t('socialProfile.blockButton', 'Block User'),
-      denyButtonText: t('feedScreen.blockAndReportButton', 'Block & Report'),
+      denyButtonText: isReported
+        ? undefined
+        : t('feedScreen.blockAndReportButton', 'Block & Report'),
       cancelButtonText: t('common.cancel', 'Cancel'),
     });
     if (action === 'cancel') return;
 
+    setModerationLoading(true);
     try {
       await feedServices.blockUser(profileId);
-      showToast({
-        type: 'success',
-        text1: t('socialProfile.userBlocked', 'User Blocked'),
-        text2: t('socialProfile.userBlockedDesc', 'This user has been blocked.'),
-      });
+      setIsBlocked(true);
+
       if (action === 'block_and_report') {
+        markUserReported(profileId);
+        setIsReported(true);
+        showToast({
+          type: 'success',
+          text1: t('socialProfile.userBlocked', 'User Blocked'),
+          text2: t('socialProfile.userBlockedDesc', 'This user has been blocked. Please provide a reason to report.'),
+        });
         setReportModalOpen(true);
       } else {
-        navigate('/feed');
+        showToast({
+          type: 'success',
+          text1: t('socialProfile.userBlocked', 'User Blocked'),
+          text2: t('socialProfile.userBlockedDesc', 'This user has been blocked.'),
+        });
       }
+      dispatch(fetchFeed({ params: { per_page: 30, page: 1 }, isRefresh: true }));
     } catch (error: any) {
       showToast({
         type: 'error',
         text1: t('socialProfile.blockFailed', 'Could not block user'),
         text2: getUserFriendlyErrorMessage(error, t('socialProfile.tryAgain', 'Please try again.')),
       });
+    } finally {
+      setModerationLoading(false);
     }
   };
 
-  const handleReportUser = async () => {
+  const handleReportClick = () => {
     if (!profileId) return;
-    const reason = await promptAppInput({
-      title: t('socialProfile.reportUserTitle', 'Report user'),
-      inputLabel: t('socialProfile.reportUserPrompt', 'Why are you reporting this user?'),
-      inputValue: t('socialProfile.reportDefaultReason', 'Inappropriate profile'),
-      confirmButtonText: t('socialProfile.submitReport', 'Submit report'),
-    });
-    if (!reason) return;
 
-    try {
-      await dispatch(reportUser({ userId: profileId, reason })).unwrap();
-      showToast({ type: 'success', text1: t('socialProfile.reportSubmitted', 'User report submitted') });
-    } catch (error: any) {
-      showToast({
-        type: 'error',
-        text1: t('socialProfile.reportFailed', 'User report not sent'),
-        text2: getUserFriendlyErrorMessage(error, t('socialProfile.tryAgain', 'Please try again.')),
-      });
+    if (isReported) {
+      const title = isBlocked
+        ? t('socialProfile.alreadyBlockedAndReportedTitle', 'Already Blocked & Reported')
+        : t('socialProfile.alreadyReportedTitle', 'Already Reported');
+      const text = isBlocked
+        ? t('socialProfile.alreadyBlockedAndReportedNotice', 'You have already reported and blocked this user.')
+        : t('socialProfile.alreadyReportedNotice', 'You have already submitted a report for this user.');
+
+      showAlreadyReportedAlert({ title, text });
+      return;
     }
+
+    setReportModalOpen(true);
   };
 
   return (
@@ -322,16 +420,47 @@ export const SocialProfile: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleBlockUser}
+                  disabled={moderationLoading}
                   className="social-profile-banner__btn"
-                  title={t('socialProfile.blockUser', 'Block User')}
+                  title={
+                    isBlocked && isReported
+                      ? t('socialProfile.alreadyBlockedAndReported', 'You already blocked and reported this user')
+                      : isBlocked
+                      ? t('socialProfile.alreadyBlockedTooltip', 'You already blocked this user')
+                      : t('socialProfile.blockUser', 'Block User')
+                  }
+                  style={
+                    isBlocked
+                      ? {
+                          borderColor: '#EF4444',
+                          background: 'rgba(239, 68, 68, 0.25)',
+                          color: '#EF4444',
+                        }
+                      : undefined
+                  }
                 >
                   <UserX size={18} />
                 </button>
                 <button
                   type="button"
-                  onClick={() => setReportModalOpen(true)}
+                  onClick={handleReportClick}
                   className="social-profile-banner__btn"
-                  title={t('socialProfile.report', 'Report')}
+                  title={
+                    isReported && isBlocked
+                      ? t('socialProfile.alreadyBlockedAndReported', 'You already blocked and reported this user')
+                      : isReported
+                      ? t('socialProfile.alreadyReportedTooltip', 'You already reported this user')
+                      : t('socialProfile.report', 'Report')
+                  }
+                  style={
+                    isReported
+                      ? {
+                          borderColor: '#F59E0B',
+                          background: 'rgba(245, 158, 11, 0.25)',
+                          color: '#F59E0B',
+                        }
+                      : undefined
+                  }
                 >
                   <Flag size={18} />
                 </button>
@@ -390,6 +519,58 @@ export const SocialProfile: React.FC = () => {
               variant={isFollowing ? 'secondary' : 'primary'}
               style={{ flex: 1, padding: '9px 16px', fontSize: '13px' }}
             />
+          </div>
+        )}
+
+        {/* Moderation Alert Banner (Only shown when user is currently Blocked) */}
+        {!isOwnProfile && isBlocked && (
+          <div
+            style={{
+              padding: '12px 18px',
+              borderRadius: '14px',
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.28)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+              margin: '14px 0',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <UserX size={19} style={{ color: '#EF4444', flexShrink: 0 }} />
+              <span
+                style={{
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  color: '#EF4444',
+                }}
+              >
+                {isReported
+                  ? t('socialProfile.bannerAlreadyBlockedAndReported', 'You have already blocked and reported this user.')
+                  : t('socialProfile.bannerAlreadyBlocked', 'You have already blocked this user.')}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleUnblockUser}
+              disabled={moderationLoading}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '10px',
+                border: 'none',
+                background: '#EF4444',
+                color: '#FFFFFF',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'opacity 0.2s',
+              }}
+            >
+              {moderationLoading ? t('common.loading', 'Loading...') : t('socialProfile.unblock', 'Unblock')}
+            </button>
           </div>
         )}
 
@@ -550,6 +731,12 @@ export const SocialProfile: React.FC = () => {
         targetId={profileId || targetUserId || ''}
         targetType="account"
         targetName={displayName}
+        onSuccess={() => {
+          if (profileId) {
+            markUserReported(profileId);
+            setIsReported(true);
+          }
+        }}
       />
     </div>
   );
