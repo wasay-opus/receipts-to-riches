@@ -64,6 +64,8 @@ type FeedComment = {
   id: string | number;
   user: string;
   userId?: string | number;
+  avatar?: string;
+  time?: string;
   text: string;
   likes: number;
   dislikes: number;
@@ -125,6 +127,22 @@ const formatTime = (value?: string) => {
   });
 };
 
+const formatRelativeTime = (value?: string) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diffInSeconds < 60) return 'Just now';
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
 const getDisplayName = (user: any): string | null => {
   const name = user?.name ?? user?.full_name;
   if (name) return name;
@@ -141,14 +159,35 @@ const normalizeComment = (comment: any, t: TranslateFn): FeedComment => {
   const rawReplies = Array.isArray(comment?.replies) ? comment.replies : [];
   const replies = rawReplies.map((r: any) => normalizeComment(r, t));
 
+  const userName =
+    getDisplayName(user) ??
+    comment?.name ??
+    comment?.author_name ??
+    (comment?.user && typeof comment.user === 'string' ? comment.user : null) ??
+    t('feedScreen.communityMemberFallback', 'Community Member');
+
+  const rawAvatar =
+    user?.image_url ??
+    user?.profile_image_url ??
+    user?.avatar ??
+    user?.image ??
+    comment?.avatar ??
+    comment?.image_url ??
+    comment?.user_avatar ??
+    comment?.profile_image;
+
+  const avatar =
+    rawAvatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=00674D&color=fff`;
+
+  const time = formatRelativeTime(comment?.created_at ?? comment?.createdAt ?? comment?.time);
+
   return {
     id: comment?.id ?? `comment-${Math.random()}`,
-    user:
-      getDisplayName(user) ??
-      comment?.name ??
-      comment?.author_name ??
-      t('feedScreen.communityMemberFallback', 'Community Member'),
+    user: userName,
     userId,
+    avatar,
+    time,
     text: comment?.body ?? comment?.comment ?? comment?.text ?? '',
     likes: Number(comment?.likes_count ?? comment?.likes ?? 0),
     dislikes: Number(comment?.dislikes_count ?? comment?.dislikes ?? 0),
@@ -274,6 +313,7 @@ export const Feed: React.FC = () => {
   const [commentReactions, setCommentReactions] = useState<
     Record<string, { liked: boolean; disliked: boolean; likesOffset: number; dislikesOffset: number }>
   >({});
+  const [collapsedReplies, setCollapsedReplies] = useState<Record<string, boolean>>({});
   const [poll, setPoll] = useState<CommunityPoll | null>(null);
   const [selectedPollOption, setSelectedPollOption] = useState<string | number | null>(null);
   const [pollLoading, setPollLoading] = useState(false);
@@ -950,12 +990,29 @@ export const Feed: React.FC = () => {
     if (!body || !activeCommentPostId) return;
 
     const parentId = replyingTo?.id;
+    const myName = currentUser
+      ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || t('feedScreen.you', 'You')
+      : t('feedScreen.you', 'You');
+    const myAvatar =
+      currentUser?.image_url ??
+      currentUser?.avatar ??
+      currentUser?.image ??
+      localStorage.getItem('user_avatar') ??
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(myName)}&background=00674D&color=fff`;
+
     const tempComment = {
       id: `temp-${Date.now()}`,
       body,
-      user: { name: t('feedScreen.you', 'You'), id: currentUserId },
+      user: {
+        name: myName,
+        id: currentUserId,
+        image_url: myAvatar,
+      },
+      avatar: myAvatar,
+      time: 'Just now',
       user_id: currentUserId,
       parent_id: parentId,
+      created_at: new Date().toISOString(),
     };
 
     dispatch(addCommentOptimistic({ postId: activeCommentPostId, comment: tempComment }));
@@ -979,7 +1036,7 @@ export const Feed: React.FC = () => {
       });
       dispatch(fetchFeed({ params: { per_page: 15, page: 1 }, isRefresh: true }));
     }
-  }, [activeCommentPostId, commentText, currentUserId, dispatch, replyingTo, t]);
+  }, [activeCommentPostId, commentText, currentUserId, currentUser, dispatch, replyingTo, t]);
 
   return (
     <Container maxWidth="640px" style={{ gap: '20px', paddingBottom: '40px' }}>
@@ -1689,12 +1746,16 @@ export const Feed: React.FC = () => {
           setReplyingTo(null);
           setCommentText('');
         }}
-        title={t('feedScreen.comments.modalTitle', 'Post Comments')}
-        maxWidth="480px"
+        title={
+          selectedPost
+            ? `Comments (${selectedPost.comments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0)})`
+            : t('feedScreen.comments.modalTitle', 'Comments')
+        }
+        maxWidth="520px"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '440px', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '440px', overflowY: 'auto', paddingRight: '4px' }}>
           {selectedPost?.comments.length === 0 && (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', margin: '16px 0' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', margin: '24px 0' }}>
               {t('feedScreen.comments.emptyState', 'No comments yet. Be the first to comment!')}
             </p>
           )}
@@ -1710,253 +1771,344 @@ export const Feed: React.FC = () => {
             const cIsDisliked = cRx ? cRx.disliked : comment.disliked;
             const cLikesCount = Math.max(0, comment.likes + (cRx?.likesOffset || 0));
             const cDislikesCount = Math.max(0, comment.dislikes + (cRx?.dislikesOffset || 0));
+            const isRepliesCollapsed = Boolean(collapsedReplies[String(comment.id)]);
 
             return (
               <div
                 key={comment.id}
                 style={{
-                  padding: '12px 14px',
-                  borderRadius: '14px',
-                  background: 'var(--bg-card-secondary)',
-                  border: '1px solid var(--border-color)',
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
+                  gap: '12px',
+                  padding: '12px 0',
+                  borderBottom: '1px solid var(--border-color)',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{comment.user}</strong>
-                </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.4' }}>{comment.text}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
-                  {isOwnComment ? (
-                    <>
-                      {/* User's own comment: Edit and Delete */}
-                      <button
-                        onClick={() => handleEditComment(comment.id, comment.text)}
-                        title={t('feedScreen.comments.editLabel', 'Edit comment')}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--text-muted)',
-                          cursor: 'pointer',
-                          padding: '2px 6px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '12px',
-                        }}
-                      >
-                        <Pencil size={13} />
-                        <span>{t('feedScreen.comments.editLabel', 'Edit')}</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteComment(comment.id)}
-                        title={t('feedScreen.comments.deleteLabel', 'Delete comment')}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#EF4444',
-                          cursor: 'pointer',
-                          padding: '2px 6px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '12px',
-                          marginLeft: 'auto',
-                        }}
-                      >
-                        <Trash2 size={13} />
-                        <span>{t('feedScreen.dialogs.deleteButton', 'Delete')}</span>
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {/* Others' comment: Like, Dislike, Reply, Report */}
-                      <button
-                        onClick={() => handleCommentReaction(comment.id, 'like', comment.liked, comment.disliked)}
-                        title={t('feedScreen.comments.likeLabel', 'Like comment')}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: cIsLiked ? '#EF4444' : 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          padding: '2px 4px',
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        <Heart
-                          size={14}
-                          fill={cIsLiked ? '#EF4444' : 'none'}
-                          color={cIsLiked ? '#EF4444' : 'currentColor'}
-                        />
-                        <span style={{ fontWeight: cIsLiked ? 800 : 500 }}>{cLikesCount}</span>
-                      </button>
-                      <button
-                        onClick={() => handleCommentReaction(comment.id, 'dislike', comment.liked, comment.disliked)}
-                        title={t('feedScreen.comments.dislikeLabel', 'Dislike comment')}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: cIsDisliked ? '#F59E0B' : 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          padding: '2px 4px',
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        <ThumbsDown
-                          size={14}
-                          fill={cIsDisliked ? '#F59E0B' : 'none'}
-                          color={cIsDisliked ? '#F59E0B' : 'currentColor'}
-                        />
-                        <span style={{ fontWeight: cIsDisliked ? 800 : 500 }}>{cDislikesCount}</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setReplyingTo({ id: comment.id, user: comment.user });
-                        }}
-                        title={t('feedScreen.comments.replyLabel', 'Reply')}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          padding: '2px 6px',
-                        }}
-                      >
-                        <Reply size={13} />
-                        <span>{t('feedScreen.comments.replyLabel', 'Reply')}</span>
-                      </button>
-                      <button
-                        onClick={() => handleReportComment(comment.id, comment.user)}
-                        title={t('feedScreen.comments.reportLabel', 'Report comment')}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--text-muted)',
-                          cursor: 'pointer',
-                          padding: '2px 6px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '12px',
-                          marginLeft: 'auto',
-                        }}
-                      >
-                        <Flag size={13} />
-                        <span>{t('socialProfile.report', 'Report')}</span>
-                      </button>
-                    </>
-                  )}
-                </div>
+                {/* User Avatar */}
+                <img
+                  src={comment.avatar || fallbackAvatar}
+                  alt={comment.user}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = fallbackAvatar;
+                  }}
+                  onClick={() => {
+                    if (comment.userId) {
+                      if (String(currentUserId) === String(comment.userId)) {
+                        navigate('/profile');
+                      } else {
+                        navigate(`/social-profile/${comment.userId}`);
+                      }
+                    }
+                  }}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                    cursor: comment.userId ? 'pointer' : 'default',
+                    border: '1px solid var(--border-color)',
+                  }}
+                />
 
-                {/* Nested Replies under this comment (User Request 2) */}
-                {comment.replies && comment.replies.length > 0 && (
-                  <div
+                {/* Comment Body & Content */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {/* Name, Time & Heart Reaction */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexWrap: 'wrap' }}>
+                      <span
+                        onClick={() => {
+                          if (comment.userId) {
+                            if (String(currentUserId) === String(comment.userId)) {
+                              navigate('/profile');
+                            } else {
+                              navigate(`/social-profile/${comment.userId}`);
+                            }
+                          }
+                        }}
+                        style={{
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: 'var(--text-main)',
+                          cursor: comment.userId ? 'pointer' : 'default',
+                        }}
+                      >
+                        {comment.user}
+                      </span>
+                      {comment.time && (
+                        <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                          {comment.time}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Heart Button */}
+                    <button
+                      onClick={() => handleCommentReaction(comment.id, 'like', comment.liked, comment.disliked)}
+                      title={t('feedScreen.comments.likeLabel', 'Like comment')}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: cIsLiked ? '#EF4444' : 'var(--text-muted)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <Heart
+                        size={14}
+                        fill={cIsLiked ? '#EF4444' : 'none'}
+                        color={cIsLiked ? '#EF4444' : 'currentColor'}
+                      />
+                      {cLikesCount > 0 && (
+                        <span style={{ fontSize: '11px', fontWeight: cIsLiked ? 700 : 500 }}>
+                          {cLikesCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Comment Text */}
+                  <p
                     style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                      marginTop: '8px',
-                      paddingLeft: '14px',
-                      borderLeft: '2px solid rgba(0, 153, 68, 0.35)',
+                      fontSize: '13px',
+                      color: 'var(--text-main)',
+                      margin: '2px 0 0 0',
+                      lineHeight: '1.45',
+                      wordBreak: 'break-word',
                     }}
                   >
-                    {comment.replies.map((reply) => {
-                      const isOwnReply = Boolean(
-                        (currentUserId && reply.userId && String(currentUserId) === String(reply.userId)) ||
-                          String(reply.id).startsWith('temp-'),
-                      );
-                      const rRx = commentReactions[String(reply.id)];
-                      const rIsLiked = rRx ? rRx.liked : reply.liked;
-                      const rIsDisliked = rRx ? rRx.disliked : reply.disliked;
-                      const rLikesCount = Math.max(0, reply.likes + (rRx?.likesOffset || 0));
-                      const rDislikesCount = Math.max(0, reply.dislikes + (rRx?.dislikesOffset || 0));
+                    {comment.text}
+                  </p>
 
-                      return (
-                        <div
-                          key={reply.id}
+                  {/* Actions Row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    {/* Reply Button (ALWAYS available, including for own comments!) */}
+                    <button
+                      onClick={() => {
+                        setReplyingTo({ id: comment.id, user: comment.user });
+                      }}
+                      title={t('feedScreen.comments.replyLabel', 'Reply')}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: 0,
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span>{t('feedScreen.comments.replyLabel', 'Reply')}</span>
+                    </button>
+
+                    {isOwnComment ? (
+                      <>
+                        <button
+                          onClick={() => handleEditComment(comment.id, comment.text)}
+                          title={t('feedScreen.comments.editLabel', 'Edit comment')}
                           style={{
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            background: 'var(--bg-card)',
-                            border: '1px solid var(--border-color)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '3px',
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            fontSize: '12px',
+                            fontWeight: 600,
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <strong style={{ fontSize: '12px', color: 'var(--text-main)' }}>{reply.user}</strong>
-                          </div>
-                          <p style={{ fontSize: '12.5px', color: 'var(--text-main)', margin: 0, lineHeight: '1.4' }}>
-                            {reply.text}
-                          </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                            {isOwnReply ? (
-                              <>
-                                <button
-                                  onClick={() => handleEditComment(reply.id, reply.text)}
-                                  style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: 'var(--text-muted)',
-                                    cursor: 'pointer',
-                                    padding: 0,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    fontSize: '11px',
-                                  }}
-                                >
-                                  <Pencil size={11} />
-                                  <span>{t('feedScreen.comments.editLabel', 'Edit')}</span>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteComment(reply.id)}
-                                  style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#EF4444',
-                                    cursor: 'pointer',
-                                    padding: 0,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    fontSize: '11px',
-                                    marginLeft: 'auto',
-                                  }}
-                                >
-                                  <Trash2 size={11} />
-                                  <span>{t('feedScreen.dialogs.deleteButton', 'Delete')}</span>
-                                </button>
-                              </>
-                            ) : (
-                              <>
+                          <span>{t('feedScreen.comments.editLabel', 'Edit')}</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteComment(comment.id)}
+                          title={t('feedScreen.comments.deleteLabel', 'Delete comment')}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#EF4444',
+                            cursor: 'pointer',
+                            padding: 0,
+                            fontSize: '12px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <span>{t('feedScreen.dialogs.deleteButton', 'Delete')}</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleCommentReaction(comment.id, 'dislike', comment.liked, comment.disliked)}
+                          title={t('feedScreen.comments.dislikeLabel', 'Dislike comment')}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: cIsDisliked ? '#F59E0B' : 'var(--text-muted)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            cursor: 'pointer',
+                            padding: 0,
+                            fontSize: '12px',
+                          }}
+                        >
+                          <ThumbsDown
+                            size={12}
+                            fill={cIsDisliked ? '#F59E0B' : 'none'}
+                            color={cIsDisliked ? '#F59E0B' : 'currentColor'}
+                          />
+                          {cDislikesCount > 0 && <span style={{ fontSize: '11px' }}>{cDislikesCount}</span>}
+                        </button>
+                        <button
+                          onClick={() => handleReportComment(comment.id, comment.user)}
+                          title={t('feedScreen.comments.reportLabel', 'Report comment')}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            fontSize: '12px',
+                          }}
+                        >
+                          <span>{t('socialProfile.report', 'Report')}</span>
+                        </button>
+                      </>
+                    )}
+
+                    {/* Hide/Show replies toggle */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <button
+                        onClick={() =>
+                          setCollapsedReplies((prev) => ({
+                            ...prev,
+                            [String(comment.id)]: !prev[String(comment.id)],
+                          }))
+                        }
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: 0,
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <span>—</span>
+                        <span>
+                          {isRepliesCollapsed
+                            ? `View ${comment.replies.length} ${comment.replies.length === 1 ? 'reply' : 'replies'}`
+                            : 'Hide replies'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Nested Replies */}
+                  {comment.replies && comment.replies.length > 0 && !isRepliesCollapsed && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        marginTop: '10px',
+                        paddingLeft: '12px',
+                        borderLeft: '2px solid rgba(0, 153, 68, 0.25)',
+                      }}
+                    >
+                      {comment.replies.map((reply) => {
+                        const isOwnReply = Boolean(
+                          (currentUserId && reply.userId && String(currentUserId) === String(reply.userId)) ||
+                            String(reply.id).startsWith('temp-'),
+                        );
+                        const rRx = commentReactions[String(reply.id)];
+                        const rIsLiked = rRx ? rRx.liked : reply.liked;
+                        const rIsDisliked = rRx ? rRx.disliked : reply.disliked;
+                        const rLikesCount = Math.max(0, reply.likes + (rRx?.likesOffset || 0));
+                        const rDislikesCount = Math.max(0, reply.dislikes + (rRx?.dislikesOffset || 0));
+
+                        return (
+                          <div
+                            key={reply.id}
+                            style={{
+                              display: 'flex',
+                              gap: '10px',
+                              padding: '6px 0',
+                            }}
+                          >
+                            <img
+                              src={reply.avatar || fallbackAvatar}
+                              alt={reply.user}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = fallbackAvatar;
+                              }}
+                              onClick={() => {
+                                if (reply.userId) {
+                                  if (String(currentUserId) === String(reply.userId)) {
+                                    navigate('/profile');
+                                  } else {
+                                    navigate(`/social-profile/${reply.userId}`);
+                                  }
+                                }
+                              }}
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                flexShrink: 0,
+                                cursor: reply.userId ? 'pointer' : 'default',
+                                border: '1px solid var(--border-color)',
+                              }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
+                                  <span
+                                    onClick={() => {
+                                      if (reply.userId) {
+                                        if (String(currentUserId) === String(reply.userId)) {
+                                          navigate('/profile');
+                                        } else {
+                                          navigate(`/social-profile/${reply.userId}`);
+                                        }
+                                      }
+                                    }}
+                                    style={{
+                                      fontSize: '12.5px',
+                                      fontWeight: 700,
+                                      color: 'var(--text-main)',
+                                      cursor: reply.userId ? 'pointer' : 'default',
+                                    }}
+                                  >
+                                    {reply.user}
+                                  </span>
+                                  {reply.time && (
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                      {reply.time}
+                                    </span>
+                                  )}
+                                </div>
                                 <button
                                   onClick={() => handleCommentReaction(reply.id, 'like', reply.liked, reply.disliked)}
                                   style={{
                                     background: 'transparent',
                                     border: 'none',
                                     color: rIsLiked ? '#EF4444' : 'var(--text-muted)',
-                                    display: 'flex',
+                                    display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '3px',
+                                    gap: '2px',
                                     cursor: 'pointer',
-                                    fontSize: '11px',
-                                    padding: 0,
+                                    padding: '2px',
                                   }}
                                 >
                                   <Heart
@@ -1964,55 +2116,118 @@ export const Feed: React.FC = () => {
                                     fill={rIsLiked ? '#EF4444' : 'none'}
                                     color={rIsLiked ? '#EF4444' : 'currentColor'}
                                   />
-                                  <span style={{ fontWeight: rIsLiked ? 800 : 500 }}>{rLikesCount}</span>
+                                  {rLikesCount > 0 && <span style={{ fontSize: '10.5px' }}>{rLikesCount}</span>}
                                 </button>
+                              </div>
+
+                              <p
+                                style={{
+                                  fontSize: '12.5px',
+                                  color: 'var(--text-main)',
+                                  margin: '1px 0 0 0',
+                                  lineHeight: '1.4',
+                                  wordBreak: 'break-word',
+                                }}
+                              >
+                                {reply.text}
+                              </p>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+                                {/* Reply on nested reply (ALWAYS available!) */}
                                 <button
-                                  onClick={() => handleCommentReaction(reply.id, 'dislike', reply.liked, reply.disliked)}
-                                  style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: rIsDisliked ? '#F59E0B' : 'var(--text-muted)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    cursor: 'pointer',
-                                    fontSize: '11px',
-                                    padding: 0,
+                                  onClick={() => {
+                                    setReplyingTo({ id: comment.id, user: reply.user });
                                   }}
-                                >
-                                  <ThumbsDown
-                                    size={13}
-                                    fill={rIsDisliked ? '#F59E0B' : 'none'}
-                                    color={rIsDisliked ? '#F59E0B' : 'currentColor'}
-                                  />
-                                  <span style={{ fontWeight: rIsDisliked ? 800 : 500 }}>{rDislikesCount}</span>
-                                </button>
-                                <button
-                                  onClick={() => handleReportComment(reply.id)}
                                   style={{
                                     background: 'transparent',
                                     border: 'none',
                                     color: 'var(--text-muted)',
                                     cursor: 'pointer',
                                     padding: 0,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    fontSize: '11px',
-                                    marginLeft: 'auto',
+                                    fontSize: '11.5px',
+                                    fontWeight: 600,
                                   }}
                                 >
-                                  <Flag size={11} />
-                                  <span>{t('socialProfile.report', 'Report')}</span>
+                                  <span>{t('feedScreen.comments.replyLabel', 'Reply')}</span>
                                 </button>
-                              </>
-                            )}
+
+                                {isOwnReply ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleEditComment(reply.id, reply.text)}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'var(--text-muted)',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        fontSize: '11.5px',
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      <span>{t('feedScreen.comments.editLabel', 'Edit')}</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteComment(reply.id)}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#EF4444',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        fontSize: '11.5px',
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      <span>{t('feedScreen.dialogs.deleteButton', 'Delete')}</span>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => handleCommentReaction(reply.id, 'dislike', reply.liked, reply.disliked)}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: rIsDisliked ? '#F59E0B' : 'var(--text-muted)',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '2px',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        fontSize: '11px',
+                                      }}
+                                    >
+                                      <ThumbsDown
+                                        size={12}
+                                        fill={rIsDisliked ? '#F59E0B' : 'none'}
+                                        color={rIsDisliked ? '#F59E0B' : 'currentColor'}
+                                      />
+                                      {rDislikesCount > 0 && <span style={{ fontSize: '10.5px' }}>{rDislikesCount}</span>}
+                                    </button>
+                                    <button
+                                      onClick={() => handleReportComment(reply.id, reply.user)}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'var(--text-muted)',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        fontSize: '11.5px',
+                                      }}
+                                    >
+                                      <span>{t('socialProfile.report', 'Report')}</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
