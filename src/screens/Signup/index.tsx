@@ -550,11 +550,11 @@ export const SignUp: React.FC = () => {
                     style={{ accentColor: 'var(--green)', width: '16px', height: '16px', marginTop: '2px' }}
                   />
                   <span>
-                    {t('auth.agreeTo', 'I agree to the')}{' '}
+                    {t('auth.agreeTo', 'Agree to')}{' '}
                     <Link to="/profile/terms" target="_blank" style={{ color: 'var(--green)', fontWeight: 600 }}>
-                      {t('auth.termsAndConditions', 'Terms & Conditions')}
+                      {t('auth.termsAndConditions', 'Terms and Conditions')}
                     </Link>{' '}
-                    &{' '}
+                    &amp;{' '}
                     <Link to="/profile/privacy" target="_blank" style={{ color: 'var(--green)', fontWeight: 600 }}>
                       {t('auth.privacyPolicy', 'Privacy Policy')}
                     </Link>

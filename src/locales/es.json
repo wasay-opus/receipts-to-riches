@@ -44,7 +44,7 @@
     "alreadyHaveAccount": "¿Ya tiene una cuenta?",
     "loginNow": "Inicie sesión ahora",
     "agreeTo": "Acepto los",
-    "termsAndConditions": "Términos y condiciones y Política de privacidad",
+    "termsAndConditions": "Términos y condiciones",
     "pleaseAgree": "Por favor, acepte los Términos y condiciones y la Política de privacidad",
     "loginSuccessful": "Inicio de sesión exitoso",
     "loginSuccessMsg": "¡Ha iniciado sesión con éxito!",
@@ -282,6 +282,7 @@
     "changeImage": "Cambiar",
     "saveAndContinue": "Guardar y Continuar",
     "gotIt": "¡Entendido!",
+    "needHelp": "Necesitas Ayuda",
     "or": "O",
     "goHome": "Ir al Inicio"
   },

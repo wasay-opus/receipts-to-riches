@@ -210,22 +210,60 @@ export const CashGame: React.FC = () => {
       setReceiptTotal('');
       return;
     }
-    // Only permit digits and a single decimal point
-    if (!/^\d*\.?\d*$/.test(val)) return;
+
+    // Only allow digits and decimal dot
+    const clean = val.replace(/[^\d.]/g, '');
+    if (!clean) {
+      setReceiptTotal('');
+      return;
+    }
+
+    if (clean === '.') {
+      setReceiptTotal('0.');
+      return;
+    }
+
+    const parts = clean.split('.');
+    if (parts.length > 2) {
+      return;
+    }
 
     const config = getReceiptTotalConfig(selectedGameSlug);
-    if (config) {
-      const parts = val.split('.');
-      const intPart = parts[0];
-      const decPart = parts[1];
-      if (intPart && intPart.length > config.maxIntDigits) {
+    const maxInt = config?.maxIntDigits ?? 5;
+    const maxVal = config?.max ?? 99999.99;
+
+    // Case 1: User typed or has a decimal point (e.g. "2.", "2.5", "2.50")
+    if (clean.includes('.')) {
+      const intPart = parts[0].slice(0, maxInt);
+      const decPart = parts[1].slice(0, 2);
+      const formatted = `${intPart}.${decPart}`;
+      const num = parseFloat(formatted);
+      if (!isNaN(num) && num > maxVal) {
         return;
       }
-      if (decPart && decPart.length > 2) {
-        return;
-      }
+      setReceiptTotal(formatted);
+      return;
     }
-    setReceiptTotal(val);
+
+    // Case 2: User entered digits without a decimal point
+    // When digits exceed maxIntDigits, place the decimal point automatically after the dollar amount
+    if (clean.length > maxInt) {
+      const intPart = clean.slice(0, maxInt);
+      const decPart = clean.slice(maxInt, maxInt + 2);
+      const formatted = `${intPart}.${decPart}`;
+      const num = parseFloat(formatted);
+      if (!isNaN(num) && num > maxVal) {
+        return;
+      }
+      setReceiptTotal(formatted);
+      return;
+    }
+
+    const num = parseFloat(clean);
+    if (!isNaN(num) && num > maxVal) {
+      return;
+    }
+    setReceiptTotal(clean);
   };
 
   const format12HourTime = (timeStr?: string) => {
@@ -411,7 +449,7 @@ export const CashGame: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="1000px" style={{ paddingBottom: '60px' }}>
+    <Container maxWidth="1160px" style={{ paddingBottom: '60px' }}>
       {/* Top Header Bar */}
       <div className="game-top-nav-bar">
         <button
@@ -442,12 +480,21 @@ export const CashGame: React.FC = () => {
         <GameHelpMenu gameSlug={selectedGameSlug} gameTitle={gameMeta.name} />
       </div>
 
-      {/* Main 2-Column Responsive Web Layout */}
-      <div className="game-screen-grid">
+      {/* 2-Column Responsive Layout: Left (Submission Form), Right (Campaign & Guidelines Stacked) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(340px, 1.25fr) minmax(280px, 0.95fr)',
+          gap: '24px',
+          alignItems: 'start',
+          width: '100%',
+        }}
+        className="state-pick-2col-grid"
+      >
         {/* Left Column: Submission Form Card */}
         <form
           onSubmit={handleSubmit}
-          className="card"
+          className="card game-card-center"
           style={{
             width: '100%',
             padding: '28px 24px',
@@ -458,42 +505,6 @@ export const CashGame: React.FC = () => {
             boxSizing: 'border-box',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingBottom: '12px',
-              borderBottom: '1px solid var(--border-color)',
-            }}
-          >
-            <div>
-              <span
-                style={{
-                  background: gameMeta.gradient,
-                  color: '#FFFFFF',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  letterSpacing: '0.5px',
-                  display: 'inline-block',
-                }}
-              >
-                {gameMeta.name} &bull; {gameMeta.prize}
-              </span>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px', marginBottom: 0 }}>
-                {gameMeta.isZdt
-                  ? t('cashGames.zdt.introText', 'Play the Zip Code, Date and Time info from any receipt. You can win up to $1,430,000 in prizes!')
-                  : selectedGameSlug === 'pick-3'
-                    ? t('cashGames.pick3.introText', 'Play the total (3-Digit) and time info from any receipt. You can win up to $1,095,000 prizes!')
-                    : selectedGameSlug === 'pick-4'
-                      ? t('cashGames.pick4.introText', 'Play the total (4-Digit) and time info from any receipt. You can win up to $1,825,000 prizes!')
-                      : t('cashGames.pick5.introText', 'Play the total (5-Digit) and time info from any receipt. You can win up to $3,659,000 prizes!')}
-              </p>
-            </div>
-          </div>
-
         {/* ZDT Specific: Vendor Zip Code */}
         {gameMeta.isZdt ? (
           <div>
@@ -740,10 +751,9 @@ export const CashGame: React.FC = () => {
         </button>
       </form>
 
-        {/* Right Column: Side Column (Campaign Ad + Rules) */}
-        <div className="game-side-column">
-          {/* Sponsored Ad Banner */}
-          <div className="card game-campaign-card">
+        {/* Right Column: Grow Your Audience Campaign Card & Guidelines (Stacked) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+          <div className="card game-campaign-card" style={{ width: '100%' }}>
             <div className="game-campaign-icon">
               <Megaphone size={28} />
             </div>
@@ -762,10 +772,11 @@ export const CashGame: React.FC = () => {
             </button>
           </div>
 
-          {/* Quick How to Win Card */}
-          <div className="card game-rules-card">
+          {/* Quick How to Win Card Stacked Below Grow Your Audience */}
+          <div className="card game-rules-card" style={{ width: '100%' }}>
             <h4 className="game-rules-title">
-              {t('profile.menuRules', 'How to Win & Guidelines')}
+              <HelpCircle size={18} color="#15AE36" />
+              <span>{t('profile.menuRules', 'How to Win & Guidelines')}</span>
             </h4>
             <div className="game-rules-list">
               <div className="game-rules-item">

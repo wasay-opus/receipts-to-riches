@@ -13,6 +13,8 @@ import {
   Tv,
   Sparkles,
   Crown,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { fetchUser } from '../../redux/Slices/userSlice';
@@ -27,6 +29,7 @@ import { fetchAllNotifications } from '../../redux/Slices/notificationsSlice';
 import { Button, Container, CustomModal, showToast, triggerCoinCelebration } from '../../components';
 import images from '../../constants/images';
 import { getUserRewardPoints, getUserFullName } from '../../utils/userDisplay';
+import { getGameGuideVideoUrl } from '../../utils/gameVideoUtil';
 
 const AD_DURATION_SECONDS = 15;
 
@@ -55,18 +58,38 @@ export const Home: React.FC = () => {
   const totalCoins = getUserRewardPoints(userData);
   const streakDays = Math.max(
     1,
-    userData?.play_streak_count ?? userData?.streak_count ?? userData?.current_streak ?? 3,
+    Math.min(
+      7,
+      Number(
+        userData?.streak_count ??
+        userData?.play_streak_count ??
+        userData?.current_streak ??
+        1
+      ) || 1
+    )
   );
 
   // Video Ad Modal State matching Play screen
   const [adGame, setAdGame] = useState<{ slug: string; title: string } | null>(null);
   const [adSecondsLeft, setAdSecondsLeft] = useState(AD_DURATION_SECONDS);
   const [unlocking, setUnlocking] = useState(false);
+  const [adMuted, setAdMuted] = useState(false);
+  const [adVideoReady, setAdVideoReady] = useState(false);
+  const adVideoRef = useRef<HTMLVideoElement | null>(null);
   const adTimerRef = useRef<any>(null);
+
+  // Preload ad video in background for instant playback
+  useEffect(() => {
+    const preloader = document.createElement('video');
+    preloader.src = 'https://api.receiptstoriches.net/images/game-guide/video-folder/IMG_6536.mp4';
+    preloader.preload = 'auto';
+    preloader.load();
+  }, []);
 
   useEffect(() => {
     if (adGame) {
       setAdSecondsLeft(AD_DURATION_SECONDS);
+      setAdVideoReady(false);
       adTimerRef.current = setInterval(() => {
         setAdSecondsLeft((prev) => {
           if (prev <= 1) {
@@ -425,11 +448,12 @@ export const Home: React.FC = () => {
             </span>
             <h2
               style={{
-                fontSize: '18px',
+                fontSize: '20px',
                 fontWeight: 800,
                 color: 'var(--text-main)',
                 lineHeight: 1.2,
                 marginTop: '2px',
+                textTransform: 'capitalize',
               }}
             >
               {userName}
@@ -548,11 +572,10 @@ export const Home: React.FC = () => {
           <div>
             <span
               style={{
-                fontSize: '12px',
+                fontSize: '15px',
                 fontWeight: 800,
                 color: isDarkMode ? '#6EE7B7' : '#14462E',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
+                textTransform: 'capitalize',
               }}
             >
               {t('home.myBalance', 'My Balance')}
@@ -661,7 +684,6 @@ export const Home: React.FC = () => {
           </span>
         </button>
       </div>
-
 
       {/* 3. Daily Streak Card (Screenshot 1) */}
       <div
@@ -1232,7 +1254,7 @@ export const Home: React.FC = () => {
         visible={Boolean(adGame)}
         onClose={closeAdModal}
         title={t('play.gameLocked', 'Unlock Game Session')}
-        maxWidth="460px"
+        maxWidth="620px"
       >
         {adGame && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
@@ -1250,7 +1272,7 @@ export const Home: React.FC = () => {
                 aspectRatio: '16 / 9',
                 borderRadius: '16px',
                 overflow: 'hidden',
-                background: '#000000',
+                background: '#0B0F17',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
                 border: '1px solid rgba(255,255,255,0.1)',
                 display: 'flex',
@@ -1259,17 +1281,80 @@ export const Home: React.FC = () => {
               }}
             >
               <video
-                src="https://receipts-to-riches.koderspedia.live/images/game-guide/video-folder/spanish/WIN%20POINTS%20GAMES/GAME%2011%20SPIN%20THE%20WHEEL%20SPANISH%20.mp4"
+                ref={adVideoRef}
+                key={adGame?.slug || 'ad-video'}
+                src={getGameGuideVideoUrl(adGame?.slug || adGame?.title, (t('language', 'en') || '').startsWith('es'))}
                 autoPlay
-                muted
+                muted={adMuted}
                 playsInline
+                preload="auto"
                 loop
+                onCanPlay={() => setAdVideoReady(true)}
+                onPlaying={() => setAdVideoReady(true)}
                 style={{
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
                 }}
               />
+
+              {/* Video Loading Spinner Overlay */}
+              {!adVideoReady && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    background: '#0B0F17',
+                    color: '#94A3B8',
+                    zIndex: 2,
+                  }}
+                >
+                  <div className="spinner" style={{ width: '32px', height: '32px', borderWidth: '3px' }} />
+                  <span style={{ fontSize: '12px', fontWeight: 600 }}>Loading video ad...</span>
+                </div>
+              )}
+
+              {/* Sound / Unmute Audio Toggle Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAdMuted(prev => !prev);
+                  if (adVideoRef.current) {
+                    adVideoRef.current.muted = !adVideoRef.current.muted;
+                    if (!adVideoRef.current.muted) {
+                      adVideoRef.current.play().catch(() => {});
+                    }
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  right: '10px',
+                  background: 'rgba(0, 0, 0, 0.75)',
+                  backdropFilter: 'blur(6px)',
+                  color: '#FFFFFF',
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  zIndex: 4,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                }}
+                aria-label={adMuted ? 'Unmute video audio' : 'Mute video audio'}
+              >
+                {adMuted ? <VolumeX size={15} color="#EF4444" /> : <Volume2 size={15} color="#10B981" />}
+                <span>{adMuted ? 'Unmute' : 'Sound On'}</span>
+              </button>
 
               {/* Floating Top-Right Countdown Badge */}
               <div

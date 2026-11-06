@@ -74,6 +74,8 @@ function Layout({ children }: { children: React.ReactNode }) {
     '/play/scratch-to-win',
     '/play/lucky-7',
     '/play/pic-pick-game',
+    '/play/state-game',
+    '/play/state-pick-game',
     '/play/cash-game',
   ];
   const isGameOrAuth = hideNavPaths.some((p) => location.pathname.startsWith(p));
@@ -158,6 +160,8 @@ function App() {
         <Route path="/play/lucky-7" element={<ProtectedRoute><Lucky7 /></ProtectedRoute>} />
         <Route path="/play/pic-pick" element={<ProtectedRoute><PicPick /></ProtectedRoute>} />
         <Route path="/play/pic-pick-game" element={<ProtectedRoute><PicPickGame /></ProtectedRoute>} />
+        <Route path="/play/state-game" element={<ProtectedRoute><PicPickGame /></ProtectedRoute>} />
+        <Route path="/play/state-pick-game" element={<ProtectedRoute><PicPickGame /></ProtectedRoute>} />
         <Route path="/play/cash-game" element={<ProtectedRoute><CashGame /></ProtectedRoute>} />
 
         {/* Social Feed */}

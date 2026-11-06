@@ -183,7 +183,7 @@ export const PicPick: React.FC = () => {
           <div
             key={game.id || idx}
             onClick={() =>
-              navigate('/play/pic-pick-game', {
+              navigate(isState ? '/play/state-game' : '/play/pic-pick-game', {
                 state: {
                   challenge: {
                     ...game,

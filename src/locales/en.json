@@ -44,7 +44,7 @@
     "alreadyHaveAccount": "Already have an account?",
     "loginNow": "Login Now",
     "agreeTo": "Agree to",
-    "termsAndConditions": "Terms and Conditions & Privacy Policy",
+    "termsAndConditions": "Terms and Conditions",
     "pleaseAgree": "Please agree to Terms and Conditions & Privacy Policy",
     "loginSuccessful": "Login Successful",
     "loginSuccessMsg": "You have successfully signed in!",
@@ -283,6 +283,7 @@
     "changeImage": "Change",
     "saveAndContinue": "Save & Continue",
     "gotIt": "Got It!",
+    "needHelp": "Need Help",
     "or": "OR"
   },
   "apiErrors": {

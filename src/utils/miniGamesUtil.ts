@@ -1,17 +1,11 @@
 export const extractPlayableSlots = (slots: any[] | undefined): number => {
   if (!Array.isArray(slots) || slots.length === 0) {
-    return 3;
+    return 0;
   }
-  return slots.filter((slot) => {
-    if (Number(slot?.is_open) === 1 || String(slot?.is_open).toLowerCase() === 'true') {
-      return true;
-    }
-    if (slot?.blocked_until) {
-      const blockedDate = new Date(slot.blocked_until).getTime();
-      return !isNaN(blockedDate) && blockedDate <= Date.now();
-    }
-    return false;
+  const openCount = slots.filter((slot) => {
+    return Number(slot?.is_open) === 1 || String(slot?.is_open).toLowerCase() === 'true';
   }).length;
+  return openCount;
 };
 
 export const getNextUnlockText = (slots: any[] | undefined): string => {

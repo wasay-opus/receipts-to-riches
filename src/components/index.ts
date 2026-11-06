@@ -8,5 +8,6 @@ export { CoinRain, triggerCoinCelebration } from './CoinRain';
 export { Container } from './Container';
 export { CustomToast, showToast } from './Toast';
 export { GameHelpMenu } from './GameHelpMenu';
+export { MiniGameHelpModal, MiniGameHelpMenu } from './MiniGameHelpModal';
 export { ReportModal } from './ReportModal';
 export { PhoneInput, sanitizePhoneNumber } from './PhoneInput';

@@ -119,29 +119,10 @@ export const PersonalInfo: React.FC = () => {
   const validationSchema = Yup.object().shape({
     first_name: Yup.string(),
     last_name: Yup.string(),
-    email: Yup.string().email(t('validation.invalidEmail', 'Invalid email')),
-    phone: Yup.string().test(
-      'valid-us-phone',
-      t('validation.invalidUsPhone', 'Please enter a valid 10-digit US phone number (e.g. 415 555 2671)'),
-      (val) => {
-        if (!val || !val.trim()) return true;
-        const clean = val.replace(/\D/g, '');
-        if (clean.length === 10) return true;
-        if (clean.length === 11 && clean.startsWith('1')) return true;
-        return false;
-      }
-    ),
     bio: Yup.string(),
-    dob: Yup.string(),
-    address: Yup.string(),
-    city: Yup.string(),
-    state: Yup.string(),
-    zip_code: Yup.string(),
-    password: Yup.string(),
-    password_confirmation: Yup.string(),
   });
 
-  const handleSubmit = async (values: any, { setFieldError }: any = {}) => {
+  const handleSubmit = async (values: any) => {
     const trimmedBio = values.bio?.trim?.() ?? '';
     const payload = new FormData();
 
@@ -151,24 +132,10 @@ export const PersonalInfo: React.FC = () => {
     if (combinedName) {
       payload.append('name', combinedName);
     }
-    if (values.email?.trim()) payload.append('email', values.email.trim());
-    const cleanPhone = values.phone?.trim?.() ? sanitizePhoneNumber(values.phone) : '';
-    if (cleanPhone) payload.append('phone', cleanPhone);
     if (trimmedBio) {
       payload.append('bio', trimmedBio);
       payload.append('description', trimmedBio);
       payload.append('about', trimmedBio);
-    }
-    if (values.dob) payload.append('dob', values.dob);
-    if (values.address?.trim()) payload.append('address', values.address.trim());
-    if (values.city?.trim()) payload.append('city', values.city.trim());
-    if (values.state?.trim()) payload.append('state', values.state.trim());
-    if (values.zip_code?.trim()) payload.append('zip_code', values.zip_code.trim());
-    if (values.password) {
-      payload.append('password', values.password);
-      if (values.password_confirmation) {
-        payload.append('password_confirmation', values.password_confirmation);
-      }
     }
 
     // Two SEPARATE optional image fields:
@@ -183,28 +150,15 @@ export const PersonalInfo: React.FC = () => {
     }
 
     try {
-      if (cleanPhone && cleanPhone !== (user?.phone || '').trim()) {
-        try {
-          await authServices.changePhone({ phone: cleanPhone });
-        } catch (phoneErr) {
-          console.warn('[PersonalInfo] changePhone API fallback:', phoneErr);
-        }
-      }
       await dispatch(editProfile(payload)).unwrap();
       dispatch(
         updateUserDataLocally({
-          first_name: values.first_name.trim(),
-          last_name: values.last_name.trim(),
-          name: `${values.first_name.trim()} ${values.last_name.trim()}`,
-          phone: cleanPhone || '',
+          first_name: values.first_name?.trim?.() || '',
+          last_name: values.last_name?.trim?.() || '',
+          name: `${values.first_name?.trim?.() || ''} ${values.last_name?.trim?.() || ''}`.trim(),
           bio: trimmedBio,
           description: trimmedBio,
           about: trimmedBio,
-          dob: values.dob || undefined,
-          address: values.address?.trim?.() ?? '',
-          city: values.city?.trim?.() ?? '',
-          state: values.state?.trim?.() ?? '',
-          zip_code: values.zip_code?.trim?.() ?? '',
           cover_image: coverPreview,
           cover_image_url: coverPreview,
           cover_photo: coverPreview,
@@ -243,10 +197,6 @@ export const PersonalInfo: React.FC = () => {
       navigate(-1);
     } catch (error: any) {
       const errorMsg = getUserFriendlyErrorMessage(error, t('personalInfo.tryAgain', 'Please try again.'));
-      const combined = `${error?.message || ''} ${errorMsg}`.toLowerCase();
-      if (setFieldError && (combined.includes('phone') || combined.includes('verification code') || combined.includes('sms'))) {
-        setFieldError('phone', t('auth.invalidPhoneError', 'Please enter a valid 10-digit US phone number.'));
-      }
       showToast({
         type: 'error',
         text1: t('personalInfo.profileNotSaved', 'Profile not saved'),
@@ -545,16 +495,11 @@ export const PersonalInfo: React.FC = () => {
               '',
             email: user?.email || '',
             phone: user?.phone || '',
-            dob: user?.dob || '',
-            address: user?.address || '',
-            city: user?.city || '',
-            state: user?.state || '',
-            zip_code: user?.zip_code || '',
           }}
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
         >
-          {({ handleChange, handleBlur, handleSubmit, values, errors, touched, dirty, setFieldValue }) => (
+          {({ handleChange, handleBlur, handleSubmit, values, errors, touched, dirty }) => (
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <FormDirtyWatcher avatarChanged={avatarFile !== null} coverChanged={coverFile !== null} onDirtyChange={setHasChanges} />
 
@@ -582,7 +527,7 @@ export const PersonalInfo: React.FC = () => {
                 />
               </div>
 
-              {/* Row 2: Email (50%) + Phone (50%) */}
+              {/* Row 2: Email (Disabled/Read-only) + Phone (Disabled/Read-only) */}
               <div className="form-grid-2">
                 <FormInput
                   label={t('auth.emailAddress', 'Email Address')}
@@ -590,72 +535,18 @@ export const PersonalInfo: React.FC = () => {
                   type="email"
                   disabled
                   value={values.email}
-                  onChange={handleChange('email')}
-                  onBlur={handleBlur('email')}
                   leftIcon={<Mail size={18} />}
                 />
-                <PhoneInput
+                <FormInput
                   label={t('auth.phoneNumber', 'Phone Number')}
                   name="phone"
-                  placeholder="415 555 2671"
+                  disabled
                   value={values.phone}
-                  onChange={(val) => setFieldValue('phone', val)}
-                  onBlur={handleBlur('phone')}
-                  error={touched.phone && errors.phone ? (errors.phone as string) : undefined}
+                  leftIcon={<Phone size={18} />}
                 />
               </div>
 
-              {/* Row 3: DOB (50%) + Street Address (50%) */}
-              <div className="form-grid-2">
-                <FormInput
-                  label={t('auth.dob', 'Date of Birth')}
-                  name="dob"
-                  type="date"
-                  value={values.dob}
-                  onChange={handleChange('dob')}
-                  onBlur={handleBlur('dob')}
-                  leftIcon={<Calendar size={18} />}
-                />
-                <FormInput
-                  label={t('auth.address', 'Street Address')}
-                  name="address"
-                  placeholder="123 Main St"
-                  value={values.address}
-                  onChange={handleChange('address')}
-                  onBlur={handleBlur('address')}
-                  leftIcon={<MapPin size={18} />}
-                />
-              </div>
-
-              {/* Row 4: City (1fr) + State (1fr) + Zip Code (1fr) */}
-              <div className="form-grid-3">
-                <FormInput
-                  label={t('auth.city', 'City')}
-                  name="city"
-                  placeholder="City"
-                  value={values.city}
-                  onChange={handleChange('city')}
-                  onBlur={handleBlur('city')}
-                />
-                <FormInput
-                  label={t('auth.state', 'State')}
-                  name="state"
-                  placeholder="State"
-                  value={values.state}
-                  onChange={handleChange('state')}
-                  onBlur={handleBlur('state')}
-                />
-                <FormInput
-                  label={t('auth.zipCode', 'Zip Code')}
-                  name="zip_code"
-                  placeholder="Zip"
-                  value={values.zip_code}
-                  onChange={handleChange('zip_code')}
-                  onBlur={handleBlur('zip_code')}
-                />
-              </div>
-
-              {/* Row 5: Bio / About Me (Full Width) */}
+              {/* Row 3: Bio / About Me (Full Width) */}
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-main)' }}>
                   {t('personalInfo.bio', 'Bio / About Me')}

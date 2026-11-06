@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { ArrowLeft, HelpCircle, Megaphone, Image as ImageIcon, Sparkles, ChevronDown, Check } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Megaphone, Image as ImageIcon, Sparkles, ChevronDown, Check, Search, MapPin } from 'lucide-react';
 import { Button, Container, CustomModal, GameHelpMenu, showToast, triggerCoinCelebration } from '../../components';
 import images from '../../constants/images';
 import gameServices from '../../services/gameServices';
@@ -41,6 +41,7 @@ export const PicPickGame: React.FC = () => {
   const challenge = (location.state as any)?.challenge;
   const isStatePick =
     challenge?.isState ||
+    location.pathname.includes('state') ||
     String(challenge?.gameType || challenge?.type || '').toLowerCase() === 'state' ||
     String(challenge?.gameSlug || '').toLowerCase().includes('state');
 
@@ -56,6 +57,8 @@ export const PicPickGame: React.FC = () => {
   const [zipCode, setZipCode] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [statesList, setStatesList] = useState<string[]>(US_STATES);
+  const [stateAccordionOpen, setStateAccordionOpen] = useState(false);
+  const [stateSearch, setStateSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ message: string; points: number } | null>(null);
 
@@ -117,23 +120,62 @@ export const PicPickGame: React.FC = () => {
       setReceiptTotal('');
       return;
     }
-    if (!/^\d*\.?\d*$/.test(val)) return;
 
-    const parts = val.split('.');
-    const intPart = parts[0];
-    const decPart = parts[1];
+    // Only allow digits and decimal dot
+    const clean = val.replace(/[^\d.]/g, '');
+    if (!clean) {
+      setReceiptTotal('');
+      return;
+    }
 
-    if (intPart && intPart.length > amountConfig.maxIntDigits) {
+    // If starts with dot, format as "0."
+    if (clean === '.') {
+      setReceiptTotal('0.');
       return;
     }
-    if (decPart && decPart.length > 2) {
+
+    // Disallow multiple dots
+    const parts = clean.split('.');
+    if (parts.length > 2) {
       return;
     }
-    const num = parseFloat(val);
-    if (!isNaN(num) && num > amountConfig.max) {
+
+    const maxInt = amountConfig.maxIntDigits;
+    const maxVal = amountConfig.max;
+
+    // Case 1: User typed or has a decimal point (e.g. "2.", "2.5", "2.50")
+    if (clean.includes('.')) {
+      const intPart = parts[0].slice(0, maxInt);
+      const decPart = parts[1].slice(0, 2);
+      const formatted = `${intPart}.${decPart}`;
+      const num = parseFloat(formatted);
+      if (!isNaN(num) && num > maxVal) {
+        return;
+      }
+      setReceiptTotal(formatted);
       return;
     }
-    setReceiptTotal(val);
+
+    // Case 2: User entered digits without a decimal point (e.g. "2", "22", "222")
+    // When digits exceed maxIntDigits, place the decimal point automatically after the dollar amount
+    if (clean.length > maxInt) {
+      const intPart = clean.slice(0, maxInt);
+      const decPart = clean.slice(maxInt, maxInt + 2);
+      const formatted = `${intPart}.${decPart}`;
+      const num = parseFloat(formatted);
+      if (!isNaN(num) && num > maxVal) {
+        return;
+      }
+      setReceiptTotal(formatted);
+      return;
+    }
+
+    // Under max integer digits (e.g. user typed "2")
+    const num = parseFloat(clean);
+    if (!isNaN(num) && num > maxVal) {
+      return;
+    }
+    setReceiptTotal(clean);
   };
 
   const handleSubmit = async () => {
@@ -162,7 +204,7 @@ export const PicPickGame: React.FC = () => {
       showToast({ type: 'error', text1: 'State required', text2: 'Please select a state from the dropdown.' });
       return;
     }
-    if (!zipCode.trim()) {
+    if (!isStatePick && !zipCode.trim()) {
       showToast({ type: 'error', text1: 'Zip code required', text2: 'Please enter the receipt vendor zip code.' });
       return;
     }
@@ -183,7 +225,7 @@ export const PicPickGame: React.FC = () => {
         type: gameType,
         game_slug: gameSlug,
         total: receiptTotal.trim(),
-        zip_code: zipCode.trim(),
+        zip_code: isStatePick ? undefined : zipCode.trim(),
         state: isStatePick ? selectedState.trim() : undefined,
         date: getUSDateYYYYMMDD(),
         time: getUSTimeHHMM(),
@@ -244,7 +286,7 @@ export const PicPickGame: React.FC = () => {
             : 'linear-gradient(135deg, #FE8904 0%, #5B00F0 100%)'));
 
   return (
-    <Container maxWidth="1000px" style={{ paddingBottom: '60px' }}>
+    <Container maxWidth="1160px" style={{ paddingBottom: '60px' }}>
       {/* Top Header Bar */}
       <div className="game-top-nav-bar">
         <button
@@ -265,10 +307,19 @@ export const PicPickGame: React.FC = () => {
         <GameHelpMenu gameSlug={isStatePick ? 'state' : 'pic-pick'} gameTitle={gameTitle} gameNumber={gameNumber} />
       </div>
 
-      {/* Main 2-Column Responsive Web Layout */}
-      <div className="game-screen-grid">
+      {/* 2-Column Layout: Left (Game Action Card), Right (Grow Your Audience + Instant Game Rules) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(340px, 1.25fr) minmax(280px, 0.95fr)',
+          gap: '24px',
+          alignItems: 'start',
+          width: '100%',
+        }}
+        className="state-pick-2col-grid"
+      >
         {/* Left Column: Game Action Card & Submit */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+        <div className="game-card-center" style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
           {/* Game Card with Sunburst Background */}
           <div
             style={{
@@ -311,9 +362,6 @@ export const PicPickGame: React.FC = () => {
               <h2 style={{ fontSize: '38px', fontWeight: 900, marginTop: '4px', margin: 0, textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>
                 {gameAmount}
               </h2>
-              <p style={{ fontSize: '13px', opacity: 0.9, marginTop: '8px', maxWidth: '280px', lineHeight: '1.4' }}>
-                {t('picPick.gameDescription', 'Enter the receipt total and submit picture of receipt.')}
-              </p>
             </div>
 
             {/* Input Fields Container */}
@@ -322,85 +370,158 @@ export const PicPickGame: React.FC = () => {
               <input
                 type="text"
                 inputMode="decimal"
+                className="glass-pill-input"
                 placeholder={amountConfig.placeholder || t('picPick.amountPlaceholder', 'Enter Amount')}
                 value={receiptTotal}
                 onChange={(e) => handleAmountChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '28px',
-                  background: 'rgba(0, 0, 0, 0.35)',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  color: '#FFFFFF',
-                  fontSize: '15px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  textAlign: 'center',
-                }}
               />
 
-              {/* Vendor Zip Code Pill Input */}
-              <input
-                type="text"
-                maxLength={10}
-                placeholder={t('cashGames.placeholders.enterZip', 'Enter Zip Code')}
-                value={zipCode}
-                onChange={(e) => setZipCode(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '28px',
-                  background: 'rgba(0, 0, 0, 0.35)',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  color: '#FFFFFF',
-                  fontSize: '15px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  textAlign: 'center',
-                }}
-              />
+              {/* Vendor Zip Code Pill Input (Hidden for State Pick Game) */}
+              {!isStatePick && (
+                <input
+                  type="text"
+                  maxLength={10}
+                  className="glass-pill-input"
+                  placeholder={t('cashGames.placeholders.enterZip', 'Enter Zip Code')}
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                />
+              )}
 
-              {/* State Pill Dropdown (for State games) */}
+              {/* State Pill Button with Inline Accordion Inside Card */}
               {isStatePick && (
-                <div style={{ position: 'relative', width: '100%' }}>
-                  <select
-                    value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
+                <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setStateAccordionOpen((prev) => !prev)}
+                    className="glass-pill-input"
                     style={{
-                      width: '100%',
-                      padding: '14px 20px',
-                      borderRadius: '28px',
-                      background: 'rgba(0, 0, 0, 0.35)',
-                      border: '1px solid rgba(255, 255, 255, 0.25)',
-                      color: selectedState ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
-                      fontSize: '15px',
-                      outline: 'none',
-                      appearance: 'none',
                       cursor: 'pointer',
-                      textAlign: 'center',
-                      boxSizing: 'border-box',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: selectedState ? '#FFFFFF' : 'rgba(255, 255, 255, 0.72)',
+                      fontWeight: selectedState ? 700 : 500,
+                      position: 'relative',
                     }}
                   >
-                    <option value="" style={{ background: '#1F2937', color: '#FFF' }}>
-                      {t('basicInfo.selectState', 'Select State')}
-                    </option>
-                    {statesList.map((stateName) => (
-                      <option key={stateName} value={stateName} style={{ background: '#1F2937', color: '#FFF' }}>
-                        {stateName}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={18}
-                    style={{
-                      position: 'absolute',
-                      right: '20px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      pointerEvents: 'none',
-                      color: 'rgba(255,255,255,0.8)',
-                    }}
-                  />
+                    <span>{selectedState || t('basicInfo.selectState', 'Select State')}</span>
+                    <ChevronDown
+                      size={18}
+                      style={{
+                        position: 'absolute',
+                        right: '20px',
+                        top: '50%',
+                        transform: `translateY(-50%) rotate(${stateAccordionOpen ? '180deg' : '0deg'})`,
+                        transition: 'transform 0.2s ease',
+                        color: 'rgba(255, 255, 255, 0.85)',
+                      }}
+                    />
+                  </button>
+
+                  {/* Inline Dropdown Panel Directly Inside Card Flow */}
+                  {stateAccordionOpen && (
+                    <div
+                      style={{
+                        width: '100%',
+                        background: 'rgba(0, 0, 0, 0.45)',
+                        border: '1px solid rgba(255, 255, 255, 0.22)',
+                        borderRadius: '20px',
+                        padding: '10px 8px',
+                        boxSizing: 'border-box',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      {/* Search State Input */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          borderRadius: '14px',
+                          padding: '8px 12px',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                        }}
+                      >
+                        <Search size={15} color="rgba(255, 255, 255, 0.75)" />
+                        <input
+                          type="text"
+                          className="glass-search-input"
+                          placeholder={t('common.search', 'Search state...')}
+                          value={stateSearch}
+                          onChange={(e) => setStateSearch(e.target.value)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            color: '#FFFFFF',
+                            fontSize: '13px',
+                            width: '100%',
+                          }}
+                        />
+                      </div>
+
+                      {/* Scrollable list of states */}
+                      <div
+                        style={{
+                          maxHeight: '180px',
+                          overflowY: 'auto',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '3px',
+                        }}
+                      >
+                        {statesList
+                          .filter((st) => st.toLowerCase().includes(stateSearch.toLowerCase()))
+                          .map((stateName) => {
+                            const isSelected = selectedState === stateName;
+                            return (
+                              <button
+                                key={stateName}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedState(stateName);
+                                  setStateAccordionOpen(false);
+                                  setStateSearch('');
+                                }}
+                                style={{
+                                  padding: '9px 14px',
+                                  borderRadius: '10px',
+                                  background: isSelected ? 'rgba(0, 103, 77, 0.6)' : 'transparent',
+                                  color: isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.9)',
+                                  border: 'none',
+                                  fontSize: '13.5px',
+                                  fontWeight: isSelected ? 700 : 500,
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  transition: 'background 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                }}
+                              >
+                                <span>{stateName}</span>
+                                {isSelected && <Check size={16} color="#10B981" />}
+                              </button>
+                            );
+                          })}
+                        {statesList.filter((st) => st.toLowerCase().includes(stateSearch.toLowerCase())).length === 0 && (
+                          <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                            No state found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -513,10 +634,9 @@ export const PicPickGame: React.FC = () => {
           </button>
         </div>
 
-        {/* Right Column: Side Column (Campaign Card & Rules) */}
-        <div className="game-side-column">
-          {/* Sponsored Ad Banner */}
-          <div className="card game-campaign-card">
+        {/* Right Column: Grow Your Audience Campaign Card & Instant Game Rules (Stacked) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+          <div className="card game-campaign-card" style={{ width: '100%' }}>
             <div className="game-campaign-icon">
               <Megaphone size={28} />
             </div>
@@ -535,10 +655,11 @@ export const PicPickGame: React.FC = () => {
             </button>
           </div>
 
-          {/* Quick How to Win Card */}
-          <div className="card game-rules-card">
+          {/* Instant Game Rules Card placed directly below Grow Your Audience */}
+          <div className="card game-rules-card" style={{ width: '100%' }}>
             <h4 className="game-rules-title">
-              {t('profile.menuRules', 'Instant Game Rules')}
+              <HelpCircle size={18} color="#15AE36" />
+              <span>{t('profile.menuRules', 'Instant Game Rules')}</span>
             </h4>
             <div className="game-rules-list">
               <div className="game-rules-item">
@@ -554,6 +675,10 @@ export const PicPickGame: React.FC = () => {
               <div className="game-rules-item">
                 <span className="game-rules-bullet">&bull;</span>
                 <span>{t('picPick.description1', 'Take or upload a clean photo of your physical receipt.')}</span>
+              </div>
+              <div className="game-rules-item">
+                <span className="game-rules-bullet">&bull;</span>
+                <span>{t('picPick.instantPrizesNotice', 'Instant winners win bonus cash and points rewards!')}</span>
               </div>
             </div>
           </div>
