@@ -103,13 +103,16 @@ export const SecretQuestion: React.FC = () => {
 
   return (
     <div
+      className="r2r-login-page"
       style={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px 16px',
-        background: 'var(--bg-main)',
+        padding: '40px 20px',
+        background: 'transparent',
+        position: 'relative',
+        zIndex: 5,
       }}
     >
       <div
@@ -117,21 +120,25 @@ export const SecretQuestion: React.FC = () => {
         style={{
           width: '100%',
           maxWidth: '700px',
-          padding: '36px 32px',
+          padding: '28px 36px 24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '24px',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-color)',
+          gap: '16px',
+          borderRadius: '26px',
+          background: '#FFFFFF',
+          border: '1px solid rgba(0, 77, 54, 0.08)',
+          boxShadow: '0 24px 60px rgba(0, 77, 54, 0.12), 0 6px 18px rgba(0, 77, 54, 0.05)',
+          position: 'relative',
+          zIndex: 5,
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-          <img src={images.SplashLogo} alt="Logo" style={{ width: '160px', objectFit: 'contain' }} />
-          <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-main)', marginTop: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          <img src={images.SplashLogo} alt="Logo" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', marginTop: '6px', marginBottom: '2px' }}>
             {t('auth.completeProfile', 'Complete Your Profile')}
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
             {t('auth.completeProfileSubtitle', 'A few more details to set up your account')}
           </p>
         </div>

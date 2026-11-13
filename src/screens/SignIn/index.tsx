@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { login, socialLogin } from '../../redux/Slices/authSlice';
 import { Button, FormInput, showToast } from '../../components';
+import { AuthBackground } from '../../components/AuthBackground';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 import {
@@ -207,7 +208,7 @@ export const SignIn: React.FC = () => {
           width: 250,
         });
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [dispatch, navigate, t]);
 
   useEffect(() => {
@@ -215,7 +216,7 @@ export const SignIn: React.FC = () => {
       setInitialEmail(passedEmail);
       try {
         sessionStorage.removeItem('last_registered_email');
-      } catch {}
+      } catch { }
       return;
     }
 
@@ -329,40 +330,46 @@ export const SignIn: React.FC = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px 16px',
-        background: 'var(--bg-main)',
-      }}
-    >
-      <div
-        className="card auth-card"
-        style={{
-          width: '100%',
-          maxWidth: '700px',
-          padding: '36px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '24px',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-color)',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+    <div className="r2r-login-page">
+      {/* Centered White Login Card with Refined Proportions matching Approved Reference */}
+      <div className="card r2r-login-card">
+        {/* R2R Circular Brand Logo */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
           <img
             src={images.SplashLogo}
             alt="Receipts To Riches"
-            style={{ width: '180px', objectFit: 'contain' }}
+            style={{
+              width: '100px',
+              height: '100px',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 4px 14px rgba(0, 77, 54, 0.12))',
+            }}
           />
-          <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-main)', marginTop: '8px' }}>
-            {t('auth.welcomeBack', 'Welcome Back')}
+          <h2
+            style={{
+              fontSize: '24px',
+              fontWeight: 800,
+              color: '#0A3323',
+              marginTop: '10px',
+              marginBottom: '4px',
+              letterSpacing: '-0.02em',
+              textAlign: 'center',
+              width: '100%',
+            }}
+          >
+            {t('auth.welcomeBack', 'Welcome Back!')}
           </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center' }}>
+          <p
+            style={{
+              fontSize: '13.5px',
+              fontWeight: 500,
+              color: '#5A7A6C',
+              textAlign: 'center',
+              margin: 0,
+              marginBottom: '14px',
+              width: '100%',
+            }}
+          >
             {t('auth.signInSubtitle', 'Sign in to earn rewards from your receipts')}
           </p>
         </div>
@@ -374,17 +381,18 @@ export const SignIn: React.FC = () => {
           onSubmit={handleSubmit}
         >
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => (
-            <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <form onSubmit={handleSubmit} style={{ width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
               <FormInput
-                label={t('auth.email', 'Email Address')}
-                placeholder="name@example.com"
+                label={t('auth.email', 'Email')}
+                placeholder="checking@gmail.com"
                 type="email"
                 name="email"
                 value={values.email}
                 onChange={handleChange('email')}
                 onBlur={handleBlur('email')}
                 error={touched.email && errors.email ? String(errors.email) : undefined}
-                leftIcon={<Mail size={18} />}
+                leftIcon={<Mail size={18} strokeWidth={2} color="#007A55" />}
+                style={{ backgroundColor: '#F3FAF6', borderColor: '#D6EFE3' }}
               />
 
               <FormInput
@@ -397,23 +405,61 @@ export const SignIn: React.FC = () => {
                 onChange={handleChange('password')}
                 onBlur={handleBlur('password')}
                 error={touched.password && errors.password ? String(errors.password) : undefined}
-                leftIcon={<Lock size={18} />}
+                leftIcon={<Lock size={18} strokeWidth={2} color="#007A55" />}
+                style={{ backgroundColor: '#F3FAF6', borderColor: '#D6EFE3' }}
               />
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  fontSize: '14px',
+                  marginTop: '2px',
+                  marginBottom: '2px',
+                  width: '100%',
+                }}
+              >
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    color: '#2C4A3E',
+                    fontWeight: 600,
+                    margin: 0,
+                    userSelect: 'none',
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    style={{ accentColor: 'var(--green)', width: '16px', height: '16px' }}
+                    style={{
+                      accentColor: '#007A55',
+                      width: '16px',
+                      height: '16px',
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                    }}
                   />
                   <span>{t('auth.rememberMe', 'Remember Me')}</span>
                 </label>
 
                 <Link
                   to="/forgot-password"
-                  style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}
+                  style={{
+                    color: '#CDA13A',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    transition: 'color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#B58D2E')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#CDA13A')}
                 >
                   {t('auth.forgotPassword', 'Forgot Password?')}
                 </Link>
@@ -423,25 +469,26 @@ export const SignIn: React.FC = () => {
                 type="submit"
                 loading={loading}
                 title={t('auth.signIn', 'Sign In')}
-                icon={<LogIn size={18} />}
-                style={{ width: '100%', marginTop: '8px' }}
+                icon={<LogIn size={18} strokeWidth={2.4} />}
+                className="r2r-login-btn"
+                style={{ width: '100%', marginTop: '6px' }}
               />
             </form>
           )}
         </Formik>
 
         <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', margin: '4px 0' }}>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('common.or', 'OR')}</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+          <div style={{ flex: 1, height: '1px', background: '#D6EFE3' }} />
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#5A7A6C' }}>{t('common.or', 'OR')}</span>
+          <div style={{ flex: 1, height: '1px', background: '#D6EFE3' }} />
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+        <div className="r2r-social-row">
           <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
             <button
               type="button"
-              className="btn-secondary"
-              style={{ width: '100%', padding: '10px', fontSize: '13px' }}
+              className="r2r-social-btn"
+              style={{ width: '100%' }}
               disabled={loading || socialLoadingProvider !== null}
               onClick={handleGoogleLogin}
             >
@@ -465,8 +512,7 @@ export const SignIn: React.FC = () => {
           </div>
           <button
             type="button"
-            className="btn-secondary"
-            style={{ flex: 1, padding: '10px', fontSize: '13px' }}
+            className="r2r-social-btn"
             disabled={loading || socialLoadingProvider !== null}
             onClick={handleAppleLogin}
           >
@@ -475,9 +521,14 @@ export const SignIn: React.FC = () => {
           </button>
         </div>
 
-        <p style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center' }}>
+        <p style={{ fontSize: '14px', color: '#5A7A6C', textAlign: 'center', margin: 0, marginTop: '2px' }}>
           {t('auth.dontHaveAccount', "Don't have an account?")}{' '}
-          <Link to="/signup" style={{ color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}>
+          <Link
+            to="/signup"
+            style={{ color: '#007A55', fontWeight: 700, textDecoration: 'none' }}
+            onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+            onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+          >
             {t('auth.signUp', 'Sign Up')}
           </Link>
         </p>

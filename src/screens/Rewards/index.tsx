@@ -361,18 +361,27 @@ export const Rewards: React.FC = () => {
 
         <div
           style={{
-            width: '58px',
-            height: '58px',
-            borderRadius: '18px',
-            background: '#091510',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            position: 'relative',
+            width: '90px',
+            height: '90px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            transition: 'transform 0.3s ease',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
-          <RedGiftBoxIcon />
+          <img
+            alt="Reward Gift"
+            src={images.giftWithGoldGlow06}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 16px rgba(251, 191, 36, 0.65))',
+            }}
+          />
         </div>
       </div>
 

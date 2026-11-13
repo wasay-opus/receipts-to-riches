@@ -158,27 +158,34 @@ export const OtpVerification: React.FC = () => {
 
   return (
     <div
+      className="r2r-login-page"
       style={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px 16px',
-        background: 'var(--bg-main)',
+        padding: '40px 20px',
+        background: 'transparent',
+        position: 'relative',
+        zIndex: 5,
       }}
     >
       <div
         className="card"
         style={{
           width: '100%',
-          maxWidth: '460px',
-          padding: '36px 28px',
+          maxWidth: '480px',
+          padding: '28px 32px 24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '24px',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-color)',
+          gap: '16px',
+          borderRadius: '26px',
+          background: '#FFFFFF',
+          border: '1px solid rgba(0, 77, 54, 0.08)',
+          boxShadow: '0 24px 60px rgba(0, 77, 54, 0.12), 0 6px 18px rgba(0, 77, 54, 0.05)',
+          position: 'relative',
+          zIndex: 5,
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>

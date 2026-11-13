@@ -70,6 +70,15 @@ import receipt from '../assets/images/receipt.png';
 import example from '../assets/images/example.png';
 import Paypal from '../assets/images/paypal.png';
 
+// New Arcade & Dashboard 3D Assets
+import crown01 from '../assets/images/01_crown.png';
+import target02 from '../assets/images/02_target.png';
+import clover03 from '../assets/images/03_clover.png';
+import blueStar04 from '../assets/images/04_blue_star.png';
+import goldCoin05 from '../assets/images/05_gold_coin.png';
+import giftWithGoldGlow06 from '../assets/images/06_gift_with_gold_glow.png';
+import goldTrophy07 from '../assets/images/07_gold_trophy.png';
+
 export const images = {
   googleIcon,
   appleIcon,
@@ -99,6 +108,15 @@ export const images = {
   uparrow,
   crossIcon,
   cross,
+
+  // New Arcade & Dashboard 3D Assets
+  crown01,
+  target02,
+  clover03,
+  blueStar04,
+  goldCoin05,
+  giftWithGoldGlow06,
+  goldTrophy07,
 
   // instant win games
   picpickbg,

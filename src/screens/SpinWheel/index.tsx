@@ -340,7 +340,9 @@ export const SpinWheel: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="1150px" style={{ paddingBottom: '60px' }}>
+    <div className="home-gaming-canvas" style={{ width: '100%', minHeight: '100vh' }}>
+      <div className="home-stage-container">
+        <Container maxWidth="100%" isPadding={false} style={{ gap: '20px', paddingBottom: '60px', position: 'relative', zIndex: 2 }}>
       {/* Top Header Navigation */}
       <div className="game-top-nav-bar">
         <button
@@ -453,7 +455,7 @@ export const SpinWheel: React.FC = () => {
             </div>
           </div>
 
-          {/* Wheel Stage with Neon Drop Glow */}
+          {/* Wheel Stage with Animated Neon Aura Drop Glow & Sparkle Needle */}
           <div
             style={{
               position: 'relative',
@@ -464,18 +466,34 @@ export const SpinWheel: React.FC = () => {
               margin: '8px 0',
             }}
           >
-            {/* Top Pointer Needle */}
+            {/* Pulsating Golden Stage Aura Glow behind Wheel */}
             <div
               style={{
                 position: 'absolute',
-                top: '0px',
+                width: '380px',
+                height: '380px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.45) 0%, rgba(245, 158, 11, 0.25) 45%, rgba(0, 168, 89, 0.15) 70%, transparent 80%)',
+                animation: 'wheelStageAuraGlow 6s ease-in-out infinite',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }}
+            />
+
+            {/* Top Pointer Needle with Live Bobbing / Ticking Animation */}
+            <div
+              className={isSpinning ? 'spin-wheel-needle--spinning' : 'spin-wheel-needle--idle'}
+              style={{
+                position: 'absolute',
+                top: '-4px',
                 zIndex: 10,
                 width: 0,
                 height: 0,
-                borderLeft: '16px solid transparent',
-                borderRight: '16px solid transparent',
-                borderTop: '32px solid #F59E0B',
-                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.4)) drop-shadow(0 0 8px rgba(245, 158, 11, 0.8))',
+                borderLeft: '17px solid transparent',
+                borderRight: '17px solid transparent',
+                borderTop: '34px solid #FFD700',
+                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 12px rgba(255, 215, 0, 0.9))',
+                transformOrigin: 'top center',
               }}
             />
 
@@ -487,43 +505,49 @@ export const SpinWheel: React.FC = () => {
                 maxWidth: '420px',
                 width: '100%',
                 height: 'auto',
-                filter: 'drop-shadow(0 14px 35px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 20px rgba(245, 158, 11, 0.35))',
+                position: 'relative',
+                zIndex: 2,
+                filter: 'drop-shadow(0 14px 35px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.4))',
               }}
             />
           </div>
 
-          {/* Spin CTA Button */}
+          {/* Spin CTA Button with High Energy Pulse & Continuous Sheen */}
           <button
             type="button"
             onClick={spin}
             disabled={isSpinning || playableSlots === 0}
+            className={!isSpinning && playableSlots !== 0 ? 'spin-wheel-btn--pulsing' : ''}
             style={{
               width: '100%',
               maxWidth: '380px',
-              padding: '14px 20px',
+              padding: '15px 24px',
               borderRadius: '999px',
-              background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+              background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #B45309 100%)',
               color: '#FFFFFF',
-              border: 'none',
-              fontSize: '15px',
-              fontWeight: 800,
+              border: '2px solid rgba(255, 215, 0, 0.6)',
+              fontSize: '16px',
+              fontWeight: 900,
+              letterSpacing: '0.8px',
               cursor: isSpinning || (unlockedMiniGamesFetched && playableSlots === 0) ? 'not-allowed' : 'pointer',
               opacity: isSpinning || (unlockedMiniGamesFetched && playableSlots === 0) ? 0.7 : 1,
-              boxShadow: '0 5px 15px rgba(217, 119, 6, 0.35)',
+              boxShadow: '0 8px 24px rgba(217, 119, 6, 0.45), 0 0 20px rgba(255, 215, 0, 0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
+              gap: '10px',
               transition: 'transform 0.15s ease',
+              position: 'relative',
+              overflow: 'hidden',
             }}
             onMouseEnter={(e) => {
-              if (!isSpinning && playableSlots !== 0) e.currentTarget.style.transform = 'scale(1.02)';
+              if (!isSpinning && playableSlots !== 0) e.currentTarget.style.transform = 'scale(1.03)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <RotateCw size={19} className={isSpinning ? 'spin-anim' : ''} />
+            <RotateCw size={20} className={isSpinning ? 'spin-anim' : ''} />
             <span>
               {isSpinning
                 ? t('spinWheel.spinning', 'SPINNING...')
@@ -943,6 +967,8 @@ export const SpinWheel: React.FC = () => {
         </div>
       </CustomModal>
     </Container>
+    </div>
+  </div>
   );
 };
 

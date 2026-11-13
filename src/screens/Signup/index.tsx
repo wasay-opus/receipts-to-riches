@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/Store';
 import { registerUser, socialLogin } from '../../redux/Slices/authSlice';
 import { Button, FormInput, PhoneInput, sanitizePhoneNumber, showToast } from '../../components';
+import { AuthBackground } from '../../components/AuthBackground';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
 
@@ -162,7 +163,7 @@ export const SignUp: React.FC = () => {
           width: 250,
         });
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [dispatch, navigate, t]);
 
   const handleGoogleLogin = async () => {
@@ -248,7 +249,7 @@ export const SignUp: React.FC = () => {
       terms: boolean;
       referralCode?: string;
     },
-    { setFieldError }: { setFieldError: (field: string, message: string | undefined) => void; [key: string]: any }
+    { setFieldError }: { setFieldError: (field: string, message: string | undefined) => void;[key: string]: any }
   ) => {
     try {
       const payload: any = {
@@ -267,7 +268,7 @@ export const SignUp: React.FC = () => {
 
       try {
         sessionStorage.setItem('last_registered_email', payload.email);
-      } catch {}
+      } catch { }
 
       const res = await dispatch(registerUser(payload)).unwrap();
 
@@ -287,7 +288,7 @@ export const SignUp: React.FC = () => {
     } catch (error: any) {
       try {
         sessionStorage.setItem('last_registered_email', values.email.trim());
-      } catch {}
+      } catch { }
 
       const rawMsg =
         error?.message ||
@@ -401,40 +402,36 @@ export const SignUp: React.FC = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '32px 16px',
-        background: 'var(--bg-main)',
-      }}
-    >
+    <div className="r2r-signup-page">
       <div
         className="card auth-card"
         style={{
           width: '100%',
-          maxWidth: '700px',
-          padding: '36px 32px',
+          maxWidth: '680px',
+          padding: '24px 32px 20px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '20px',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-color)',
+          gap: '14px',
+          borderRadius: '26px',
+          background: '#FFFFFF',
+          border: '1px solid rgba(0, 77, 54, 0.08)',
+          boxShadow: '0 24px 60px rgba(0, 77, 54, 0.12), 0 6px 18px rgba(0, 77, 54, 0.05)',
+          position: 'relative',
+          zIndex: 5,
+          margin: 'auto',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <img
             src={images.SplashLogo}
             alt="Receipts To Riches"
-            style={{ width: '160px', objectFit: 'contain' }}
+            style={{ width: '100px', height: '100px', objectFit: 'contain' }}
           />
-          <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-main)', marginTop: '6px' }}>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px', marginBottom: '2px' }}>
             {t('auth.createAccount', 'Create Account')}
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
             {t('auth.signUpSubtitle', 'Join and start turning receipts into cash & prizes!')}
           </p>
         </div>
@@ -454,7 +451,7 @@ export const SignUp: React.FC = () => {
           onSubmit={handleSubmit}
         >
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched, setFieldValue }) => (
-            <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div className="auth-grid-2col">
                 <FormInput
                   label={t('auth.firstName', 'First Name')}
@@ -504,31 +501,33 @@ export const SignUp: React.FC = () => {
                 />
               </div>
 
-              <FormInput
-                label={t('auth.password', 'Password')}
-                placeholder="••••••••"
-                type="password"
-                name="password"
-                isPassword
-                value={values.password}
-                onChange={handleChange('password')}
-                onBlur={handleBlur('password')}
-                error={touched.password && errors.password ? errors.password : undefined}
-                leftIcon={<Lock size={18} />}
-              />
+              <div className="auth-grid-2col">
+                <FormInput
+                  label={t('auth.password', 'Password')}
+                  placeholder="••••••••"
+                  type="password"
+                  name="password"
+                  isPassword
+                  value={values.password}
+                  onChange={handleChange('password')}
+                  onBlur={handleBlur('password')}
+                  error={touched.password && errors.password ? errors.password : undefined}
+                  leftIcon={<Lock size={18} />}
+                />
 
-              <FormInput
-                label={t('auth.confirmPassword', 'Confirm Password')}
-                placeholder="••••••••"
-                type="password"
-                name="password_confirmation"
-                isPassword
-                value={values.password_confirmation}
-                onChange={handleChange('password_confirmation')}
-                onBlur={handleBlur('password_confirmation')}
-                error={touched.password_confirmation && errors.password_confirmation ? errors.password_confirmation : undefined}
-                leftIcon={<Lock size={18} />}
-              />
+                <FormInput
+                  label={t('auth.confirmPassword', 'Confirm Password')}
+                  placeholder="••••••••"
+                  type="password"
+                  name="password_confirmation"
+                  isPassword
+                  value={values.password_confirmation}
+                  onChange={handleChange('password_confirmation')}
+                  onBlur={handleBlur('password_confirmation')}
+                  error={touched.password_confirmation && errors.password_confirmation ? errors.password_confirmation : undefined}
+                  leftIcon={<Lock size={18} />}
+                />
+              </div>
 
               <FormInput
                 label={t('auth.referralCode', 'Referral Code (Optional)')}

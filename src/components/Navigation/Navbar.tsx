@@ -10,6 +10,7 @@ import {
   Trophy,
   Award,
   User,
+  Crown,
 } from 'lucide-react';
 import images from '../../constants/images';
 
@@ -53,9 +54,108 @@ export const DesktopNavbar: React.FC = () => {
             </NavLink>
           );
         })}
+        {/* Decorative Luxury VIP Tier Pass in Sidebar bottom */}
+        <div className="desktop-sidebar__vip-divider" />
+        <div
+          className="desktop-sidebar__vip-card"
+          onClick={() => navigate('/rewards')}
+          style={{
+            marginTop: '0',
+            marginBottom: '16px',
+            padding: '14px 14px',
+            borderRadius: '18px',
+            background: 'linear-gradient(135deg, #022C22 0%, #004D3A 50%, #00674D 100%)',
+            border: '1.5px solid rgba(255, 215, 0, 0.45)',
+            boxShadow: '0 8px 24px rgba(0, 103, 77, 0.25), 0 0 16px rgba(255, 215, 0, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            position: 'relative',
+            overflow: 'hidden',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 12px 28px rgba(0, 103, 77, 0.35), 0 0 22px rgba(255, 215, 0, 0.35)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 103, 77, 0.25), 0 0 16px rgba(255, 215, 0, 0.2)';
+          }}
+        >
+          {/* Subtle gold shimmer streak */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '-50%',
+              left: '-50%',
+              width: '200%',
+              height: '200%',
+              background: 'linear-gradient(60deg, transparent 40%, rgba(255, 215, 0, 0.2) 50%, transparent 60%)',
+              pointerEvents: 'none',
+              animation: 'winPointShine 5s infinite',
+            }}
+          />
 
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #FFE066 0%, #F59E0B 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 14px rgba(245, 158, 11, 0.45)',
+              flexShrink: 0,
+            }}
+          >
+            <Crown size={22} color="#FFFFFF" strokeWidth={2.4} />
+          </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+          <div style={{ minWidth: 0, flex: 1, position: 'relative', zIndex: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 900,
+                  color: '#FFFFFF',
+                  letterSpacing: '0.4px',
+                  lineHeight: 1.2,
+                }}
+              >
+                VIP Club
+              </span>
+              <span
+                style={{
+                  fontSize: '9px',
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #FFD700 0%, #D5AD60 100%)',
+                  color: '#07130F',
+                  padding: '1px 6px',
+                  borderRadius: '999px',
+                  letterSpacing: '0.3px',
+                }}
+              >
+                LEVEL 1
+              </span>
+            </div>
+            <span
+              style={{
+                fontSize: '10.5px',
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontWeight: 600,
+                display: 'block',
+                marginTop: '3px',
+              }}
+            >
+              Earn 2x Cash Points &rarr;
+            </span>
+          </div>
+        </div>
+
+        <div style={{ paddingTop: '12px', borderTop: '1px solid var(--sidebar-divider)' }}>
           <NavLink
             to="/profile"
             className={`desktop-sidebar__link${isItemActive('/profile') ? ' desktop-sidebar__link--active' : ''}`}

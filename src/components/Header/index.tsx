@@ -1,6 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Moon, Sun, Bell, Globe, Crown } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Moon, Sun, Bell, Crown, Sparkles } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { RootState } from '../../redux/Store';
@@ -25,11 +25,16 @@ export const Header: React.FC<HeaderProps> = ({
   showBalance = true,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isHome = location.pathname === '/' || location.pathname === '/home';
   const dispatch = useDispatch();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDarkMode = useSelector((state: RootState) => state.theme?.isDarkMode);
   const user = useSelector((state: RootState) => state.user?.userData);
   const totalCoins = getUserRewardPoints(user);
+  const unreadCount = useSelector((state: RootState) =>
+    (state.notifications?.notifications ?? []).filter((notification) => !notification.read_at).length,
+  );
 
   const handleBack = () => {
     if (onBackPress) {
@@ -46,53 +51,47 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header
-      className="app-main-header"
-      style={{
-        width: '100%',
-        padding: '12px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        background: 'var(--nav-bg)',
-        backdropFilter: 'blur(16px)',
-        borderBottom: 'none',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {showBackButton ? (
-          <button
-            onClick={handleBack}
-            className="header-icon-btn"
-            style={{ borderRadius: '10px', width: '36px', height: '36px' }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-        ) : (
-          <div
-            onClick={() => navigate('/')}
-            className="mobile-header-logo"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-          >
-            <img
-              src={images.SplashLogo}
-              alt="Receipts To Riches"
-              style={{ height: '36px', objectFit: 'contain' }}
-            />
-          </div>
-        )}
+    <>
+      <header
+        className={`app-main-header${isHome ? ' app-main-header--home' : ''}`}
+      >
+        <div className="app-main-header__left">
+          {showBackButton ? (
+            <button
+              onClick={handleBack}
+              className="header-icon-btn"
+              style={{ borderRadius: '10px', width: '36px', height: '36px' }}
+            >
+              <ArrowLeft size={18} />
+            </button>
+          ) : (
+            <div
+              onClick={() => navigate('/')}
+              className="mobile-header-logo"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+            >
+              <img
+                src={images.SplashLogo}
+                alt="Receipts To Riches"
+                style={{ height: '36px', objectFit: 'contain' }}
+              />
+            </div>
+          )}
 
-        {title && (
-          <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
-            {title}
-          </h2>
-        )}
-      </div>
+          {title && (
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
+              {title}
+            </h2>
+          )}
+          <span className="app-main-header__tagline">
+            <Sparkles size={16} aria-hidden="true" />
+            <span className="app-main-header__tagline-text">Turn your receipts into rewards</span>
+          </span>
+        </div>
+      </header>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      {/* Floating Sticky Right Bar - completely independent of header scroll */}
+      <div className="app-header-sticky-right">
         {rightComponent ? (
           rightComponent
         ) : (
@@ -100,20 +99,35 @@ export const Header: React.FC<HeaderProps> = ({
             {showBalance && (
               <div
                 onClick={() => navigate('/rewards')}
-                className="header-coin-badge"
+                className="header-coin-badge group"
+                title={t('bottomTabs.rewards', 'Rewards')}
               >
-                <img src={images.Coin} alt="Coins" style={{ width: '18px', height: '18px' }} />
-                <span>{Number(totalCoins).toLocaleString()}</span>
+                <img
+                  src={images.goldCoin05 || images.Coin}
+                  alt="Coins"
+                  className="coin-rotate-icon group-hover:rotate-180 transition-transform duration-500"
+                  style={{ width: '20px', height: '20px', objectFit: 'contain' }}
+                />
+                <span style={{ fontWeight: 800 }}>{Number(totalCoins).toLocaleString()}</span>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: '#d97706' }}>PTS</span>
               </div>
             )}
 
             <button
               onClick={() => navigate('/rankings')}
-              title="Rankings Leaderboard"
+              title={t('rankingsScreen.leaderboard', 'Leaderboard')}
               className="header-icon-btn"
+              style={{ color: '#F59E0B' }}
             >
-              <Crown size={17} color="#f59e0b" />
+              <Crown size={18} />
             </button>
+
+            {isHome && (
+              <button onClick={() => navigate('/notifications')} title="Notifications" className="header-icon-btn header-notification-btn">
+                <Bell size={17} />
+                {unreadCount > 0 && <span className="header-notification-badge" />}
+              </button>
+            )}
 
             <button
               onClick={handleLanguageToggle}
@@ -132,18 +146,18 @@ export const Header: React.FC<HeaderProps> = ({
               {isDarkMode ? <Sun size={17} color="#FFD700" /> : <Moon size={17} />}
             </button>
 
-            <button
+            {!isHome && <button
               onClick={() => navigate('/notifications')}
               title="Notifications"
               className="header-icon-btn"
               style={{ position: 'relative' }}
             >
               <Bell size={17} />
-            </button>
+            </button>}
           </>
         )}
       </div>
-    </header>
+    </>
   );
 };
 

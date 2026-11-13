@@ -202,7 +202,10 @@ export const Play: React.FC = () => {
   ];
 
   return (
-    <Container maxWidth="1100px" style={{ gap: '24px', paddingBottom: '60px' }}>
+    <div className="home-gaming-canvas" style={{ width: '100%' }}>
+      {/* Centered Responsive Stage for Play */}
+      <div className="home-stage-container">
+        <Container maxWidth="100%" isPadding={false} style={{ gap: '24px', paddingBottom: '60px', position: 'relative', zIndex: 2, width: '100%' }}>
       {/* Top Header Bar */}
       <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
@@ -929,6 +932,8 @@ export const Play: React.FC = () => {
         )}
       </CustomModal>
     </Container>
+    </div>
+  </div>
   );
 };
 
