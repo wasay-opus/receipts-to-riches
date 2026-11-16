@@ -105,7 +105,7 @@ type CommunityPoll = {
 };
 
 const fallbackAvatar =
-  'https://ui-avatars.com/api/?name=Community+Member&background=00674D&color=fff';
+  'https://ui-avatars.com/api/?name=User&background=00674D&color=fff';
 
 type TranslateFn = any;
 
@@ -216,19 +216,27 @@ const normalizePost = (post: any, t: TranslateFn): FeedPost => {
     post?.file_url;
   const media_type = post?.media_type ?? (isVideoUrl(image) ? 'video' : 'image');
 
+  const authorName =
+    getDisplayName(user) ??
+    post?.author_name ??
+    post?.name ??
+    t('feedScreen.communityMemberFallback', 'Community Member');
+
+  const rawPostAvatar =
+    user?.image_url ??
+    user?.profile_image_url ??
+    user?.avatar ??
+    post?.avatar ??
+    user?.image;
+
+  const resolvedAvatar =
+    rawPostAvatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=00674D&color=fff`;
+
   return {
     id: post?.id,
-    author:
-      getDisplayName(user) ??
-      post?.author_name ??
-      post?.name ??
-      t('feedScreen.communityMemberFallback', 'Community Member'),
-    avatar:
-      user?.image_url ??
-      user?.profile_image_url ??
-      user?.avatar ??
-      post?.avatar ??
-      fallbackAvatar,
+    author: authorName,
+    avatar: resolvedAvatar,
     time: formatTime(post?.created_at ?? post?.createdAt),
     content: post?.description ?? post?.content ?? post?.body ?? '',
     image,
@@ -307,7 +315,7 @@ export const Feed: React.FC = () => {
     toggleFollowLoadingMap,
   } = useSelector((state: RootState) => state.feed);
 
-  const [activeCommentPostId, setActiveCommentPostId] = useState<string | number | null>(postId || null);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | number | null>(null);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: string | number; user: string } | null>(null);
   const [commentReactions, setCommentReactions] = useState<
@@ -1346,7 +1354,20 @@ export const Feed: React.FC = () => {
                 }}
               >
                 <button
-                  onClick={() => post.userId && navigate(`/social-profile/${post.userId}`)}
+                  onClick={() =>
+                    post.userId &&
+                    navigate(`/social-profile/${post.userId}`, {
+                      state: {
+                        user: {
+                          id: post.userId,
+                          name: post.author,
+                          avatar: post.avatar,
+                          image: post.avatar,
+                        },
+                      },
+                    })
+                  }
+                  className="feed-post-author-btn"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1363,6 +1384,10 @@ export const Feed: React.FC = () => {
                   <img
                     src={post.avatar}
                     alt={post.author}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author || 'User')}&background=00674D&color=fff`;
+                    }}
                     style={{
                       width: '42px',
                       height: '42px',
@@ -1371,9 +1396,10 @@ export const Feed: React.FC = () => {
                       flexShrink: 0,
                     }}
                   />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div className="feed-post-header-title-row" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <h4
+                        className="feed-post-author-name"
                         style={{
                           fontSize: '15px',
                           fontWeight: 700,
@@ -1388,8 +1414,9 @@ export const Feed: React.FC = () => {
                       </h4>
                       {isTargetPost && (
                         <span
+                          className="feed-linked-post-badge"
                           style={{
-                            padding: '2px 8px',
+                            padding: '2px 7px',
                             borderRadius: '8px',
                             background: 'rgba(0, 230, 118, 0.12)',
                             color: 'var(--green)',
@@ -1399,6 +1426,7 @@ export const Feed: React.FC = () => {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '3px',
+                            whiteSpace: 'nowrap',
                           }}
                         >
                           ★ Linked Post
@@ -1752,8 +1780,9 @@ export const Feed: React.FC = () => {
             : t('feedScreen.comments.modalTitle', 'Comments')
         }
         maxWidth="520px"
+        className="feed-comments-modal"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '440px', overflowY: 'auto', paddingRight: '4px' }}>
+        <div className="feed-comments-list-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '440px', overflowY: 'auto', paddingRight: '4px' }}>
           {selectedPost?.comments.length === 0 && (
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', margin: '24px 0' }}>
               {t('feedScreen.comments.emptyState', 'No comments yet. Be the first to comment!')}
@@ -2455,66 +2484,30 @@ export const Feed: React.FC = () => {
       {/* Fullscreen Image Preview Lightbox */}
       {previewModalImage && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            backgroundColor: 'rgba(0, 0, 0, 0.92)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            animation: 'fadeIn 0.2s ease-out',
-          }}
+          className="feed-lightbox-backdrop"
           onClick={() => setPreviewModalImage(null)}
         >
           {/* Close button */}
           <button
             type="button"
+            className="feed-lightbox-close-btn"
             onClick={() => setPreviewModalImage(null)}
             title={t('common.close', 'Close')}
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              background: 'rgba(255, 255, 255, 0.16)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '42px',
-              height: '42px',
-              color: '#FFFFFF',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 10,
-              transition: 'background 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)';
-            }}
           >
-            <X size={24} />
+            <X size={22} />
           </button>
 
           {/* Full Image */}
-          <img
-            src={previewModalImage}
-            alt="Full size attachment"
-            style={{
-              maxWidth: '95vw',
-              maxHeight: '92vh',
-              objectFit: 'contain',
-              borderRadius: '10px',
-              boxShadow: '0 16px 48px rgba(0, 0, 0, 0.8)',
-            }}
+          <div
+            className="feed-lightbox-content-box"
             onClick={(e) => e.stopPropagation()}
-          />
+          >
+            <img
+              src={previewModalImage}
+              alt="Full size attachment"
+              className="feed-lightbox-img"
+            />
+          </div>
         </div>
       )}
     </Container>

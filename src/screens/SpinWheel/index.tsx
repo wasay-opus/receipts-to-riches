@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, HelpCircle, ArrowLeft, RotateCw, RotateCcw, Megaphone, Tv, Volume2, VolumeX, Check, Clock } from 'lucide-react';
-import { Button, Container, CustomModal, MiniGameHelpMenu, showToast, triggerCoinCelebration } from '../../components';
+import { Button, Container, CustomModal, MiniGameHelpMenu, showToast, triggerCoinCelebration, FailAnimation } from '../../components';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import { isDeviceInUSTimezone, UNSUPPORTED_TIMEZONE_MESSAGE } from '../../utils/usTime';
 import { WebSound, soundAssets } from '../../utils/soundLoader';
@@ -686,28 +686,13 @@ export const SpinWheel: React.FC = () => {
             </>
           ) : (
             <>
-              {/* Better Luck Next Time Distinct State (No Gold Coin) */}
-              <div
-                style={{
-                  width: '84px',
-                  height: '84px',
-                  borderRadius: '50%',
-                  background: 'rgba(245, 158, 11, 0.12)',
-                  border: '2px dashed rgba(245, 158, 11, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                  boxShadow: '0 8px 24px rgba(245, 158, 11, 0.15)',
-                }}
-              >
-                <RotateCcw size={40} color="#F59E0B" />
-              </div>
+              {/* Better Luck Next Time Distinct State with Lottie Fail Animation */}
+              <FailAnimation width={170} height={130} style={{ marginBottom: '12px' }} />
 
-              <h3 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
-                Better Luck Next Time!
+              <h3 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0', textAlign: 'center' }}>
+                Better luck next time!
               </h3>
-              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: '0 0 24px 0', lineHeight: '1.45' }}>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: '0 0 24px 0', lineHeight: '1.45', textAlign: 'center' }}>
                 The wheel stopped on zero points! Give it another spin to score rewards.
               </p>
 
@@ -719,13 +704,13 @@ export const SpinWheel: React.FC = () => {
                     width: '100%',
                     padding: '14px',
                     borderRadius: '24px',
-                    background: '#F59E0B',
+                    background: '#00674D',
                     color: '#FFFFFF',
                     border: 'none',
                     fontSize: '15.5px',
-                    fontWeight: 800,
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+                    boxShadow: '0 4px 14px rgba(0, 103, 77, 0.35)',
                     transition: 'transform 0.15s ease',
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.01)')}
@@ -743,14 +728,14 @@ export const SpinWheel: React.FC = () => {
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: 'var(--text-muted)',
-                    fontSize: '14.5px',
-                    fontWeight: 600,
+                    color: '#00674D',
+                    fontSize: '15px',
+                    fontWeight: 700,
                     cursor: 'pointer',
                     padding: '8px 16px',
                   }}
                 >
-                  Back to Home
+                  Done
                 </button>
               </div>
             </>

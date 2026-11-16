@@ -279,6 +279,7 @@ export const Rewards: React.FC = () => {
     <Container maxWidth="760px" style={{ gap: '20px', paddingBottom: '90px' }}>
       {/* 1. Header matching Screenshot 1 */}
       <div
+        className="screen-header-row"
         style={{
           display: 'flex',
           alignItems: 'center',

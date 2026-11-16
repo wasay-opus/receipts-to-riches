@@ -341,7 +341,7 @@ export const Home: React.FC = () => {
     <div className="home-gaming-canvas">
       <div className="home-stage-container">
         <CoinsLayer />
-        <Container className="home-dashboard-content" maxWidth="1200px" isPadding={false} style={{ gap: '24px', padding: '16px 20px 48px', position: 'relative', zIndex: 10, width: '100%', margin: '0 auto' }}>
+        <Container className="home-dashboard-content" maxWidth="1200px" isPadding={false} style={{ gap: '24px', position: 'relative', zIndex: 10, width: '100%', margin: '0 auto' }}>
       <style>{`
         @keyframes slideDownToast {
           0% { transform: translate(-50%, -100px); opacity: 0; }
@@ -413,16 +413,20 @@ export const Home: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Header Greeting & Notification */}
+      {/* 1. Header Greeting */}
       <div
+        className="home-greeting-row"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           paddingTop: '4px',
+          minHeight: '46px',
+          position: 'relative',
+          zIndex: 10,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
           <div
             onClick={() => navigate('/profile')}
             style={{
@@ -454,212 +458,80 @@ export const Home: React.FC = () => {
               }}
             />
           </div>
-          <div>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span>👋</span> {t('home.hello', 'Hello')}
             </span>
             <h2
               style={{
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 800,
                 color: 'var(--text-main)',
                 lineHeight: 1.2,
                 marginTop: '2px',
                 textTransform: 'capitalize',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {userName}
             </h2>
           </div>
         </div>
-
-        <div className="home-greeting-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={() => navigate('/rankings')}
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.25))',
-              border: '1.5px solid rgba(245, 158, 11, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#F59E0B',
-              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.25)',
-              transition: 'transform 0.15s ease',
-            }}
-            aria-label={t('rankingsScreen.leaderboard', 'Leaderboard')}
-            title={t('rankingsScreen.leaderboard', 'Leaderboard')}
-          >
-            <Crown size={21} />
-          </button>
-
-          <button
-            onClick={() => navigate('/notifications')}
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              position: 'relative',
-              color: 'var(--text-main)',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-            }}
-            aria-label={t('notifications.title', 'Notifications')}
-          >
-            <Bell size={20} />
-            {unreadCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '-2px',
-                  background: '#EF4444',
-                  color: '#FFFFFF',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  borderRadius: '10px',
-                  minWidth: '18px',
-                  height: '18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '2px solid var(--bg-main)',
-                }}
-              >
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* 2. Hero "My Balance" Card (Centerpiece) */}
       <section
-        className="balance-banner relative overflow-hidden"
+        className="balance-banner relative overflow-hidden home-balance-banner-card"
         data-purpose="balance-banner"
-        style={{
-          borderRadius: '24px',
-          padding: '24px 28px',
-          background: 'linear-gradient(135deg, #096843 0%, #109766 50%, #1ea773 100%)',
-          border: '1px solid rgba(110, 231, 183, 0.45)',
-          boxShadow: '0 20px 45px -10px rgba(9, 104, 67, 0.35)',
-          position: 'relative',
-          color: '#FFFFFF',
-        }}
       >
         {/* Luxury curved background highlights & radial mesh */}
-        <div
-          style={{
-            position: 'absolute',
-            right: '-64px',
-            top: '-96px',
-            width: '28rem',
-            height: '28rem',
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.15)',
-            filter: 'blur(40px)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            right: '192px',
-            bottom: '-80px',
-            width: '20rem',
-            height: '20rem',
-            borderRadius: '50%',
-            background: 'rgba(110, 231, 183, 0.2)',
-            filter: 'blur(30px)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            left: '33%',
-            top: '50%',
-            width: '12rem',
-            height: '12rem',
-            borderRadius: '50%',
-            background: 'rgba(251, 191, 36, 0.1)',
-            filter: 'blur(40px)',
-            pointerEvents: 'none',
-          }}
-        />
+        <div className="home-balance-glow-orb-1" />
+        <div className="home-balance-glow-orb-2" />
+        <div className="home-balance-glow-orb-3" />
 
         {/* Sparkling particles */}
-        <div style={{ position: 'absolute', left: '256px', top: '24px', color: 'rgba(254, 240, 138, 0.9)', fontSize: '14px', userSelect: 'none', pointerEvents: 'none' }}>✦</div>
-        <div style={{ position: 'absolute', left: '52%', top: '32px', color: 'rgba(255, 255, 255, 0.7)', fontSize: '12px', userSelect: 'none', pointerEvents: 'none' }}>✦</div>
-        <div style={{ position: 'absolute', left: '38%', bottom: '40px', color: 'rgba(167, 243, 208, 0.8)', fontSize: '14px', userSelect: 'none', pointerEvents: 'none' }}>✦</div>
+        <div className="home-balance-sparkle-1">✦</div>
+        <div className="home-balance-sparkle-2">✦</div>
+        <div className="home-balance-sparkle-3">✦</div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 10 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="home-balance-top-row">
+          <div className="home-balance-header-col">
+            <div className="home-balance-badge-row">
               <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  color: 'rgba(167, 243, 208, 0.95)',
-                  background: 'rgba(6, 78, 59, 0.45)',
-                  padding: '3px 12px',
-                  borderRadius: '999px',
-                  border: '1px solid rgba(52, 211, 153, 0.3)',
-                }}
+                className="home-balance-title-pill"
               >
                 TOTAL REWARDS BALANCE
               </span>
             </div>
 
             {/* Points and 3D Gold Coin */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingTop: '4px' }}>
+            <div className="home-balance-points-row">
               <div
-                style={{
-                  position: 'relative',
-                  width: '56px',
-                  height: '56px',
-                  flexShrink: 0,
-                  filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.25))',
-                }}
+                className="home-balance-coin-icon-wrap"
               >
                 <img
                   alt="Gold Star Coin"
                   src={images.goldCoin05}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', transition: 'transform 0.4s ease' }}
+                  className="home-balance-coin-img"
                   onMouseEnter={(e) => (e.currentTarget.style.transform = 'rotate(15deg) scale(1.08)')}
                   onMouseLeave={(e) => (e.currentTarget.style.transform = 'rotate(0deg) scale(1)')}
                 />
               </div>
               <div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                <div className="home-balance-value-row">
                   <span
-                    style={{
-                      fontSize: '46px',
-                      fontWeight: 900,
-                      letterSpacing: '-0.02em',
-                      color: '#FFFFFF',
-                      lineHeight: 1,
-                      filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
-                    }}
+                    className="home-balance-points-val"
                   >
                     {Number(totalCoins).toLocaleString()}
                   </span>
-                  <span style={{ color: '#D1FAE5', fontWeight: 800, fontSize: '16px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  <span className="home-balance-points-unit">
                     Points
                   </span>
                 </div>
-                <p style={{ margin: '4px 0 0 0', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ color: '#FFFFFF' }}>Instant Payout Available</span>
+                <p className="home-balance-payout-text">
+                  <span className="home-balance-payout-label">Instant Payout Available</span>
                 </p>
               </div>
             </div>
@@ -668,67 +540,30 @@ export const Home: React.FC = () => {
           {/* Right: 3D Glossy Gift Box suspended on golden pedestal aura */}
           <div
             onClick={() => navigate('/rewards')}
-            style={{
-              position: 'relative',
-              paddingRight: '6px',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
+            className="home-balance-gift-trigger"
             title={t('bottomTabs.rewards', 'Rewards')}
           >
-            <div className="aura-rings" style={{ position: 'absolute', inset: 0, filter: 'blur(35px)', borderRadius: '50%', transform: 'scale(1.3)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', inset: '-8px', background: 'rgba(251, 191, 36, 0.2)', filter: 'blur(25px)', borderRadius: '50%', pointerEvents: 'none' }} className="animate-pulse-glow" />
+            <div className="aura-rings home-balance-gift-aura-outer" />
+            <div className="animate-pulse-glow home-balance-gift-aura-inner" />
             <div
-              style={{
-                position: 'relative',
-                width: '120px',
-                height: '120px',
-                filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.3))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'transform 0.3s ease',
-              }}
+              className="home-balance-gift-wrapper"
               onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
               onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
             >
               <img
                 alt="Glossy Gift Box"
                 src={images.giftWithGoldGlow06}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 0 16px rgba(251, 191, 36, 0.65))',
-                }}
+                className="home-balance-gift-img"
               />
             </div>
           </div>
         </div>
 
         {/* Bottom Action Bar: Standout High-Tech "Scan Receipt to earn 40 points extra" CTA */}
-        <div style={{ marginTop: '18px' }}>
+        <div className="home-scan-cta-wrapper">
           <div
             onClick={() => navigate('/scan')}
-            className="scan-receipt-cta group"
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              background: 'linear-gradient(90deg, #022c22 0%, #072418 50%, #022c22 100%)',
-              color: '#FFFFFF',
-              borderRadius: '18px',
-              padding: '14px 22px',
-              border: '1px solid rgba(52, 211, 153, 0.45)',
-              boxShadow: '0 12px 28px rgba(0, 28, 20, 0.45)',
-              cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
+            className="scan-receipt-cta group home-scan-cta-bar"
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'scale(1.012)';
               e.currentTarget.style.borderColor = '#6ee7b7';
@@ -740,63 +575,29 @@ export const Home: React.FC = () => {
               e.currentTarget.style.background = 'linear-gradient(90deg, #022c22 0%, #072418 50%, #022c22 100%)';
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div className="home-scan-cta-left">
               <div
-                className="scan-cta-icon group-hover:rotate-6 transition-transform duration-300"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #10b981 0%, #2dd4bf 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#022c22',
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                  flexShrink: 0,
-                  transition: 'transform 0.3s ease',
-                }}
+                className="scan-cta-icon group-hover:rotate-6 transition-transform duration-300 home-scan-icon-box"
               >
                 <ScanLine size={24} color="#022c22" strokeWidth={2.5} />
               </div>
               <div>
-                <span style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '0.02em', color: '#FFFFFF', display: 'block', lineHeight: 1.2 }}>
+                <span className="home-scan-cta-title">
                   {t('home.useCameraEarnPoints', 'Scan Receipt to earn 40 points extra')}
                 </span>
-                <span style={{ fontSize: '11px', color: '#6ee7b7', fontWeight: 600 }}>
+                <span className="home-scan-cta-subtitle">
                   Instant verification • Unlimited daily scans
                 </span>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="home-scan-cta-right">
               <span
-                style={{
-                  fontSize: '11.5px',
-                  fontWeight: 900,
-                  color: '#fef08a',
-                  background: 'rgba(251, 191, 36, 0.2)',
-                  padding: '5px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(251, 191, 36, 0.35)',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                }}
+                className="home-scan-bonus-badge"
               >
                 +40 PTS
               </span>
               <div
-                className="scan-cta-chevron transition-colors duration-200"
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'rgba(16, 185, 129, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#6ee7b7',
-                  flexShrink: 0,
-                  transition: 'all 0.2s ease',
-                }}
+                className="scan-cta-chevron transition-colors duration-200 home-scan-chevron-box"
               >
                 <ChevronRight size={18} strokeWidth={3} />
               </div>
@@ -807,274 +608,115 @@ export const Home: React.FC = () => {
 
       {/* 3. Daily Streak Card (Ultra Glass with Prestigious 3D Golden Trophy) */}
       <section
-        className="ultra-glass"
-        style={{
-          borderRadius: '24px',
-          padding: '22px 26px',
-          border: isDarkMode ? '1px solid rgba(52, 211, 153, 0.25)' : '1px solid rgba(167, 243, 208, 0.8)',
-          background: isDarkMode ? 'rgba(18, 59, 46, 0.85)' : 'rgba(255, 255, 255, 0.88)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: isDarkMode ? '0 16px 36px -10px rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(255, 255, 255, 0.05) inset' : '0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 1px 2px 0 rgba(255, 255, 255, 0.8) inset',
-        }}
+        className="ultra-glass home-streak-section"
         data-purpose="daily-streak"
       >
         {/* Pedestal spotlight glow behind Trophy */}
-        <div
-          style={{
-            position: 'absolute',
-            right: '-24px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '180px',
-            height: '180px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, rgba(245, 158, 11, 0.25) 50%, transparent 70%)',
-            filter: 'blur(30px)',
-            pointerEvents: 'none',
-          }}
-        />
+        <div className="home-streak-glow-spotlight" />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, paddingRight: '20px', position: 'relative', zIndex: 10 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '10px',
-                  background: isDarkMode ? 'rgba(251, 191, 36, 0.2)' : '#fef3c7',
-                  fontSize: '15px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                }}
-              >
+        <div className="home-streak-content-col">
+          <div className="home-streak-header-block">
+            <div className="home-streak-title-row">
+              <span className="home-streak-fire-badge">
                 🔥
               </span>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
+              <span className="home-streak-title-text">
                 {t('home.streakTitle', 'Daily Streak (Unlocks 500 points)')}
               </span>
-              <span
-                style={{
-                  background: 'rgba(251, 191, 36, 0.2)',
-                  color: isDarkMode ? '#fde68a' : '#92400e',
-                  fontSize: '10px',
-                  fontWeight: 900,
-                  textTransform: 'uppercase',
-                  padding: '2px 9px',
-                  borderRadius: '999px',
-                  border: '1px solid rgba(251, 191, 36, 0.4)',
-                }}
-              >
+              <span className="home-streak-day-badge">
                 Day {streakDays} of 7
               </span>
             </div>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>
-              Login &amp; play consecutive <strong style={{ color: 'var(--text-main)' }}>07 days</strong> to receive a grand bonus of <strong style={{ color: '#10b981' }}>500 points</strong>
+            <p className="home-streak-subtitle-text">
+              Login &amp; play consecutive <strong className="home-streak-bold-days">07 days</strong> to receive a grand bonus of <strong className="home-streak-bold-points">500 points</strong>
             </p>
           </div>
 
           {/* 7-Day Milestone Interactive Progress Stepper */}
-          <div style={{ position: 'relative', paddingTop: '10px', paddingBottom: '6px' }}>
+          <div className="home-streak-stepper-wrap">
+            <div className="home-streak-track-bg" />
             <div
+              className="home-streak-track-fill"
               style={{
-                position: 'absolute',
-                top: '24px',
-                left: '20px',
-                right: '20px',
-                height: '8px',
-                background: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0',
-                borderRadius: '999px',
-                zIndex: 0,
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: '24px',
-                left: '20px',
                 width: `${Math.min(100, Math.max(16, ((streakDays - 1) / 6) * 100))}%`,
-                height: '8px',
-                background: 'linear-gradient(90deg, #10b981 0%, #2dd4bf 100%)',
-                borderRadius: '999px',
-                boxShadow: '0 0 10px #10b981',
-                zIndex: 0,
-                transition: 'width 0.4s ease',
               }}
             />
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative', zIndex: 10, padding: '0 4px' }}>
+            <div className="home-streak-milestones-row">
               {/* Day 01 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #059669 0%, #34d399 100%)',
-                    color: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 10px rgba(5, 150, 105, 0.35)',
-                    border: '3px solid #d1fae5',
-                  }}
-                >
-                  <CheckCircle2 size={18} strokeWidth={3} />
+              <div className="home-streak-milestone-item">
+                <div className="home-streak-milestone-circle home-streak-circle-done">
+                  <CheckCircle2 size={15} strokeWidth={3} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '6px', minHeight: '26px' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 900, color: isDarkMode ? '#34d399' : '#065f46', lineHeight: 1 }}>01</span>
-                  <span style={{ fontSize: '9px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', marginTop: '2px' }}>DONE</span>
+                <div className="home-streak-milestone-label-col">
+                  <span className="home-streak-day-num home-streak-day-num--done">01</span>
+                  <span className="home-streak-day-subtext home-streak-day-subtext--done">DONE</span>
                 </div>
               </div>
 
               {/* Day 02 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: isDarkMode ? '#123b2e' : '#FFFFFF',
-                    border: '2.5px solid #10b981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: isDarkMode ? '0 0 0 4px rgba(16, 185, 129, 0.25)' : '0 0 0 4px #ecfdf5',
-                  }}
-                >
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981' }} />
+              <div className="home-streak-milestone-item">
+                <div className="home-streak-milestone-circle home-streak-circle-today">
+                  <span className="home-streak-today-inner-dot" />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '6px', minHeight: '26px' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1 }}>02</span>
-                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#10b981', marginTop: '2px' }}>TODAY</span>
+                <div className="home-streak-milestone-label-col">
+                  <span className="home-streak-day-num home-streak-day-num--today">02</span>
+                  <span className="home-streak-day-subtext home-streak-day-subtext--today">TODAY</span>
                 </div>
               </div>
 
               {/* Day 03 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
-                    border: isDarkMode ? '2px solid rgba(255, 255, 255, 0.18)' : '2px solid #cbd5e1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#f59e0b',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
-                    transition: 'transform 0.2s ease',
-                  }}
-                >
-                  <Lock size={16} strokeWidth={2.4} />
+              <div className="home-streak-milestone-item">
+                <div className="home-streak-milestone-circle home-streak-circle-locked">
+                  <Lock size={13} strokeWidth={2.4} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '6px', minHeight: '26px' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-muted)', lineHeight: 1 }}>03</span>
+                <div className="home-streak-milestone-label-col">
+                  <span className="home-streak-day-num home-streak-day-num--locked">03</span>
                 </div>
               </div>
 
               {/* Day 04 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
-                    border: isDarkMode ? '2px solid rgba(255, 255, 255, 0.18)' : '2px solid #cbd5e1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#f59e0b',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
-                    transition: 'transform 0.2s ease',
-                  }}
-                >
-                  <Lock size={16} strokeWidth={2.4} />
+              <div className="home-streak-milestone-item">
+                <div className="home-streak-milestone-circle home-streak-circle-locked">
+                  <Lock size={13} strokeWidth={2.4} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '6px', minHeight: '26px' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-muted)', lineHeight: 1 }}>04</span>
+                <div className="home-streak-milestone-label-col">
+                  <span className="home-streak-day-num home-streak-day-num--locked">04</span>
                 </div>
               </div>
 
               {/* Day 05 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
-                    border: isDarkMode ? '2px solid rgba(255, 255, 255, 0.18)' : '2px solid #cbd5e1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#f59e0b',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
-                    transition: 'transform 0.2s ease',
-                  }}
-                >
-                  <Lock size={16} strokeWidth={2.4} />
+              <div className="home-streak-milestone-item">
+                <div className="home-streak-milestone-circle home-streak-circle-locked">
+                  <Lock size={13} strokeWidth={2.4} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '6px', minHeight: '26px' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-muted)', lineHeight: 1 }}>05</span>
+                <div className="home-streak-milestone-label-col">
+                  <span className="home-streak-day-num home-streak-day-num--locked">05</span>
                 </div>
               </div>
 
               {/* Day 06 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
-                    border: isDarkMode ? '2px solid rgba(255, 255, 255, 0.18)' : '2px solid #cbd5e1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#f59e0b',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
-                    transition: 'transform 0.2s ease',
-                  }}
-                >
-                  <Lock size={16} strokeWidth={2.4} />
+              <div className="home-streak-milestone-item">
+                <div className="home-streak-milestone-circle home-streak-circle-locked">
+                  <Lock size={13} strokeWidth={2.4} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '6px', minHeight: '26px' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-muted)', lineHeight: 1 }}>06</span>
+                <div className="home-streak-milestone-label-col">
+                  <span className="home-streak-day-num home-streak-day-num--locked">06</span>
                 </div>
               </div>
 
               {/* Day 07 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+              <div className="home-streak-milestone-item">
                 <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #059669 0%, #022c22 100%)',
-                    border: '2px solid #f59e0b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.35)',
-                    transition: 'transform 0.2s ease',
-                  }}
+                  className="home-streak-milestone-circle home-streak-circle-grand-bonus"
                   onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.12)')}
                   onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  <span style={{ fontSize: '16px' }}>🎁</span>
+                  <span className="home-streak-grand-gift-icon">🎁</span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '6px', minHeight: '26px' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 900, color: '#b45309', lineHeight: 1 }}>07</span>
-                  <span style={{ fontSize: '9px', fontWeight: 900, color: '#d97706', background: isDarkMode ? 'rgba(251, 191, 36, 0.25)' : '#fef3c7', padding: '1px 5px', borderRadius: '4px', marginTop: '2px' }}>+500</span>
+                <div className="home-streak-milestone-label-col">
+                  <span className="home-streak-day-num home-streak-day-num--grand">07</span>
+                  <span className="home-streak-day-subtext home-streak-bonus-tag">+500</span>
                 </div>
               </div>
             </div>
@@ -1083,27 +725,12 @@ export const Home: React.FC = () => {
 
         {/* Right: Large Prestigious 3D Golden Trophy */}
         <div
-          style={{
-            position: 'relative',
-            width: '100px',
-            height: '100px',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10,
-          }}
+          className="home-streak-trophy-wrapper"
         >
           <img
             alt="Gold Trophy"
             src={images.goldTrophy07}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 12px 22px rgba(234, 179, 8, 0.45))',
-              transition: 'transform 0.3s ease',
-            }}
+            className="home-streak-trophy-img"
             onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
             onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           />
@@ -1111,45 +738,22 @@ export const Home: React.FC = () => {
       </section>
 
       {/* 4. Win Cash Games Section */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '6px' }} data-purpose="cash-games">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #059669 0%, #14b8a6 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)',
-              }}
-            >
+      <section className="home-cash-games-section" data-purpose="cash-games">
+        <div className="home-cash-games-header">
+          <div className="home-cash-games-title-group">
+            <div className="home-cash-games-icon-wrap">
               <Gamepad2 size={20} color="#FFFFFF" />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2 style={{ fontSize: '17px', fontWeight: 900, color: 'var(--text-main)', margin: 0, lineHeight: 1.2 }}>
+              <div className="home-cash-games-title-row">
+                <h2 className="home-cash-games-heading">
                   Win Cash Games
                 </h2>
-                <span
-                  style={{
-                    background: '#d1fae5',
-                    color: '#065f46',
-                    fontSize: '10px',
-                    fontWeight: 900,
-                    padding: '2px 8px',
-                    borderRadius: '999px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
+                <span className="home-cash-games-nobuyin-badge">
                   NO BUY-IN
                 </span>
               </div>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, margin: '2px 0 0 0' }}>
+              <p className="home-cash-games-subtitle">
                 Play 100% free daily for your chance to win instant cash
               </p>
             </div>
@@ -1158,22 +762,7 @@ export const Home: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/play')}
-            style={{
-              fontSize: '12.5px',
-              fontWeight: 800,
-              color: '#047857',
-              background: 'rgba(209, 250, 229, 0.7)',
-              border: 'none',
-              borderRadius: '999px',
-              padding: '6px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              transition: 'background 0.2s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#d1fae5')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(209, 250, 229, 0.7)')}
+            className="home-cash-games-view-all-btn"
           >
             <span>View All Games</span>
             <ChevronRight size={14} strokeWidth={2.5} />
@@ -1181,63 +770,35 @@ export const Home: React.FC = () => {
         </div>
 
         {/* 4 High-Octane Vibrant Jackpot Game Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        <div className="home-games-grid">
           {/* Card 1: Purple Velvet ($1,000) with 3D Crown */}
           <div
             onClick={() => navigate('/play/cash-game?slug=zdt')}
-            className="game-card shadow-glow-purple group"
-            style={{
-              borderRadius: '24px',
-              background: 'linear-gradient(135deg, #7715ec 0%, #630fc9 50%, #3f0685 100%)',
-              color: '#FFFFFF',
-              padding: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: '175px',
-              border: '1px solid rgba(192, 132, 252, 0.3)',
-              cursor: 'pointer',
-            }}
+            className="game-card shadow-glow-purple group home-cash-game-card home-cash-game-card--zdt"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', position: 'relative', zIndex: 10 }}>
-              <span
-                style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  fontSize: '9px',
-                  fontWeight: 900,
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: '#FFFFFF',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
+            <div className="home-cash-card-header">
+              <span className="home-cash-card-badge">
                 ✦ JACKPOT
               </span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.05em' }}>DAILY</span>
+              <span className="home-cash-card-tag">DAILY</span>
             </div>
 
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
+            <div className="home-cash-card-watermark-wrap">
               <img
                 alt="Gold Crown"
                 src={images.crown01}
-                className="card-watermark group-hover:rotate-6 transition-transform duration-500"
-                style={{ width: '125px', height: '125px', objectFit: 'contain', opacity: 0.35, filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' }}
+                className="card-watermark group-hover:rotate-6 transition-transform duration-500 home-cash-card-watermark-img"
               />
             </div>
 
-            <div style={{ textAlign: 'center', margin: 'auto 0', position: 'relative', zIndex: 10, padding: '8px 0' }}>
-              <div style={{ fontSize: '13px', fontWeight: 900, letterSpacing: '0.08em', color: '#FFFFFF', textTransform: 'uppercase' }}>
+            <div className="home-cash-card-body">
+              <div className="home-cash-card-title">
                 ZDT
               </div>
-              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', margin: '2px 0', filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.5))' }}>
+              <div className="home-cash-card-amount">
                 $1,000
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              <span className="home-cash-card-label">
                 CASH PRIZE
               </span>
             </div>
@@ -1246,59 +807,31 @@ export const Home: React.FC = () => {
           {/* Card 2: Crimson Ruby ($3,000) with 3D Target */}
           <div
             onClick={() => navigate('/play/cash-game?slug=pick-3')}
-            className="game-card shadow-glow-red group"
-            style={{
-              borderRadius: '24px',
-              background: 'linear-gradient(135deg, #ff2a5f 0%, #e8144b 50%, #b30831 100%)',
-              color: '#FFFFFF',
-              padding: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: '175px',
-              border: '1px solid rgba(251, 113, 133, 0.3)',
-              cursor: 'pointer',
-            }}
+            className="game-card shadow-glow-red group home-cash-game-card home-cash-game-card--pick3"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', position: 'relative', zIndex: 10 }}>
-              <span
-                style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  fontSize: '9px',
-                  fontWeight: 900,
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: '#FFFFFF',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
+            <div className="home-cash-card-header">
+              <span className="home-cash-card-badge">
                 ✦ JACKPOT
               </span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.05em' }}>POPULAR</span>
+              <span className="home-cash-card-tag">POPULAR</span>
             </div>
 
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
+            <div className="home-cash-card-watermark-wrap">
               <img
                 alt="Red Target"
                 src={images.target02}
-                className="card-watermark group-hover:rotate-6 transition-transform duration-500"
-                style={{ width: '125px', height: '125px', objectFit: 'contain', opacity: 0.35, filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' }}
+                className="card-watermark group-hover:rotate-6 transition-transform duration-500 home-cash-card-watermark-img"
               />
             </div>
 
-            <div style={{ textAlign: 'center', margin: 'auto 0', position: 'relative', zIndex: 10, padding: '8px 0' }}>
-              <div style={{ fontSize: '13px', fontWeight: 900, letterSpacing: '0.08em', color: '#FFFFFF', textTransform: 'uppercase' }}>
+            <div className="home-cash-card-body">
+              <div className="home-cash-card-title">
                 PICK 3
               </div>
-              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', margin: '2px 0', filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.5))' }}>
+              <div className="home-cash-card-amount">
                 $3,000
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              <span className="home-cash-card-label">
                 CASH PRIZE
               </span>
             </div>
@@ -1307,59 +840,31 @@ export const Home: React.FC = () => {
           {/* Card 3: Emerald Jade ($4,000) with 3D Four-Leaf Clover */}
           <div
             onClick={() => navigate('/play/cash-game?slug=pick-4')}
-            className="game-card shadow-glow-emerald group"
-            style={{
-              borderRadius: '24px',
-              background: 'linear-gradient(135deg, #12c476 0%, #09a860 50%, #04703e 100%)',
-              color: '#FFFFFF',
-              padding: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: '175px',
-              border: '1px solid rgba(110, 231, 183, 0.4)',
-              cursor: 'pointer',
-            }}
+            className="game-card shadow-glow-emerald group home-cash-game-card home-cash-game-card--pick4"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', position: 'relative', zIndex: 10 }}>
-              <span
-                style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  fontSize: '9px',
-                  fontWeight: 900,
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: '#FFFFFF',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
+            <div className="home-cash-card-header">
+              <span className="home-cash-card-badge">
                 ✦ JACKPOT
               </span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.05em' }}>LUCKY</span>
+              <span className="home-cash-card-tag">LUCKY</span>
             </div>
 
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
+            <div className="home-cash-card-watermark-wrap">
               <img
                 alt="Four Leaf Clover"
                 src={images.clover03}
-                className="card-watermark group-hover:rotate-6 transition-transform duration-500"
-                style={{ width: '125px', height: '125px', objectFit: 'contain', opacity: 0.35, filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' }}
+                className="card-watermark group-hover:rotate-6 transition-transform duration-500 home-cash-card-watermark-img"
               />
             </div>
 
-            <div style={{ textAlign: 'center', margin: 'auto 0', position: 'relative', zIndex: 10, padding: '8px 0' }}>
-              <div style={{ fontSize: '13px', fontWeight: 900, letterSpacing: '0.08em', color: '#FFFFFF', textTransform: 'uppercase' }}>
+            <div className="home-cash-card-body">
+              <div className="home-cash-card-title">
                 PICK 4
               </div>
-              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', margin: '2px 0', filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.5))' }}>
+              <div className="home-cash-card-amount">
                 $4,000
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              <span className="home-cash-card-label">
                 CASH PRIZE
               </span>
             </div>
@@ -1368,59 +873,31 @@ export const Home: React.FC = () => {
           {/* Card 4: Sapphire Blue ($5,000) with 3D Star */}
           <div
             onClick={() => navigate('/play/cash-game?slug=pick-5')}
-            className="game-card shadow-glow-blue group"
-            style={{
-              borderRadius: '24px',
-              background: 'linear-gradient(135deg, #247df6 0%, #1264d8 50%, #0842a1 100%)',
-              color: '#FFFFFF',
-              padding: '16px',
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: '175px',
-              border: '1px solid rgba(147, 197, 253, 0.3)',
-              cursor: 'pointer',
-            }}
+            className="game-card shadow-glow-blue group home-cash-game-card home-cash-game-card--pick5"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', position: 'relative', zIndex: 10 }}>
-              <span
-                style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  fontSize: '9px',
-                  fontWeight: 900,
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: '#FFFFFF',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
+            <div className="home-cash-card-header">
+              <span className="home-cash-card-badge">
                 ✦ MEGA JACKPOT
               </span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.05em' }}>TOP</span>
+              <span className="home-cash-card-tag">TOP</span>
             </div>
 
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
+            <div className="home-cash-card-watermark-wrap">
               <img
                 alt="Blue Star"
                 src={images.blueStar04}
-                className="card-watermark group-hover:rotate-6 transition-transform duration-500"
-                style={{ width: '125px', height: '125px', objectFit: 'contain', opacity: 0.35, filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' }}
+                className="card-watermark group-hover:rotate-6 transition-transform duration-500 home-cash-card-watermark-img"
               />
             </div>
 
-            <div style={{ textAlign: 'center', margin: 'auto 0', position: 'relative', zIndex: 10, padding: '8px 0' }}>
-              <div style={{ fontSize: '13px', fontWeight: 900, letterSpacing: '0.08em', color: '#FFFFFF', textTransform: 'uppercase' }}>
+            <div className="home-cash-card-body">
+              <div className="home-cash-card-title">
                 PICK 5
               </div>
-              <div style={{ fontSize: '34px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', margin: '2px 0', filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.5))' }}>
+              <div className="home-cash-card-amount">
                 $5,000
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              <span className="home-cash-card-label">
                 CASH PRIZE
               </span>
             </div>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
@@ -44,7 +44,7 @@ import {
 } from '../../utils/userDisplay';
 
 const fallbackAvatar =
-  'https://ui-avatars.com/api/?name=Community+Member&background=00674D&color=fff';
+  'https://ui-avatars.com/api/?name=User&background=00674D&color=fff';
 
 const isVideoUrl = (url?: string, type?: string) => {
   if (!url) return false;
@@ -79,8 +79,11 @@ const formatTime = (value?: string) => {
 export const SocialProfile: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { userId } = useParams();
   const dispatch = useDispatch<AppDispatch>();
+
+  const stateUser = (location.state as any)?.user || (location.state as any)?.author || null;
 
   const {
     userProfileData,
@@ -96,8 +99,20 @@ export const SocialProfile: React.FC = () => {
   const targetUserId = userId ? String(userId) : currentUserId ? String(currentUserId) : '';
   const isOwnProfile = Boolean(currentUserId && targetUserId && String(currentUserId) === String(targetUserId));
 
+  // Find user from existing feed list if state is not present
+  const feedMatchingUser = useMemo(() => {
+    if (!targetUserId || !Array.isArray(feedList)) return null;
+    const match = feedList.find((item: any) => {
+      const uId = item?.user_id ?? item?.user?.id ?? item?.author_id;
+      return uId && String(uId) === String(targetUserId);
+    });
+    return match?.user ?? match?.author ?? (match?.user_id ? match : null);
+  }, [targetUserId, feedList]);
+
   const profileFromApi = getProfile(userProfileData);
-  const activeProfile = isOwnProfile ? { ...(profileFromApi || {}), ...(currentUser || {}) } : profileFromApi;
+  const activeProfile = isOwnProfile
+    ? { ...(profileFromApi || {}), ...(currentUser || {}) }
+    : { ...(stateUser || {}), ...(feedMatchingUser || {}), ...(profileFromApi || {}) };
 
   const profileId = targetUserId || activeProfile?.id || activeProfile?.user_id;
   const isFollowing = Boolean(activeProfile?.is_following ?? activeProfile?.is_followed ?? activeProfile?.isFollowing);
@@ -171,9 +186,13 @@ export const SocialProfile: React.FC = () => {
     ? getUserFullName(currentUser) || getDisplayName(activeProfile)
     : getDisplayName(activeProfile);
 
+  const dynamicFallbackAvatar = useMemo(() => {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || 'User')}&background=00674D&color=fff`;
+  }, [displayName]);
+
   const avatarUrl = isOwnProfile
-    ? getUserAvatarUrl(currentUser) || getUserAvatarUrl(activeProfile) || fallbackAvatar
-    : getUserAvatarUrl(activeProfile) || fallbackAvatar;
+    ? getUserAvatarUrl(currentUser) || getUserAvatarUrl(activeProfile) || dynamicFallbackAvatar
+    : getUserAvatarUrl(activeProfile) || dynamicFallbackAvatar;
 
   const coverPhotoUrl = useMemo(() => {
     return isOwnProfile
@@ -275,13 +294,13 @@ export const SocialProfile: React.FC = () => {
         : t('socialProfile.alreadyBlockedTitle', 'Already Blocked');
       const text = isReported
         ? t(
-            'socialProfile.alreadyBlockedAndReportedText',
-            'You have already blocked and reported this user. Would you like to unblock them?'
-          )
+          'socialProfile.alreadyBlockedAndReportedText',
+          'You have already blocked and reported this user. Would you like to unblock them?'
+        )
         : t(
-            'socialProfile.alreadyBlockedText',
-            'You already blocked this user. Would you like to unblock them?'
-          );
+          'socialProfile.alreadyBlockedText',
+          'You already blocked this user. Would you like to unblock them?'
+        );
 
       const wantUnblock = await confirmUnblockAction({
         title,
@@ -426,16 +445,16 @@ export const SocialProfile: React.FC = () => {
                     isBlocked && isReported
                       ? t('socialProfile.alreadyBlockedAndReported', 'You already blocked and reported this user')
                       : isBlocked
-                      ? t('socialProfile.alreadyBlockedTooltip', 'You already blocked this user')
-                      : t('socialProfile.blockUser', 'Block User')
+                        ? t('socialProfile.alreadyBlockedTooltip', 'You already blocked this user')
+                        : t('socialProfile.blockUser', 'Block User')
                   }
                   style={
                     isBlocked
                       ? {
-                          borderColor: '#EF4444',
-                          background: 'rgba(239, 68, 68, 0.25)',
-                          color: '#EF4444',
-                        }
+                        borderColor: '#EF4444',
+                        background: 'rgba(239, 68, 68, 0.25)',
+                        color: '#EF4444',
+                      }
                       : undefined
                   }
                 >
@@ -449,16 +468,16 @@ export const SocialProfile: React.FC = () => {
                     isReported && isBlocked
                       ? t('socialProfile.alreadyBlockedAndReported', 'You already blocked and reported this user')
                       : isReported
-                      ? t('socialProfile.alreadyReportedTooltip', 'You already reported this user')
-                      : t('socialProfile.report', 'Report')
+                        ? t('socialProfile.alreadyReportedTooltip', 'You already reported this user')
+                        : t('socialProfile.report', 'Report')
                   }
                   style={
                     isReported
                       ? {
-                          borderColor: '#F59E0B',
-                          background: 'rgba(245, 158, 11, 0.25)',
-                          color: '#F59E0B',
-                        }
+                        borderColor: '#F59E0B',
+                        background: 'rgba(245, 158, 11, 0.25)',
+                        color: '#F59E0B',
+                      }
                       : undefined
                   }
                 >
@@ -490,9 +509,23 @@ export const SocialProfile: React.FC = () => {
 
         {/* User Display Name, Bio & Location */}
         <div className="social-profile-header-info">
-          <h2 className="social-profile-name">
-            {displayName}
-          </h2>
+          {userProfileLoading && (!displayName || displayName === 'Community Member') ? (
+            <div
+              style={{
+                width: '140px',
+                height: '24px',
+                borderRadius: '6px',
+                background: 'var(--border-color)',
+                opacity: 0.5,
+                animation: 'pulse 1.5s infinite',
+                margin: '4px 0',
+              }}
+            />
+          ) : (
+            <h2 className="social-profile-name">
+              {displayName}
+            </h2>
+          )}
 
           {userBio ? (
             <p className="social-profile-bio">
@@ -517,7 +550,8 @@ export const SocialProfile: React.FC = () => {
               title={isFollowing ? t('socialProfile.following', 'Following') : t('socialProfile.follow', 'Follow')}
               icon={isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
               variant={isFollowing ? 'secondary' : 'primary'}
-              style={{ flex: 1, padding: '9px 16px', fontSize: '13px' }}
+              className="social-profile-follow-btn"
+              style={{ padding: '9px 16px', fontSize: '13px' }}
             />
           </div>
         )}
@@ -686,23 +720,11 @@ export const SocialProfile: React.FC = () => {
                         <img src={postMedia} alt="Post thumbnail" loading="lazy" />
                       )
                     ) : (
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          padding: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          textAlign: 'center',
-                          fontSize: '12.5px',
-                          fontWeight: 600,
-                          color: 'var(--text-main)',
-                          background: 'linear-gradient(135deg, rgba(0, 103, 77, 0.22), rgba(0, 230, 118, 0.08))',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {postDesc ? (postDesc.length > 70 ? postDesc.substring(0, 70) + '...' : postDesc) : 'Text post'}
+                      <div className="social-profile-text-tile">
+                        <div className="social-profile-text-quote-icon">“</div>
+                        <p className="social-profile-text-snippet">
+                          {postDesc ? postDesc : t('feedScreen.emptyPostSnippet', 'Text update')}
+                        </p>
                       </div>
                     )}
 

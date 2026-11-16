@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, HelpCircle, ArrowLeft, RefreshCw, Trophy, Megaphone, Zap, Tv, Volume2, VolumeX, Clock } from 'lucide-react';
-import { Button, Container, CustomModal, MiniGameHelpMenu, showToast, triggerCoinCelebration } from '../../components';
+import { Button, Container, CustomModal, MiniGameHelpMenu, showToast, triggerCoinCelebration, FailAnimation } from '../../components';
 import { WebSound } from '../../utils/soundLoader';
 import images from '../../constants/images';
 
@@ -827,37 +827,42 @@ export const Scratch2Win: React.FC = () => {
         </div>
       </CustomModal>
 
-      {/* Result Modal matching flow-video with 360° Spinning Coin */}
+      {/* Result Modal matching flow-video with 360° Spinning Coin or Fail Animation */}
       <CustomModal
         visible={Boolean(resultModal)}
         onClose={() => setResultModal(null)}
         maxWidth="390px"
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '10px 4px 4px 4px' }}>
-          {/* 360 Degree Continuously Spinning Golden Coin in 3D */}
-          <div
-            style={{
-              perspective: '600px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '16px',
-            }}
-          >
-            <img
-              src={images.Coin}
-              alt="Prize Coin"
+          {resultModal?.won ? (
+            /* 360 Degree Continuously Spinning Golden Coin in 3D */
+            <div
               style={{
-                width: '88px',
-                height: '88px',
-                animation: 'coin3DSpinAnimation 2.2s linear infinite',
-                transformStyle: 'preserve-3d',
-                filter: 'drop-shadow(0 6px 18px rgba(255, 215, 0, 0.5))',
+                perspective: '600px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px',
               }}
-            />
-          </div>
+            >
+              <img
+                src={images.Coin}
+                alt="Prize Coin"
+                style={{
+                  width: '88px',
+                  height: '88px',
+                  animation: 'coin3DSpinAnimation 2.2s linear infinite',
+                  transformStyle: 'preserve-3d',
+                  filter: 'drop-shadow(0 6px 18px rgba(255, 215, 0, 0.5))',
+                }}
+              />
+            </div>
+          ) : (
+            /* Lottie Fail Animation when user did not win */
+            <FailAnimation width={170} height={130} style={{ marginBottom: '12px' }} />
+          )}
 
-          <h3 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
+          <h3 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
             {resultModal?.won ? `You won ${resultModal.points} points!` : 'Better luck next time!'}
           </h3>
           <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: '0 0 24px 0', lineHeight: '1.45' }}>
@@ -877,13 +882,13 @@ export const Scratch2Win: React.FC = () => {
                 width: '100%',
                 padding: '14px',
                 borderRadius: '24px',
-                background: '#10B981',
+                background: '#00674D',
                 color: '#FFFFFF',
                 border: 'none',
                 fontSize: '15.5px',
-                fontWeight: 800,
+                fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                boxShadow: '0 4px 14px rgba(0, 103, 77, 0.35)',
                 transition: 'transform 0.15s ease',
               }}
               onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.01)')}
@@ -911,14 +916,14 @@ export const Scratch2Win: React.FC = () => {
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--text-muted)',
-                fontSize: '14.5px',
-                fontWeight: 600,
+                color: '#00674D',
+                fontSize: '15px',
+                fontWeight: 700,
                 cursor: 'pointer',
                 padding: '8px 16px',
               }}
             >
-              Back to Home
+              Done
             </button>
           </div>
         </div>

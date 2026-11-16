@@ -9,6 +9,7 @@ export interface CustomModalProps {
   maxWidth?: string | number;
   showCloseButton?: boolean;
   contentPadding?: string | number;
+  className?: string;
 }
 
 export const CustomModal: React.FC<CustomModalProps> = ({
@@ -19,6 +20,7 @@ export const CustomModal: React.FC<CustomModalProps> = ({
   maxWidth = '460px',
   showCloseButton = true,
   contentPadding = '20px',
+  className = '',
 }) => {
   useEffect(() => {
     if (visible) {
@@ -51,6 +53,7 @@ export const CustomModal: React.FC<CustomModalProps> = ({
       onClick={onClose}
     >
       <div
+        className={`custom-modal-card ${className}`.trim()}
         style={{
           width: '100%',
           maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth,

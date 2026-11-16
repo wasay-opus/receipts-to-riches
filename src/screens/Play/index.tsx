@@ -207,7 +207,7 @@ export const Play: React.FC = () => {
       <div className="home-stage-container">
         <Container maxWidth="100%" isPadding={false} style={{ gap: '24px', paddingBottom: '60px', position: 'relative', zIndex: 2, width: '100%' }}>
       {/* Top Header Bar */}
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="screen-header-row" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -385,56 +385,138 @@ export const Play: React.FC = () => {
           </p>
         </div>
 
-        <div className="cash-game-grid" style={{ width: '100%' }}>
-          {cashGames.map((game) => (
-            <div
-              key={game.id}
-              onClick={() => navigate(game.path)}
-              className={`cash-game-card cash-game-card--${game.id}`}
-            >
-              {/* Comic Halftone & Rayburst Mask Overlay with Zoom on Hover */}
-              <img
-                src={images.cardBgMask}
-                alt=""
-                className="cash-game-mask-bg"
-              />
-
-              {/* Top Glass Badge */}
-              <div className="cash-game-badge">
-                <span>✦ JACKPOT</span>
-              </div>
-
-              {/* Centered Game Name and Price Pill */}
-              <div
-                style={{
-                  position: 'relative',
-                  zIndex: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  margin: '4px 0',
-                }}
-              >
-                <span className="cash-game-item-name">
-                  {game.name}
-                </span>
-
-                <div className="cash-game-price-pill">
-                  <span className="cash-game-item-price">
-                    {game.price}
-                  </span>
-                </div>
-              </div>
-
-              {/* Bottom Play Now Micro Tag */}
-              <div className="cash-game-play-btn">
-                <span>Play Now</span>
-                <span>→</span>
-              </div>
+        <div className="home-games-grid" style={{ width: '100%' }}>
+          {/* Card 1: Purple Velvet ($1,000) with 3D Crown */}
+          <div
+            onClick={() => navigate('/play/cash-game?slug=zdt')}
+            className="game-card shadow-glow-purple group home-cash-game-card home-cash-game-card--zdt"
+          >
+            <div className="home-cash-card-header">
+              <span className="home-cash-card-badge">
+                ✦ JACKPOT
+              </span>
+              <span className="home-cash-card-tag">DAILY</span>
             </div>
-          ))}
+
+            <div className="home-cash-card-watermark-wrap">
+              <img
+                alt="Gold Crown"
+                src={images.crown01}
+                className="card-watermark group-hover:rotate-6 transition-transform duration-500 home-cash-card-watermark-img"
+              />
+            </div>
+
+            <div className="home-cash-card-body">
+              <div className="home-cash-card-title">
+                ZDT
+              </div>
+              <div className="home-cash-card-amount">
+                $1,000
+              </div>
+              <span className="home-cash-card-label">
+                CASH PRIZE
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Crimson Ruby ($3,000) with 3D Target */}
+          <div
+            onClick={() => navigate('/play/cash-game?slug=pick-3')}
+            className="game-card shadow-glow-red group home-cash-game-card home-cash-game-card--pick3"
+          >
+            <div className="home-cash-card-header">
+              <span className="home-cash-card-badge">
+                ✦ JACKPOT
+              </span>
+              <span className="home-cash-card-tag">POPULAR</span>
+            </div>
+
+            <div className="home-cash-card-watermark-wrap">
+              <img
+                alt="Red Target"
+                src={images.target02}
+                className="card-watermark group-hover:rotate-6 transition-transform duration-500 home-cash-card-watermark-img"
+              />
+            </div>
+
+            <div className="home-cash-card-body">
+              <div className="home-cash-card-title">
+                PICK 3
+              </div>
+              <div className="home-cash-card-amount">
+                $3,000
+              </div>
+              <span className="home-cash-card-label">
+                CASH PRIZE
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Emerald Jade ($4,000) with 3D Four-Leaf Clover */}
+          <div
+            onClick={() => navigate('/play/cash-game?slug=pick-4')}
+            className="game-card shadow-glow-emerald group home-cash-game-card home-cash-game-card--pick4"
+          >
+            <div className="home-cash-card-header">
+              <span className="home-cash-card-badge">
+                ✦ JACKPOT
+              </span>
+              <span className="home-cash-card-tag">LUCKY</span>
+            </div>
+
+            <div className="home-cash-card-watermark-wrap">
+              <img
+                alt="Four Leaf Clover"
+                src={images.clover03}
+                className="card-watermark group-hover:rotate-6 transition-transform duration-500 home-cash-card-watermark-img"
+              />
+            </div>
+
+            <div className="home-cash-card-body">
+              <div className="home-cash-card-title">
+                PICK 4
+              </div>
+              <div className="home-cash-card-amount">
+                $4,000
+              </div>
+              <span className="home-cash-card-label">
+                CASH PRIZE
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: Sapphire Blue ($5,000) with 3D Star */}
+          <div
+            onClick={() => navigate('/play/cash-game?slug=pick-5')}
+            className="game-card shadow-glow-blue group home-cash-game-card home-cash-game-card--pick5"
+          >
+            <div className="home-cash-card-header">
+              <span className="home-cash-card-badge">
+                ✦ MEGA JACKPOT
+              </span>
+              <span className="home-cash-card-tag">TOP</span>
+            </div>
+
+            <div className="home-cash-card-watermark-wrap">
+              <img
+                alt="Blue Star"
+                src={images.blueStar04}
+                className="card-watermark group-hover:rotate-6 transition-transform duration-500 home-cash-card-watermark-img"
+              />
+            </div>
+
+            <div className="home-cash-card-body">
+              <div className="home-cash-card-title">
+                PICK 5
+              </div>
+              <div className="home-cash-card-amount">
+                $5,000
+              </div>
+              <span className="home-cash-card-label">
+                CASH PRIZE
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -108,15 +108,15 @@ export const Header: React.FC<HeaderProps> = ({
                   className="coin-rotate-icon group-hover:rotate-180 transition-transform duration-500"
                   style={{ width: '20px', height: '20px', objectFit: 'contain' }}
                 />
-                <span style={{ fontWeight: 800 }}>{Number(totalCoins).toLocaleString()}</span>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: '#d97706' }}>PTS</span>
+                <span className="header-coin-points-num">{Number(totalCoins).toLocaleString()}</span>
+                <span className="header-coin-pts-label">PTS</span>
               </div>
             )}
 
             <button
               onClick={() => navigate('/rankings')}
               title={t('rankingsScreen.leaderboard', 'Leaderboard')}
-              className="header-icon-btn"
+              className="header-icon-btn header-crown-btn"
               style={{ color: '#F59E0B' }}
             >
               <Crown size={18} />
@@ -132,7 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={handleLanguageToggle}
               title="Change Language"
-              className="header-icon-btn"
+              className="header-icon-btn header-lang-btn"
               style={{ fontSize: '11px', fontWeight: 700 }}
             >
               {i18n.language?.toUpperCase().slice(0, 2) || 'EN'}
@@ -141,7 +141,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => dispatch(toggleDarkMode())}
               title="Toggle Dark/Light Mode"
-              className="header-icon-btn"
+              className="header-icon-btn header-theme-btn"
             >
               {isDarkMode ? <Sun size={17} color="#FFD700" /> : <Moon size={17} />}
             </button>
@@ -149,10 +149,11 @@ export const Header: React.FC<HeaderProps> = ({
             {!isHome && <button
               onClick={() => navigate('/notifications')}
               title="Notifications"
-              className="header-icon-btn"
+              className="header-icon-btn header-notification-btn"
               style={{ position: 'relative' }}
             >
               <Bell size={17} />
+              {unreadCount > 0 && <span className="header-notification-badge" />}
             </button>}
           </>
         )}

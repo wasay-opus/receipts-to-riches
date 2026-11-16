@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowLeft, HelpCircle, Megaphone, Image as ImageIcon, Sparkles, ChevronDown, Check, Search, MapPin } from 'lucide-react';
-import { Button, Container, CustomModal, GameHelpMenu, showToast, triggerCoinCelebration } from '../../components';
+import { Button, Container, CustomModal, GameHelpMenu, showToast, triggerCoinCelebration, FailAnimation } from '../../components';
 import images from '../../constants/images';
 import gameServices from '../../services/gameServices';
 import locationServices from '../../services/locationServices';
@@ -204,9 +204,15 @@ export const PicPickGame: React.FC = () => {
       showToast({ type: 'error', text1: 'State required', text2: 'Please select a state from the dropdown.' });
       return;
     }
-    if (!isStatePick && !zipCode.trim()) {
-      showToast({ type: 'error', text1: 'Zip code required', text2: 'Please enter the receipt vendor zip code.' });
-      return;
+    if (!isStatePick) {
+      if (!zipCode.trim()) {
+        showToast({ type: 'error', text1: 'Zip code required', text2: 'Please enter the receipt vendor zip code.' });
+        return;
+      }
+      if (zipCode.trim().length !== 5) {
+        showToast({ type: 'error', text1: 'Invalid Zip Code', text2: 'Please enter a valid 5-digit US zip code.' });
+        return;
+      }
     }
 
     if (!isDeviceInUSTimezone()) {
@@ -247,12 +253,20 @@ export const PicPickGame: React.FC = () => {
         // Fallback
       }
 
+      const responseMessage = extractMessage(response?.data, 'Receipt submitted successfully.');
+      const isOops = responseMessage.toLowerCase().includes('oops') ||
+        responseMessage.toLowerCase().includes('better luck') ||
+        responseMessage.toLowerCase().includes('couldn’t match') ||
+        responseMessage.toLowerCase().includes("couldn't match");
+
       setResult({
-        message: extractMessage(response?.data, 'Receipt submitted successfully.'),
+        message: responseMessage,
         points,
       });
 
-      triggerCoinCelebration();
+      if (!isOops) {
+        triggerCoinCelebration();
+      }
 
       setReceiptFile(null);
       setReceiptPreview(null);
@@ -380,11 +394,12 @@ export const PicPickGame: React.FC = () => {
               {!isStatePick && (
                 <input
                   type="text"
-                  maxLength={10}
+                  inputMode="numeric"
+                  maxLength={5}
                   className="glass-pill-input"
-                  placeholder={t('cashGames.placeholders.enterZip', 'Enter Zip Code')}
+                  placeholder={t('cashGames.placeholders.enterZip', 'Enter Zip Code (5 digits)')}
                   value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
+                  onChange={(e) => setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
                 />
               )}
 
@@ -685,24 +700,57 @@ export const PicPickGame: React.FC = () => {
         </div>
       </div>
 
-      {/* Success Modal */}
+      {/* Result / Success / Oops Modal */}
       <CustomModal visible={Boolean(result)} onClose={() => navigate('/home')} maxWidth="400px">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
-          <img src={images.Coin} alt="Prize" style={{ width: '80px', height: '80px' }} />
-          <div>
-            <h3 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)' }}>
-              {result?.message}
-            </h3>
-            <p style={{ fontSize: '15px', color: 'var(--primary)', fontWeight: 700, marginTop: '4px' }}>
-              {t('home.points', 'Points')}: +{result?.points ?? 0}
-            </p>
-          </div>
-          <Button
-            title={t('common.backToHome', 'Back to Home')}
-            onClick={() => navigate('/home')}
-            style={{ width: '100%', marginTop: '8px' }}
-          />
-        </div>
+        {(() => {
+          const isOops = result?.message?.toLowerCase().includes('oops') ||
+            result?.message?.toLowerCase().includes('better luck') ||
+            result?.message?.toLowerCase().includes('couldn’t match') ||
+            result?.message?.toLowerCase().includes("couldn't match");
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '6px 4px 4px 4px' }}>
+              {isOops ? (
+                <FailAnimation width={170} height={130} style={{ marginBottom: '12px' }} />
+              ) : (
+                <img src={images.Coin} alt="Prize" style={{ width: '80px', height: '80px', marginBottom: '12px' }} />
+              )}
+              <div>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', lineHeight: '1.35', margin: '0 0 6px 0' }}>
+                  {result?.message}
+                </h3>
+                {typeof result?.points === 'number' && result.points > 0 && (
+                  <p style={{ fontSize: '14.5px', color: '#10B981', fontWeight: 700, margin: '6px 0 0 0' }}>
+                    {t('home.points', 'Points')}: +{result.points}
+                  </p>
+                )}
+              </div>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => navigate('/home')}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '24px',
+                    background: '#00674D',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontSize: '15.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(0, 103, 77, 0.35)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.01)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  {t('common.backToHome', 'Back to Home')}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </CustomModal>
     </Container>
   );

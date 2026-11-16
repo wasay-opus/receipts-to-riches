@@ -11,3 +11,4 @@ export { GameHelpMenu } from './GameHelpMenu';
 export { MiniGameHelpModal, MiniGameHelpMenu } from './MiniGameHelpModal';
 export { ReportModal } from './ReportModal';
 export { PhoneInput, sanitizePhoneNumber } from './PhoneInput';
+export { FailAnimation } from './FailAnimation';

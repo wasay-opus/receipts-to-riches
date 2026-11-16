@@ -201,9 +201,8 @@ export const Notification: React.FC = () => {
             <div
               key={notification.id}
               onClick={() => !isRead && handleMarkOne(notification.id)}
-              className="card"
+              className="card notification-item-card"
               style={{
-                padding: '16px 20px',
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '14px',
@@ -227,16 +226,16 @@ export const Notification: React.FC = () => {
               >
                 {isRead ? <CheckCircle2 size={18} color="#10B981" /> : <Bell size={18} color="#00674D" />}
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                  <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
+                  <h4 className="notification-title" style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
                     {notification.title}
                   </h4>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <span className="notification-date" style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
                     {formatNotificationDate(notification.created_at)}
                   </span>
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
                   {notification.body}
                 </p>
               </div>

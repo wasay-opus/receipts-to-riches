@@ -319,6 +319,14 @@ export const CashGame: React.FC = () => {
         });
         return;
       }
+      if (zipCode.trim().length !== 5) {
+        showToast({
+          type: 'error',
+          text1: 'Invalid Zip Code',
+          text2: 'Please enter a valid 5-digit US zip code.',
+        });
+        return;
+      }
     } else {
       if (!receiptTotal.trim()) {
         showToast({
@@ -514,10 +522,11 @@ export const CashGame: React.FC = () => {
             <input
               className="form-input"
               type="text"
-              maxLength={10}
-              placeholder={t('cashGames.placeholders.enterZip', 'Enter Zip Code')}
+              inputMode="numeric"
+              maxLength={5}
+              placeholder={t('cashGames.placeholders.enterZip', 'Enter Zip Code (5 digits)')}
               value={zipCode}
-              onChange={(e) => setZipCode(e.target.value)}
+              onChange={(e) => setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
               required
               style={{ borderRadius: '14px' }}
             />
