@@ -45,6 +45,11 @@ yarn-error.log
 .env
 .env.local
 
+# archives & outputs
+output.tar
+*.tar
+dist.zip
+
 # build output
 dist/
 

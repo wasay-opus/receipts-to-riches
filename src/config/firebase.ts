@@ -2,13 +2,13 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCLGQL--UakdAWnxXMfYsByoDLQsWVnbrg",
-  authDomain: "r2r-firebase-project.firebaseapp.com",
-  projectId: "r2r-firebase-project",
-  storageBucket: "r2r-firebase-project.firebasestorage.app",
-  messagingSenderId: "387421915736",
-  appId: "1:387421915736:web:c3f1ee069d8669f7b1982d",
-  measurementId: "G-ZZ4SWT2Q77"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "r2r-firebase-project.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "r2r-firebase-project",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "r2r-firebase-project.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "387421915736",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:387421915736:web:c3f1ee069d8669f7b1982d",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-ZZ4SWT2Q77"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
