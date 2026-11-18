@@ -109,7 +109,7 @@ export const ForgetPassword: React.FC = () => {
               <Button
                 type="submit"
                 loading={loading}
-                title={t('auth.sendCode', 'Send Reset Code')}
+                title={t('auth.sendResetCode', 'Send Reset Code')}
                 icon={<Send size={18} />}
                 style={{ width: '100%', marginTop: '6px' }}
               />

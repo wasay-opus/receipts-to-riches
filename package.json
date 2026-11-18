@@ -13,6 +13,7 @@
     "axios": "^1.7.9",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
+    "firebase": "^13.4.0",
     "formik": "^2.4.6",
     "framer-motion": "^12.4.7",
     "i18next": "^24.2.2",

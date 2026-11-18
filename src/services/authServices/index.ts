@@ -170,14 +170,14 @@ class AuthServices {
     return response;
   };
 
-  changePhone = async (data: IAuthData): Promise<IApiResponse> => {
+  changePhone = async (data: { phone: string }, verificationToken?: string | null): Promise<IApiResponse> => {
     const response = await fetchApi({
       method: 'POST',
       endPoint: endPoints.CHANGE_PHONE,
       data,
       params: undefined,
       formData: undefined,
-      token: true,
+      authToken: verificationToken,
     });
     return response;
   };

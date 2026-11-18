@@ -50,6 +50,7 @@ export const Home: React.FC = () => {
   } | null>(null);
 
   const { userData } = useSelector((state: RootState) => state.user);
+  const isRegister = useSelector((state: RootState) => state.auth.isRegister);
   const { campaigns } = useSelector((state: RootState) => state.campaigns);
   const isDarkMode = useSelector((state: RootState) => state.theme?.isDarkMode);
   const { unlockedMiniGames, unlockMiniGameLoading } = useSelector(
@@ -168,10 +169,10 @@ export const Home: React.FC = () => {
       return;
     }
     const isComplete = userData?.is_profile_complete;
-    if (userData && (isComplete === false || isComplete === 0 || isComplete === '0')) {
+    if (isRegister && userData && isComplete !== true && isComplete !== 1 && isComplete !== '1') {
       navigate('/secret-question', { replace: true });
     }
-  }, [userData?.is_profile_complete, navigate]);
+  }, [isRegister, userData?.is_profile_complete, navigate]);
 
   useEffect(() => {
     const stateCelebration = (location.state as any)?.rewardCelebration;

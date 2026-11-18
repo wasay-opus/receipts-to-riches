@@ -14,6 +14,7 @@ import {
   Play,
   Video,
   Sparkles,
+  ChevronUp,
 } from 'lucide-react';
 import { Container, Button } from '../../components';
 import images from '../../constants/images';
@@ -134,6 +135,7 @@ export const Winners: React.FC = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<WinnerTab>('winner');
+  const [expandedWinnerId, setExpandedWinnerId] = useState<string | null>(PREVIOUS_WINNERS_VIDEOS[0]?.id || null);
 
   // Winners state
   const [winners, setWinners] = useState<WinnerItem[]>([]);
@@ -603,309 +605,287 @@ export const Winners: React.FC = () => {
       {/* 3. Tab Content */}
       {activeTab === 'winner' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Previous Winners' Video Showcase (Client 5th Point) */}
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              borderRadius: '24px',
-              padding: '20px 16px',
-              border: '1px solid var(--border-color)',
-              boxShadow: 'var(--shadow-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}
-          >
-            {/* Section Header */}
-            <div
+          {/* Watch Our Past Winners' Stories Header */}
+          <div style={{ textAlign: 'center', padding: '10px 10px 4px' }}>
+            <h2
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '8px',
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '24px',
+                fontWeight: 900,
+                color: 'var(--text-main)',
+                margin: '0 0 8px 0',
+                letterSpacing: '-0.3px',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div
-                  style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '12px',
-                    background: 'rgba(245, 158, 11, 0.15)',
-                    border: '1px solid rgba(245, 158, 11, 0.35)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#F59E0B',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Video size={19} />
-                </div>
-                <div>
-                  <h3
-                    style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: '16.5px',
-                      fontWeight: 800,
-                      color: 'var(--text-main)',
-                      margin: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <span>Previous Winners' Videos</span>
-                    <Sparkles size={14} color="#F59E0B" />
-                  </h3>
-                  <p
-                    style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: '12px',
-                      color: 'var(--text-muted)',
-                      margin: '2px 0 0 0',
-                    }}
-                  >
-                    Watch real winner celebrations & previous winner stories
-                  </p>
-                </div>
-              </div>
-
-              <span
-                style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  background: 'rgba(0, 208, 102, 0.12)',
-                  border: '1px solid rgba(0, 208, 102, 0.3)',
-                  color: '#00D066',
-                  borderRadius: '20px',
-                  padding: '4px 10px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                }}
-              >
-                {PREVIOUS_WINNERS_VIDEOS.length} Featured Videos
-              </span>
-            </div>
-
-            {/* Video Cards Grid - 3 cards in row 1, 2 cards in row 2 */}
-            <div className="previous-winners-video-grid">
-              {PREVIOUS_WINNERS_VIDEOS.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setActiveVideoModal(item)}
-                  style={{
-                    background: 'var(--bg-card-secondary, #F8FAFC)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '18px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: 'var(--shadow-sm)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-3px)';
-                    e.currentTarget.style.boxShadow = '0 8px 22px rgba(0,0,0,0.12)';
-                    e.currentTarget.style.borderColor = '#F59E0B';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                    e.currentTarget.style.borderColor = 'var(--border-color)';
-                  }}
-                >
-                  {/* Video Thumbnail Box with Glowing Play Button */}
-                  <div
-                    style={{
-                      position: 'relative',
-                      width: '100%',
-                      paddingTop: '62%',
-                      background: '#0B0F19',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <video
-                      src={item.videoUrl}
-                      preload="metadata"
-                      muted
-                      playsInline
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        opacity: 0.72,
-                      }}
-                    />
-                    {/* Gradient Overlay */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%)',
-                      }}
-                    />
-
-                    {/* Tag badge on top */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '8px',
-                        left: '8px',
-                        background: 'rgba(0, 0, 0, 0.7)',
-                        backdropFilter: 'blur(4px)',
-                        borderRadius: '8px',
-                        padding: '2px 8px',
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        color: '#FBBF24',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Trophy size={10} color="#FBBF24" />
-                      <span>{item.tag}</span>
-                    </div>
-
-                    {/* Big Center Glowing Play Button */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #00D066 0%, #009944 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#FFFFFF',
-                        boxShadow: '0 4px 16px rgba(0, 208, 102, 0.55)',
-                      }}
-                    >
-                      <Play size={18} fill="#FFFFFF" style={{ marginLeft: '2px' }} />
-                    </div>
-                  </div>
-
-                  {/* Card Content with Previous Winner Name */}
-                  <div
-                    style={{
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '4px',
-                      flex: 1,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '8px',
-                        flexWrap: 'nowrap',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: "'Plus Jakarta Sans', sans-serif",
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: '#F59E0B',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.4px',
-                          whiteSpace: 'nowrap',
-                          flexShrink: 0,
-                        }}
-                      >
-                        Previous Winner
-                      </span>
-                      <span
-                        style={{
-                          fontFamily: "'Plus Jakarta Sans', sans-serif",
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          color: '#00D066',
-                          whiteSpace: 'nowrap',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {item.prizeAmount}
-                      </span>
-                    </div>
-
-                    <h4
-                      style={{
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
-                        fontSize: '15px',
-                        fontWeight: 800,
-                        color: 'var(--text-main)',
-                        margin: '2px 0 0 0',
-                      }}
-                    >
-                      {item.winnerName}
-                    </h4>
-
-                    <p
-                      style={{
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
-                        fontSize: '12px',
-                        color: 'var(--text-muted)',
-                        margin: '0 0 8px 0',
-                      }}
-                    >
-                      {item.gameTitle}
-                    </p>
-
-                    <button
-                      type="button"
-                      style={{
-                        marginTop: 'auto',
-                        width: '100%',
-                        padding: '7px 10px',
-                        borderRadius: '10px',
-                        background: 'rgba(0, 208, 102, 0.1)',
-                        border: '1px solid rgba(0, 208, 102, 0.25)',
-                        color: '#00D066',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <Play size={12} fill="currentColor" />
-                      <span>Watch Winner Video</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+              Watch Our Past Winners' Stories
+            </h2>
+            <p
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '13.5px',
+                color: 'var(--text-muted)',
+                margin: '0 auto',
+                maxWidth: '560px',
+                lineHeight: 1.5,
+              }}
+            >
+              See how everyday shoppers turned receipts into real cash prizes. Tap below to watch their winning moments!
+            </p>
           </div>
 
-          {/* Subheader: Recent Daily Winners */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-            <Trophy size={17} color="#F59E0B" />
+          {/* Collapsible Accordion Winner 1, Winner 2, etc. (Matching Mobile App Reference) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {PREVIOUS_WINNERS_VIDEOS.map((item, index) => {
+              const isExpanded = expandedWinnerId === item.id;
+              const winnerNumber = index + 1;
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    background: 'var(--bg-card)',
+                    borderRadius: '20px',
+                    border: isExpanded ? '1.5px solid #00674D' : '1px solid var(--border-color)',
+                    overflow: 'hidden',
+                    transition: 'all 0.25s ease',
+                    boxShadow: isExpanded ? '0 8px 24px rgba(0, 103, 77, 0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  {/* Accordion Header */}
+                  <div
+                    onClick={() => setExpandedWinnerId(isExpanded ? null : item.id)}
+                    style={{
+                      padding: '16px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <img
+                        src={images.goldTrophy07 || images.Trophy}
+                        alt="Trophy"
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          objectFit: 'contain',
+                          filter: 'drop-shadow(0 2px 6px rgba(245, 158, 11, 0.35))',
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span
+                          style={{
+                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                            fontSize: '17px',
+                            fontWeight: 800,
+                            color: 'var(--text-main)',
+                          }}
+                        >
+                          Winner {winnerNumber}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                            fontSize: '12px',
+                            color: 'var(--text-muted)',
+                            marginTop: '2px',
+                          }}
+                        >
+                          {item.winnerName} • <strong style={{ color: '#00A854' }}>{item.prizeAmount}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: isExpanded ? 'rgba(0, 103, 77, 0.1)' : 'var(--bg-card-secondary)',
+                        color: isExpanded ? '#00674D' : 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </div>
+                  </div>
+
+                  {/* Accordion Body with Embedded Video */}
+                  {isExpanded && (
+                    <div
+                      style={{
+                        padding: '0 20px 20px 20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          maxWidth: '520px',
+                          margin: '0 auto',
+                          borderRadius: '16px',
+                          overflow: 'hidden',
+                          background: '#0B0F19',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                        }}
+                      >
+                        <video
+                          src={item.videoUrl}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          style={{
+                            width: '100%',
+                            maxHeight: '480px',
+                            display: 'block',
+                            background: '#000000',
+                          }}
+                        />
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          padding: '10px 14px',
+                          borderRadius: '12px',
+                          background: 'var(--bg-card-secondary)',
+                          maxWidth: '520px',
+                          margin: '0 auto',
+                          width: '100%',
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span
+                            style={{
+                              background: 'rgba(245, 158, 11, 0.15)',
+                              color: '#F59E0B',
+                              padding: '3px 8px',
+                              borderRadius: '8px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {item.gameTitle}
+                          </span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {item.description || 'Verified winner celebration video'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* You Could Be The Next Winner Card (Screenshot 2 Reference) */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(0, 103, 77, 0.08) 0%, rgba(0, 208, 102, 0.05) 100%)',
+              border: '1px solid rgba(0, 103, 77, 0.2)',
+              borderRadius: '24px',
+              padding: '24px 20px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '12px',
+              boxShadow: '0 4px 16px rgba(0, 103, 77, 0.06)',
+            }}
+          >
             <h3
               style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '16px',
-                fontWeight: 800,
+                fontSize: '20px',
+                fontWeight: 900,
                 color: 'var(--text-main)',
                 margin: 0,
               }}
             >
-              Recent Daily Winners
+              You Could Be The Next Winner!
             </h3>
+            <p
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '13.5px',
+                color: 'var(--text-muted)',
+                margin: 0,
+                maxWidth: '460px',
+                lineHeight: 1.5,
+              }}
+            >
+              Upload any store receipt and play our daily games for your chance to win instant cash.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/play')}
+              style={{
+                marginTop: '4px',
+                padding: '12px 28px',
+                borderRadius: '14px',
+                background: '#00674D',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '14.5px',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 6px 18px rgba(0, 103, 77, 0.35)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.background = '#00523D';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = '#00674D';
+              }}
+            >
+              <span>Play & Win Now</span>
+              <span style={{ fontSize: '16px' }}>&rsaquo;</span>
+            </button>
+          </div>
+
+          {/* Subheader: Current Winners (Matching Screenshot 2) */}
+          <div style={{ textAlign: 'center', marginTop: '10px' }}>
+            <h3
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '22px',
+                fontWeight: 900,
+                color: 'var(--text-main)',
+                margin: '0 0 4px 0',
+              }}
+            >
+              Current Winners
+            </h3>
+            <p
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '13px',
+                color: 'var(--text-muted)',
+                margin: 0,
+              }}
+            >
+              Latest lucky winners from daily game draws
+            </p>
           </div>
 
           {/* Winner List */}

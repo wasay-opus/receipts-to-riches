@@ -1381,6 +1381,7 @@ svg.animate-spin,
 }
 
 .header-icon-btn {
+  position: relative;
   background: var(--bg-card-secondary);
   border: 1px solid var(--border-color);
   border-radius: 50%;
@@ -1472,6 +1473,7 @@ svg.animate-spin,
 }
 
 .dark .app-main-header--home .header-icon-btn {
+  position: relative;
   background: var(--bg-card-secondary);
   border-color: var(--border-color);
 }
@@ -3735,9 +3737,22 @@ svg.animate-spin,
   box-sizing: border-box;
 }
 
+.secret-question-card {
+  max-width: 520px !important;
+  margin: auto;
+}
+
+.secret-question-form .form-input {
+  min-height: 46px;
+}
+
 @media (max-width: 640px) {
   .auth-card {
     padding: 28px 18px !important;
+  }
+
+  .secret-question-card {
+    padding: 20px 18px !important;
   }
 }
 

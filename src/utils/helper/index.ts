@@ -151,6 +151,7 @@ export interface FetchApiOptions {
   method: Method;
   endPoint: string;
   token?: boolean;
+  authToken?: string | null;
   data?: any;
   params?: any;
   formData?: boolean;
@@ -168,6 +169,7 @@ export const fetchApi = async ({
   method,
   endPoint,
   token = false,
+  authToken,
   data,
   params,
   formData = false,
@@ -178,7 +180,9 @@ export const fetchApi = async ({
       Accept: 'application/json',
     };
 
-    if (token) {
+    if (isValidAccessToken(authToken)) {
+      headers.Authorization = `Bearer ${authToken}`;
+    } else if (token) {
       let accessToken = await getAccessToken();
       if (!isValidAccessToken(accessToken)) {
         const reduxToken = store.getState().auth?.token;
@@ -247,8 +251,13 @@ export const fetchApi = async ({
         extractedMsg ||
         getStatusFriendlyMessage(status) ||
         getUserFriendlyErrorMessage(error);
+      const isPhoneVerificationRedirect =
+        /^(auth\/login|auth\/social\/login)$/.test(endPoint.replace(/^\//, '')) &&
+        (String(responseData?.message ?? '').toLowerCase().includes('verify your phone') ||
+          responseData?.is_phone_verified === false ||
+          responseData?.data?.is_phone_verified === false);
 
-      if (friendlyMsg && status !== 401) {
+      if (friendlyMsg && status !== 401 && !isPhoneVerificationRedirect) {
         maybeShowApiFeedback('Error', friendlyMsg);
       }
     }

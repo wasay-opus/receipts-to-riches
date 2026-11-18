@@ -120,8 +120,27 @@ const extractAuthUser = (payload: any): any | null => {
   );
 };
 
+const extractUnverifiedPhone = (payload: any) => {
+  const data = payload?.data ?? payload;
+  const user = extractAuthUser(payload);
+  const isUnverifiedFlag = (value: unknown) =>
+    value === false || value === 0 || value === '0' || value === 'false';
+  const phone =
+    data?.phone ?? data?.phone_number ?? data?.data?.phone ??
+    data?.data?.phone_number ?? user?.phone ?? user?.phone_number;
+  const email = data?.email ?? data?.data?.email ?? user?.email;
+  const isUnverified =
+    isUnverifiedFlag(data?.is_phone_verified) ||
+    isUnverifiedFlag(data?.data?.is_phone_verified) ||
+    isUnverifiedFlag(user?.is_phone_verified) ||
+    String(payload?.message ?? data?.message ?? '').toLowerCase().includes('verify your phone');
+  return { isUnverified, phone, email };
+};
+
 const hasCompletedProfile = (user: any): boolean =>
-  user?.is_profile_complete === true;
+  user?.is_profile_complete === true ||
+  user?.is_profile_complete === 1 ||
+  user?.is_profile_complete === '1';
 
 const extractErrorMessage = (
   responseData: any,
@@ -256,6 +275,16 @@ export const login = createAsyncThunk(
       const response = await authServices.loginUser(credentials);
       const data = response?.data ?? response;
       const token = extractAuthToken(response) ?? extractAuthToken(data);
+      const { isUnverified: isUnverifiedPhone, phone } = extractUnverifiedPhone(response);
+
+      if (isUnverifiedPhone) {
+        return rejectWithValue({
+          message: extractErrorMessage(response, 'Please verify your phone number to continue.'),
+          is_phone_verified: false,
+          phone,
+          verificationToken: token,
+        });
+      }
 
       if (
         response &&
@@ -270,36 +299,20 @@ export const login = createAsyncThunk(
         return response;
       }
 
-      const resData = response?.data || response;
-      const isUnverifiedPhone =
-        resData?.is_phone_verified === false ||
-        resData?.data?.is_phone_verified === false ||
-        String(response?.message || '').toLowerCase().includes('verify your phone');
-
-      if (isUnverifiedPhone) {
-        return rejectWithValue({
-          message: extractErrorMessage(response, 'Please verify your phone number to continue.'),
-          is_phone_verified: false,
-          phone: resData?.phone || resData?.data?.phone,
-        });
-      }
-
       return rejectWithValue(
         extractErrorMessage(response, 'Invalid login response. Please try again.'),
       );
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response) {
         const resData = error.response.data;
-        const isUnverifiedPhone =
-          resData?.is_phone_verified === false ||
-          resData?.data?.is_phone_verified === false ||
-          String(resData?.message || '').toLowerCase().includes('verify your phone');
+        const { isUnverified: isUnverifiedPhone, phone } = extractUnverifiedPhone(resData);
 
         if (isUnverifiedPhone) {
           return rejectWithValue({
             message: extractErrorMessage(resData, 'Please verify your phone number to continue.'),
             is_phone_verified: false,
-            phone: resData?.phone || resData?.data?.phone,
+            phone,
+            verificationToken: extractAuthToken(resData),
           });
         }
 
@@ -510,6 +523,17 @@ export const socialLogin = createAsyncThunk(
       const response = await authServices.socialLogin(payload);
       const data = response?.data ?? response;
       const token = extractAuthToken(response) ?? extractAuthToken(data);
+      const { isUnverified: isUnverifiedPhone, phone, email } = extractUnverifiedPhone(response);
+
+      if (isUnverifiedPhone) {
+        return rejectWithValue({
+          message: extractErrorMessage(response, 'Please verify your phone number to continue.'),
+          is_phone_verified: false,
+          phone,
+          email,
+          verificationToken: token,
+        });
+      }
 
       if (
         response &&
@@ -529,6 +553,19 @@ export const socialLogin = createAsyncThunk(
       );
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response) {
+        const resData = error.response.data;
+        const { isUnverified: isUnverifiedPhone, phone, email } = extractUnverifiedPhone(resData);
+
+        if (isUnverifiedPhone) {
+          return rejectWithValue({
+            message: extractErrorMessage(resData, 'Please verify your phone number to continue.'),
+            is_phone_verified: false,
+            phone,
+            email,
+            verificationToken: extractAuthToken(resData),
+          });
+        }
+
         return rejectWithValue(
           extractErrorMessage(error.response.data, 'Social login failed.'),
         );
@@ -573,6 +610,9 @@ const authSlice = createSlice({
       state.deleteAccountSuccess = false;
       state.error = null;
       state.loading = false;
+    },
+    markNewUserOnboarding: state => {
+      state.isRegister = true;
     },
   },
   extraReducers: builder => {
@@ -626,6 +666,7 @@ const authSlice = createSlice({
         state.token = token;
         state.userId = user?.id ?? user?.user_id ?? null;
         state.isAuthenticated = Boolean(token);
+        state.isRegister = false;
         state.isProfile = hasCompletedProfile(user);
         state.needsGuideVideo = false;
       })
@@ -786,6 +827,9 @@ const authSlice = createSlice({
         state.token = token;
         state.userId = user?.id ?? user?.user_id ?? null;
         state.isAuthenticated = Boolean(token);
+        const responseData = extractAuthResponseData(action.payload);
+        const newUserFlag = responseData?.is_new_user ?? responseData?.isNewUser ?? responseData?.data?.is_new_user ?? user?.is_new_user;
+        state.isRegister = newUserFlag === true || newUserFlag === 1 || newUserFlag === '1';
         state.isProfile = hasCompletedProfile(user);
         state.needsGuideVideo = Boolean(token) && !hasCompletedProfile(user);
       })
@@ -814,6 +858,7 @@ const authSlice = createSlice({
         state.userId = user?.id ?? user?.user_id ?? state.userId;
         state.isAuthenticated = Boolean(token ?? state.token);
         state.isProfile = true;
+        state.isRegister = false;
         state.needsGuideVideo = false;
       })
       .addCase(completeProfile.rejected, (state, action) => {
@@ -836,5 +881,6 @@ export const {
   completeGuideVideo,
   resetChangePasswordState,
   resetDeleteAccountState,
+  markNewUserOnboarding,
 } = authSlice.actions;
 export default authSlice.reducer;

@@ -26,6 +26,7 @@ export const SecretQuestion: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { userData } = useSelector((state: RootState) => state.user);
   const isProfileComplete = useSelector((state: RootState) => state.auth?.isProfile);
+  const { token, isRegister } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
     const hasCompleted =
@@ -35,10 +36,12 @@ export const SecretQuestion: React.FC = () => {
       userData?.is_profile_complete === '1' ||
       isProfileComplete === true;
 
-    if (hasCompleted) {
+    if (!token) {
+      navigate('/signin', { replace: true });
+    } else if (hasCompleted || !isRegister) {
       navigate('/', { replace: true });
     }
-  }, [userData, isProfileComplete, navigate]);
+  }, [userData, isProfileComplete, isRegister, token, navigate]);
 
   const validationSchema = Yup.object().shape({
     title: Yup.string().required(t('validation.required', 'Title is required')),
@@ -103,28 +106,28 @@ export const SecretQuestion: React.FC = () => {
 
   return (
     <div
-      className="r2r-login-page"
+      className="r2r-login-page secret-question-page"
       style={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 20px',
+        justifyContent: 'flex-start',
+        padding: '24px 16px 40px',
         background: 'transparent',
         position: 'relative',
         zIndex: 5,
       }}
     >
       <div
-        className="card auth-card"
+        className="card auth-card secret-question-card"
         style={{
           width: '100%',
-          maxWidth: '700px',
-          padding: '28px 36px 24px',
+          maxWidth: '520px',
+          padding: '24px 28px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px',
+          gap: '12px',
           borderRadius: '26px',
           background: '#FFFFFF',
           border: '1px solid rgba(0, 77, 54, 0.08)',
@@ -134,7 +137,7 @@ export const SecretQuestion: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          <img src={images.SplashLogo} alt="Logo" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
+          <img src={images.SplashLogo} alt="Logo" style={{ width: '72px', height: '72px', objectFit: 'contain' }} />
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-main)', marginTop: '6px', marginBottom: '2px' }}>
             {t('auth.completeProfile', 'Complete Your Profile')}
           </h2>
@@ -159,7 +162,7 @@ export const SecretQuestion: React.FC = () => {
           onSubmit={handleSubmit}
         >
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
-            <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form className="secret-question-form" onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '14px', fontWeight: 500, color: 'var(--text-muted)' }}>
                   {t('auth.title', 'Title')}

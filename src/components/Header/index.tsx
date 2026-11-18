@@ -122,12 +122,15 @@ export const Header: React.FC<HeaderProps> = ({
               <Crown size={18} />
             </button>
 
-            {isHome && (
-              <button onClick={() => navigate('/notifications')} title="Notifications" className="header-icon-btn header-notification-btn">
-                <Bell size={17} />
-                {unreadCount > 0 && <span className="header-notification-badge" />}
-              </button>
-            )}
+            <button
+              onClick={() => navigate('/notifications')}
+              title="Notifications"
+              className="header-icon-btn header-notification-btn"
+              style={{ position: 'relative' }}
+            >
+              <Bell size={17} />
+              {unreadCount > 0 && <span className="header-notification-badge" />}
+            </button>
 
             <button
               onClick={handleLanguageToggle}
@@ -145,16 +148,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {isDarkMode ? <Sun size={17} color="#FFD700" /> : <Moon size={17} />}
             </button>
-
-            {!isHome && <button
-              onClick={() => navigate('/notifications')}
-              title="Notifications"
-              className="header-icon-btn header-notification-btn"
-              style={{ position: 'relative' }}
-            >
-              <Bell size={17} />
-              {unreadCount > 0 && <span className="header-notification-badge" />}
-            </button>}
           </>
         )}
       </div>

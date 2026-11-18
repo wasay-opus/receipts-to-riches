@@ -13,6 +13,7 @@ import { RewardProvider } from './services/rewards/RewardProvider';
 import SignIn from './screens/SignIn';
 import SignUp from './screens/Signup';
 import ForgetPassword from './screens/ForgetPassword';
+import ResetPassword from './screens/ResetPassword';
 import OtpVerification from './screens/OtpVerification';
 import SecretQuestion from './screens/SecretQuestion';
 
@@ -70,6 +71,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     '/signin',
     '/signup',
     '/forgot-password',
+    '/reset-password',
     '/otp',
     '/otp-verification',
     '/secret-question',
@@ -88,6 +90,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     '/signin',
     '/signup',
     '/forgot-password',
+    '/reset-password',
     '/otp',
     '/otp-verification',
     '/secret-question',
@@ -155,6 +158,7 @@ function App() {
         <Route path="/signin" element={isAuthenticated ? <Navigate to="/" replace /> : <SignIn />} />
         <Route path="/signup" element={isAuthenticated ? <Navigate to="/" replace /> : <SignUp />} />
         <Route path="/forgot-password" element={<ForgetPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/otp" element={<OtpVerification />} />
         <Route path="/otp-verification" element={<OtpVerification />} />
         <Route path="/secret-question" element={<SecretQuestion />} />

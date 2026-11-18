@@ -11,6 +11,8 @@ import { Button, FormInput, showToast } from '../../components';
 import { AuthBackground } from '../../components/AuthBackground';
 import { getUserFriendlyErrorMessage } from '../../utils/errorMessages';
 import images from '../../constants/images';
+import { signInWithGoogleFirebase } from '../../config/firebase';
+import { pendingPhoneVerification } from '../../services/pendingPhoneVerification';
 import {
   getRememberedSignIn,
   saveRememberedSignIn,
@@ -142,7 +144,7 @@ export const SignIn: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [initialEmail, setInitialEmail] = useState(passedEmail);
   const [socialLoadingProvider, setSocialLoadingProvider] = useState<
-    'google' | 'apple' | null
+    'google' | null
   >(null);
   const googleBtnRef = React.useRef<HTMLDivElement>(null);
 
@@ -164,13 +166,50 @@ export const SignIn: React.FC = () => {
       });
       navigate('/');
     } catch (error: any) {
+      const isUnverifiedPhone =
+        error?.is_phone_verified === false ||
+        (typeof error?.message === 'string' &&
+          error.message.toLowerCase().includes('verify your phone')) ||
+        (typeof error === 'string' && error.toLowerCase().includes('verify your phone'));
+
+      if (isUnverifiedPhone) {
+        pendingPhoneVerification.setVerificationToken(error?.verificationToken);
+        if (!error?.phone) {
+          pendingPhoneVerification.setGoogleToken(idToken);
+          navigate('/otp-verification', {
+            state: { email: error?.email, isPhoneVerification: true, socialPhone: true, codeSent: false },
+          });
+          return;
+        }
+        pendingPhoneVerification.setGoogleToken(idToken);
+        showToast({
+          type: 'info',
+          text1: t('auth.verifyPhone', 'Verify Phone Number'),
+          text2: error?.phone
+            ? t('auth.verifyPhoneFirst', 'Please verify your phone number first.')
+            : 'No phone number is linked to this Google account.',
+        });
+        navigate('/otp-verification', {
+          state: {
+            email: error?.email,
+            phone: error?.phone,
+            isPhoneVerification: true,
+            socialPhone: true,
+            codeSent: false,
+          },
+        });
+        return;
+      }
+
+      const errorMessage = getUserFriendlyErrorMessage(
+        error,
+        t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+      );
+
       showToast({
         type: 'error',
         text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
-        text2: getUserFriendlyErrorMessage(
-          error,
-          t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
-        ),
+        text2: errorMessage,
       });
     } finally {
       setSocialLoadingProvider(null);
@@ -184,7 +223,7 @@ export const SignIn: React.FC = () => {
 
     loadGoogleIdentityScript()
       .then(() => {
-        if (!window.google?.accounts?.id || !googleBtnRef.current) return;
+        if (!window.google?.accounts?.id) return;
 
         window.google.accounts.id.initialize({
           client_id: clientId,
@@ -198,6 +237,7 @@ export const SignIn: React.FC = () => {
           },
         });
 
+        if (!googleBtnRef.current) return;
         googleBtnRef.current.innerHTML = '';
         window.google.accounts.id.renderButton(googleBtnRef.current, {
           type: 'standard',
@@ -260,6 +300,38 @@ export const SignIn: React.FC = () => {
 
       navigate('/');
     } catch (error: any) {
+      const isUnverifiedPhone =
+        error?.is_phone_verified === false ||
+        (typeof error?.message === 'string' &&
+          error.message.toLowerCase().includes('verify your phone')) ||
+        (typeof error === 'string' && error.toLowerCase().includes('verify your phone'));
+
+      if (isUnverifiedPhone) {
+        pendingPhoneVerification.setVerificationToken(error?.verificationToken);
+        pendingPhoneVerification.setLogin(values.email.trim().toLowerCase(), values.password);
+        if (!error?.phone) {
+          navigate('/otp-verification', {
+            state: { email: values.email.trim().toLowerCase(), isPhoneVerification: true, loginPhone: true, codeSent: false },
+          });
+          return;
+        }
+        showToast({
+          type: 'info',
+          text1: t('auth.verifyPhone', 'Verify Phone Number'),
+          text2: t('auth.verifyPhoneFirst', 'Please verify your phone number first.'),
+        });
+        navigate('/otp-verification', {
+          state: {
+            email: values.email.trim(),
+            phone: error?.phone,
+            isPhoneVerification: true,
+            loginPhone: true,
+            codeSent: false,
+          },
+        });
+        return;
+      }
+
       const errorMessage = getUserFriendlyErrorMessage(
         error,
         t('auth.checkCredentials', 'Please check your credentials and try again.'),
@@ -270,63 +342,55 @@ export const SignIn: React.FC = () => {
         text1: t('auth.loginFailed', 'Sign In Failed'),
         text2: errorMessage,
       });
-
-      if (
-        error?.is_phone_verified === false ||
-        (typeof errorMessage === 'string' &&
-          errorMessage.toLowerCase().includes('verify your phone'))
-      ) {
-        setTimeout(() => {
-          navigate('/otp-verification', {
-            state: {
-              email: values.email.trim(),
-              phone: error?.phone,
-              isPhoneVerification: true,
-            },
-          });
-        }, 1200);
-      }
     }
   };
 
   const handleGoogleLogin = async () => {
-    const clientId =
-      import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_WEB_CLIENT_ID;
-
-    if (!clientId) {
-      showToast({
-        type: 'error',
-        text1: t('auth.googleSignInNotConfiguredTitle', 'Google Sign-In'),
-        text2: t('auth.googleSignInNotConfiguredMsg', 'Set VITE_GOOGLE_CLIENT_ID to enable Google login on web.'),
-      });
-      return;
-    }
-
     setSocialLoadingProvider('google');
 
     try {
-      await loadGoogleIdentityScript();
-      const idToken = await getGoogleCredential(clientId);
+      // 1. Try Firebase Popup Auth (identical to Mobile app Firebase Auth)
+      const idToken = await signInWithGoogleFirebase();
       await processGoogleCredential(idToken);
-    } catch (error: any) {
-      showToast({
-        type: 'error',
-        text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
-        text2: getUserFriendlyErrorMessage(
-          error,
-          t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
-        ),
-      });
-      setSocialLoadingProvider(null);
-    }
-  };
+    } catch (firebaseErr: any) {
+      if (firebaseErr?.code === 'auth/popup-closed-by-user') {
+        setSocialLoadingProvider(null);
+        return;
+      }
 
-  const handleAppleLogin = () => {
-    showToast({
-      type: 'error',
-      text1: t('auth.appleSignInNotConfiguredTitle', 'Apple Sign-In Not Configured'),
-      text2: t('auth.appleSignInNotConfiguredMsg', 'Add Apple web OAuth settings before enabling this login.'),
-    });
+      // Fallback: If popup was blocked or failed, try standard Google Identity Services
+      const clientId =
+        import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_WEB_CLIENT_ID;
+
+      if (!clientId) {
+        showToast({
+          type: 'error',
+          text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
+          text2: getUserFriendlyErrorMessage(
+            firebaseErr,
+            t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+          ),
+        });
+        setSocialLoadingProvider(null);
+        return;
+      }
+
+      try {
+        await loadGoogleIdentityScript();
+        const idToken = await getGoogleCredential(clientId);
+        await processGoogleCredential(idToken);
+      } catch (error: any) {
+        showToast({
+          type: 'error',
+          text1: t('auth.googleSignInFailedTitle', 'Google Sign-In Failed'),
+          text2: getUserFriendlyErrorMessage(
+            error,
+            t('auth.googleSignInFailedMsg', 'Please try Google sign-in again.'),
+          ),
+        });
+        setSocialLoadingProvider(null);
+      }
+    }
   };
 
   return (
@@ -495,30 +559,7 @@ export const SignIn: React.FC = () => {
               <img src={images.googleIcon} alt="Google" style={{ width: '18px', height: '18px' }} />
               <span>{socialLoadingProvider === 'google' ? t('auth.signingIn', 'Signing in...') : 'Google'}</span>
             </button>
-            <div
-              ref={googleBtnRef}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                opacity: 0.001,
-                overflow: 'hidden',
-                cursor: 'pointer',
-                zIndex: 10,
-              }}
-            />
           </div>
-          <button
-            type="button"
-            className="r2r-social-btn"
-            disabled={loading || socialLoadingProvider !== null}
-            onClick={handleAppleLogin}
-          >
-            <img src={images.appleIcon} alt="Apple" style={{ width: '18px', height: '18px' }} />
-            <span>Apple</span>
-          </button>
         </div>
 
         <p style={{ fontSize: '14px', color: '#5A7A6C', textAlign: 'center', margin: 0, marginTop: '2px' }}>
