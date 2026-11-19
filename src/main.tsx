@@ -9,6 +9,13 @@ import App from './App';
 import { CustomToast } from './components/Toast';
 import './index.css';
 
+// Suppress console logs in production so API responses and sensitive data are not leaked
+if (import.meta.env.PROD || process.env.NODE_ENV === 'production') {
+  console.log = () => {};
+  console.debug = () => {};
+  console.info = () => {};
+}
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Failed to find root element');
