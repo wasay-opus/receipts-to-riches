@@ -188,7 +188,7 @@ const normalizeComment = (comment: any, t: TranslateFn): FeedComment => {
     userId,
     avatar,
     time,
-    text: comment?.body ?? comment?.comment ?? comment?.text ?? '',
+    text: cleanFeedText(comment?.body ?? comment?.comment ?? comment?.text ?? ''),
     likes: Number(comment?.likes_count ?? comment?.likes ?? 0),
     dislikes: Number(comment?.dislikes_count ?? comment?.dislikes ?? 0),
     liked: Boolean(comment?.liked ?? comment?.is_liked ?? comment?.isLiked),
@@ -202,6 +202,16 @@ const isVideoUrl = (url?: string, type?: string) => {
   if (!url) return false;
   if (type === 'video') return true;
   return /\.(mp4|mov|webm|m4v|ogg)(\?.*)?$/i.test(url);
+};
+
+export const cleanFeedText = (text?: string): string => {
+  if (!text) return '';
+  return text
+    // Strip Unicode Object Replacement Character (U+FFFC / OBJ) and unknown replacement (U+FFFD)
+    .replace(/[\uFFFC\uFFFD\uFEFF]/g, '')
+    // Strip invisible non-printable control chars
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim();
 };
 
 const normalizePost = (post: any, t: TranslateFn): FeedPost => {
@@ -238,7 +248,7 @@ const normalizePost = (post: any, t: TranslateFn): FeedPost => {
     author: authorName,
     avatar: resolvedAvatar,
     time: formatTime(post?.created_at ?? post?.createdAt),
-    content: post?.description ?? post?.content ?? post?.body ?? '',
+    content: cleanFeedText(post?.description ?? post?.content ?? post?.body ?? ''),
     image,
     media_type,
     likes: Number(post?.likes_count ?? post?.likes ?? post?.reactions_count ?? 0),

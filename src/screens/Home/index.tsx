@@ -644,82 +644,77 @@ export const Home: React.FC = () => {
             />
 
             <div className="home-streak-milestones-row">
-              {/* Day 01 */}
-              <div className="home-streak-milestone-item">
-                <div className="home-streak-milestone-circle home-streak-circle-done">
-                  <CheckCircle2 size={15} strokeWidth={3} />
-                </div>
-                <div className="home-streak-milestone-label-col">
-                  <span className="home-streak-day-num home-streak-day-num--done">01</span>
-                  <span className="home-streak-day-subtext home-streak-day-subtext--done">DONE</span>
-                </div>
-              </div>
+              {Array.from({ length: 7 }, (_, index) => {
+                const dayNumber = index + 1;
+                const isGrand = dayNumber === 7;
+                const isDone = dayNumber < streakDays;
+                const isToday = dayNumber === streakDays;
+                const isLocked = dayNumber > streakDays;
+                const paddedDay = String(dayNumber).padStart(2, '0');
 
-              {/* Day 02 */}
-              <div className="home-streak-milestone-item">
-                <div className="home-streak-milestone-circle home-streak-circle-today">
-                  <span className="home-streak-today-inner-dot" />
-                </div>
-                <div className="home-streak-milestone-label-col">
-                  <span className="home-streak-day-num home-streak-day-num--today">02</span>
-                  <span className="home-streak-day-subtext home-streak-day-subtext--today">TODAY</span>
-                </div>
-              </div>
+                return (
+                  <div key={dayNumber} className="home-streak-milestone-item">
+                    {isGrand ? (
+                      <div
+                        className={`home-streak-milestone-circle ${
+                          isDone
+                            ? 'home-streak-circle-done'
+                            : isToday
+                            ? 'home-streak-circle-today'
+                            : 'home-streak-circle-grand-bonus'
+                        }`}
+                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.12)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      >
+                        {isDone ? (
+                          <CheckCircle2 size={15} strokeWidth={3} />
+                        ) : isToday ? (
+                          <span className="home-streak-today-inner-dot" />
+                        ) : (
+                          <span className="home-streak-grand-gift-icon">🎁</span>
+                        )}
+                      </div>
+                    ) : isDone ? (
+                      <div className="home-streak-milestone-circle home-streak-circle-done">
+                        <CheckCircle2 size={15} strokeWidth={3} />
+                      </div>
+                    ) : isToday ? (
+                      <div className="home-streak-milestone-circle home-streak-circle-today">
+                        <span className="home-streak-today-inner-dot" />
+                      </div>
+                    ) : (
+                      <div className="home-streak-milestone-circle home-streak-circle-locked">
+                        <Lock size={13} strokeWidth={2.4} />
+                      </div>
+                    )}
 
-              {/* Day 03 */}
-              <div className="home-streak-milestone-item">
-                <div className="home-streak-milestone-circle home-streak-circle-locked">
-                  <Lock size={13} strokeWidth={2.4} />
-                </div>
-                <div className="home-streak-milestone-label-col">
-                  <span className="home-streak-day-num home-streak-day-num--locked">03</span>
-                </div>
-              </div>
-
-              {/* Day 04 */}
-              <div className="home-streak-milestone-item">
-                <div className="home-streak-milestone-circle home-streak-circle-locked">
-                  <Lock size={13} strokeWidth={2.4} />
-                </div>
-                <div className="home-streak-milestone-label-col">
-                  <span className="home-streak-day-num home-streak-day-num--locked">04</span>
-                </div>
-              </div>
-
-              {/* Day 05 */}
-              <div className="home-streak-milestone-item">
-                <div className="home-streak-milestone-circle home-streak-circle-locked">
-                  <Lock size={13} strokeWidth={2.4} />
-                </div>
-                <div className="home-streak-milestone-label-col">
-                  <span className="home-streak-day-num home-streak-day-num--locked">05</span>
-                </div>
-              </div>
-
-              {/* Day 06 */}
-              <div className="home-streak-milestone-item">
-                <div className="home-streak-milestone-circle home-streak-circle-locked">
-                  <Lock size={13} strokeWidth={2.4} />
-                </div>
-                <div className="home-streak-milestone-label-col">
-                  <span className="home-streak-day-num home-streak-day-num--locked">06</span>
-                </div>
-              </div>
-
-              {/* Day 07 */}
-              <div className="home-streak-milestone-item">
-                <div
-                  className="home-streak-milestone-circle home-streak-circle-grand-bonus"
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.12)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                >
-                  <span className="home-streak-grand-gift-icon">🎁</span>
-                </div>
-                <div className="home-streak-milestone-label-col">
-                  <span className="home-streak-day-num home-streak-day-num--grand">07</span>
-                  <span className="home-streak-day-subtext home-streak-bonus-tag">+500</span>
-                </div>
-              </div>
+                    <div className="home-streak-milestone-label-col">
+                      <span
+                        className={`home-streak-day-num ${
+                          isGrand
+                            ? 'home-streak-day-num--grand'
+                            : isDone
+                            ? 'home-streak-day-num--done'
+                            : isToday
+                            ? 'home-streak-day-num--today'
+                            : 'home-streak-day-num--locked'
+                        }`}
+                      >
+                        {paddedDay}
+                      </span>
+                      {isDone && (
+                        <span className="home-streak-day-subtext home-streak-day-subtext--done">DONE</span>
+                      )}
+                      {isToday && (
+                        <span className="home-streak-day-subtext home-streak-day-subtext--today">TODAY</span>
+                      )}
+                      {isGrand && !isDone && !isToday && (
+                        <span className="home-streak-day-subtext home-streak-bonus-tag">+500</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
